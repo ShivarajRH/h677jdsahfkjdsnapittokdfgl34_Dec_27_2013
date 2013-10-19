@@ -398,15 +398,15 @@
         var marker=new google.maps.Marker({
             position:myCenter
             ,title: frn_title
-            //,size: new google.maps.Size(20, 16)
             ,icon: site_url+"images/google-map-pointer-green-th.png"//"http://static.snapittoday.com/loading_maroon.gif"
+            ,size: new google.maps.Size(10,10)
         });
          
         // Load popup content
         var infowindow1 = new google.maps.InfoWindow({
             content: contentString
         });
-
+  
         google.maps.event.addListener(marker, 'click', function() {
                 infowindow1.open(map,marker);
         });
