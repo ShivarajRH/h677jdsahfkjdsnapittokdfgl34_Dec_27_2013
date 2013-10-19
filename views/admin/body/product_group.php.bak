@@ -1,0 +1,220 @@
+<?php 
+$pids=array();
+$d=false;
+if(isset($deal))
+$d=$deal; 
+?>
+<div class="container">
+
+<h2>Product Group : <?=$group['group_name']?></h2>
+
+<h4 style="margin:0px;margin-top:20px;">Attribute Classes</h4>
+<table class="datagrid">
+<thead><tr><th>Attributes</th><th>Possible Values</th></tr></thead>
+<tbody>
+<?php $as=$this->db->query("select group_concat(av.attribute_value) as `values`,a.attribute_name as name from products_group_attributes a join products_group_attribute_values av on av.attribute_name_id=a.attribute_name_id where a.group_id=? group by a.attribute_name_id order by a.attribute_name_id",$group['group_id'])->result_array(); foreach($as as $a){?>
+<tr>
+<td><?=$a['name']?></td><Td><?=$a['values']?></Td>
+</tr>
+<?php }?>
+</tbody>
+</table>
+
+
+<h4 style="margin:0px;margin-top:20px;">Products Linked</h4>
+    <!--<div style="margin-left: 380px;"><a href="" class="link_product2group">Add link to product</a></div>-->
+<table class="datagrid">
+<thead><tr><th>Product Name</th><?php foreach($as as $a){?><th><?=$a['name']?></th><?php }?></tr></thead>
+<tbody>
+<?php foreach($prods as $prod){?>
+<tr>
+<td><a href="<?=site_url("admin/product/{$prod['product_id']}")?>" class="link"><?=$prod['product_name']?></a></td>
+<?php foreach($this->db->query("select av.attribute_value as value from products_group_pids p join products_group_attribute_values av on av.attribute_value_id=p.attribute_value_id where p.group_id=? and p.product_id=?",array($group['group_id'],$prod['product_id']))->result_array() as $a){?>
+<td><?=$a['value']?></td>
+<?php }?>
+</tr>
+<?php }?>
+</tbody>
+</table>
+
+<br>
+<h4 style="margin:0px;margin-top:20px;">Deals Linked</h4>
+<table class="datagrid">
+<thead><tr><th>Sno</th><th>Deal Name</th><th>MRP</th><th>Price</th></tr></thead>
+<tbody>
+<?php $i=1; foreach($this->db->query("select i.* from king_dealitems i join m_product_group_deal_link l on l.itemid=i.id where l.group_id=?",$group['group_id'])->result_array() as $p){?>
+<tr>
+<td><?=$i++?></td><td><a href="<?=site_url("admin/deal/{$p['id']}")?>"><?=$p['name']?></a></td><td><?=$p['orgprice']?></td><td><?=$p['price']?></td>
+</tr>
+<?php }?>
+</tbody>
+</table>
+
+<script>
+    $(".link_product2group").click(function(e) {
+        e.preventDefault();
+            $( "#dialog-modal" ).dialog({
+              height:400,
+              width:700,
+              modal: true,
+              buttons: {
+                "Close": function() {
+                  $( this ).dialog( "close" );
+                }
+              }
+            });
+            
+    });
+    
+    //
+    var attr_i=0;
+
+    var attr_names=[];
+    var attr_values=[];
+
+    var added_pids=[];
+
+    function remove_prow(o,pid)
+    {
+            obj=$(o).parent().parent();
+            obj.remove();
+            t_pid=added_pids;
+            added_pids=[];
+            for(i=0;i<t_pid.length;i++)
+            {
+                    if(pid!=t_pid[i])
+                            added_pids.push(t_pid[i]);
+            }
+    }
+      
+    function addproduct(id,name,mrp) { 
+        
+//        $.post(site_url+"admin/jx_get_group_attibutes", {product_id:id,group_id:<?=$group['group_id']?>}, function(rdata) {
+//            if(rdata.status == 'success') {
+//                var data;var values='';var group_id;
+//                values+="<select name='attributes'>";
+//                $.each(rdata.result,function(i,data) {
+//                    $("#link_products_cont_head").html("<th></th>");
+//                    
+//                    values+="<option value='"+data.att_val_id+"'>"+data.att_value+"</option>\n";
+//                    group_id=data.group_id;
+//                });
+//                values+="</select>";
+//                    print_link_products(id,name,mrp,values,group_id);
+//            }
+//            else {
+//                alert(rdata.result);
+//                return false;
+//            }
+//        }, "json");
+        print_link_products(id,name,mrp);
+    }
+    
+    function print_link_products(id,name,mrp) {
+        $("#link_products_cont").append("<tr>\n\
+                <td><input type='hidden' name='product_id' class='product_id' id='"+id+"' value='"+id+"'/>"+name+"\n\
+                    <span style='color:#ff9900'>(Mrp:Rs"+mrp+")</span></td>\n\
+                <td><input type='text' name='new_attr_value_"+id+"' value=''/></td></tr>");
+    }
+
+    $(function(){
+
+            $(".prod_search_add").keyup(function(){
+                    $.post('<?=site_url("admin/jx_searchproducts")?>',{q:$(this).val()},function(data){
+                            $("#prods_list").html(data).show();
+                    });
+            }).attr("disabled",false);
+
+
+            $("#pg_form").submit(function(){
+                    //$("#link_products_cont_output").print($(this).serialize());
+                    alert($(".product_id").id);
+                   $.each($(".product_id").id,function(i,val) {
+                       $("#link_products_cont_output").append("PID:"+i+"\nval="+val); 
+                    });
+                    return false;
+            });
+
+    });
+</script>
+
+<div id="dialog-modal" title="Link product to group" style="display: none;">
+  
+    <?php $superadmin=$this->erpm->auth(TRUE,TRUE);?>
+        <form method="post" id="pg_form">
+<!--
+        <div id="products_attr_cont">
+        <h4 style="margin:30px 0px 0px 0px">Products Attributes</h4>
+        <table class="datagrid noprint" id="attributes_table">
+        <thead><tr><th>Attribute Name</th><th width="600" style="vertical-align:middle"><input onclick='addprodattributes()' type="button" value="Add New Attribute Class+" style="padding:0px;font-size:120%;margin:-3px;float:right;">Possible values</th></tr></thead>
+        <tbody>
+        </tbody>
+        </table>
+        <div style="padding:10px 0px;">
+        <input type="button" value="Next" onclick='show_addprod()'>
+        </div>
+        </div>-->
+            <div id="show_after_attr">
+                <h4 style="margin:30px 0px 0px 0px">Link Products</h4>
+                <div id="product_details">
+                    Search : <input type="text" size="40" class="inp prod_search_add">
+                    <input type='hidden' name='group_id' value='<?=$group['group_id']?>'/>
+                    <div id="prods_list" class="srch_result_pop closeonclick"></div>
+                    <div>
+                        <table class='datagrid' width='100%'>
+                            <thead id="link_products_cont_head"><th>Product name</th><th>New attribute value</th></thead>
+                            <tbody id="link_products_cont"></tbody>
+                        </table>
+                        <div id="link_products_cont_output"></div>
+                    </div>
+                </div>
+                <br><br>
+                <input type="submit" value="Update Product Group">
+            </div>
+        </form>
+        
+
+<!--        <div style="display:none;">
+        <div  id="prods_link_thead_template">
+        <table class="datagrid">
+        <thead><tr><th width="300">Product%attr_names%</th><th></th></tr></thead>
+        <tbody>
+        </tbody>
+        </table>
+        </div>-->
+
+<!--        <table>
+        <tbody id="prods_attr_template">
+        <tr>
+        <td><input type="text" class="attr_names inp" name="attr_name[]" size="30"><a href="javascript:void(0)" onclick='$(this).parent().parent().remove()'>remove</a></td>
+        <td>
+        <span class="attr_i" style="display:none;">%i%</span>
+        <input type="button" value="Add values+" style="float:right;margin:-3px;padding:0px;" onclick='addattrvalue(this)'>
+        <div class="attrvaluecont">
+        <input type="text" class="attrvalue inp attrvalue%i%" name="attr_values[%i%][]">
+        </div>
+        </td>
+        </tr>
+        </tbody>
+        </table>-->
+
+<!--        <table>
+        <tbody id="prods_inv_prod">
+        <tr>
+        <td><input type="hidden" class="p_inv_pids" name="pids[]" value="%pid%">%pname% %attr_data%</td>
+        <td><a href="javascript:void(0)" onclick='remove_prow(this,"%pid%")'>remove</a></td>
+        </tr>
+        </tbody>
+        </table>-->
+
+        </div>
+</div>
+
+<style>
+    .srch_result_pop { 
+        margin-left: 0 !important;
+    }
+
+</style>
+</div>
+<?php
