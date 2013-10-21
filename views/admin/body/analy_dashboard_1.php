@@ -91,8 +91,8 @@
         <!-- Content  Start -->
         <div class="content fl_left">
             <div class="stats" id="content_total_log"></diV>
-            <div id="map_canv" style="width:100%;height:610px;"></div>
-<!--            <div class="content_holder"></div>-->
+            <div class="googlemap_holder fl_left"> <div id="googleMap" style="width:1298px;height:610px;"></div></div>
+            <div class="content_holder"></div>
         </div>
         <!-- Content  End -->
     </div>
@@ -101,7 +101,6 @@
 
 <div class="click_to_know_container" style="display: none;" title="Basic dialog"></div>
 
-<script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDY0kkJiTPVd2U7aTOAwhc9ySH6oHxOIYM&sensor=false&format=png"></script>
 
 <script type="text/javascript">
     $(document).ready(function() {
@@ -144,7 +143,7 @@
     function onclick_fran(fran_id) {
         curr_franchise_id=fran_id;
         //alert(fran_id);
-        // get_fran_google_map();
+        get_fran_google_map();
         
         //$(".content_holder").html('');
         $(".list_view_item").css({"background":"none"});
@@ -211,7 +210,7 @@
                                     ,'created_on': currentDate
                                 };
                     });
-                    // get_fran_google_map();
+                    get_fran_google_map();
                 }
                 else {
                     rdata='<div class="list_view_item">\n\
@@ -257,11 +256,158 @@
         }   
         $('#refine_frlist').toggle();    
     });
+    $(".click_to_know_container").dialog({
+                height: 580
+                ,width: 780
+                ,autoOpen:false
+//                ,modal: true
+    });
 </script>
 
-
+<script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDY0kkJiTPVd2U7aTOAwhc9ySH6oHxOIYM&sensor=false&format=png"></script>
 <script>
-    
+    function get_fran_google_map() {
+        var locations_arr=franchise_info;
+        
+        if(curr_franchise_id!=0) {
+            //alert(curr_franchise_id);
+            
+            //$(".content_holder").print(franchise_info);  return false;
+            var contentString = '';
+            
+            $.each(franchise_info, function(frn,location_obj) {
+                $.each(location_obj, function(i,location) {
+                    $(".content_holder").html("");
+                    $(".content_holder").print(location['lat']+","+ location['long']+","+location); 
+                    //$(".content_holder").print(location); 
+                    //return false;
+
+                    var myCenter=new google.maps.LatLng(location[curr_franchise_id]['lat'], location[curr_franchise_id]['long']);
+                    var zoompoint=9;
+                    var frn_title=location[curr_franchise_id]['store_name'];
+                    contentString = '<div id="m_pop_content">'+
+                                    '<div id="siteNotice">'+
+                                        '</div>'+
+                                        '<h1 id="firstHeading" class="firstHeading">'+location[curr_franchise_id]['franchise_id']+'. '+location[curr_franchise_id]['franchise_name']+'</h1>'+
+                                        '<div id="bodyContent">'+
+                                        '<p><b>'+location[curr_franchise_id]['store_name']+'</b>,<br> '+location[curr_franchise_id]["address"]+'</p>'+
+                                        ' Registed on '+location[curr_franchise_id]['created_on']+'</p>'+
+                                        '<p><div class="click_to_know"><a href="javascript:void(0);" franchise_id="'+location[curr_franchise_id]["franchise_id"]+'" onclick="click_to_know(this)">Know more</a></div></p>'+
+                                        '</div>'+
+                                    '</div>';
+                    alert(location['lat'] +","+ location['long']+"\n"+contentString);
+                });
+            });
+        }
+        else {
+            var myCenter=new google.maps.LatLng(12.9283467,77.5631842);
+            var zoompoint=8;
+            var frn_title = "Default location";
+            //var contentString = '<div id="m_pop_content"></div>'+contentString;
+        }
+        return false;
+        // Set other locations in array first title for marker, second coords
+        /*locations = [ 
+            ["marker title1", -13.530825,-71.957565],
+            ["marker title2", -13.531211,-71.961921],
+            ["marker title3", -13.531336,-71.960387],
+            ["marker title4", -13.533099,-71.960151],
+            ["marker title5", -13.533985,-71.960751],
+            ["marker title6", -13.535289,-71.962929]
+            ];*/
+        
+        //$(".content_holder").print(locations_arr);
+        
+//        alert(locations_arr);
+        
+        //apply location marker to centre on
+        var mapProp = {
+            center:myCenter
+            ,zoom:zoompoint
+            ,mapTypeId:google.maps.MapTypeId.ROADMAP
+          };
+
+        var map=new google.maps.Map(document.getElementById("googleMap"),mapProp);
+
+        var marker=new google.maps.Marker({
+            position:myCenter
+            ,title: frn_title
+            ,icon: site_url+"images/google-map-pointer-green-th.png"//"http://static.snapittoday.com/loading_maroon.gif"// ,size: new google.maps.Size(10,10)
+        });
+         
+        // Load popup content
+        var infowindow1 = new google.maps.InfoWindow({
+            content: contentString
+        });
+  
+        google.maps.event.addListener(marker, 'click', function() {
+                infowindow1.open(map,marker);
+        });
+        // End load popup content
+            
+            //$(".content_holder").print("44334"+franchise_info);
+            
+            // apply other location markers
+            $.each(franchise_info, function(frn,location_obj) {
+                
+                $(".content_holder").html(frn+"<div></div>");
+                $(".content_holder div").print(location_obj);
+                
+                //$(".content_holder").print(franchise_info);
+               // $(".content_holder").print(franchise_info["store_name"]);
+               // $(".content_holder").print(franchise_info[0]["store_name"]);
+               // $(".content_holder").print(franchise_info["store_name"]);
+                
+                //return false;
+                
+                $.each(location_obj, function(i,location) {
+                    //$(".content_holder").print(location);
+                    
+                    //$(".content_holder").print(i+"<br>"+location);
+                        //return false;
+                    marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(location['lat'], location['long'])
+                        ,map: map
+                        ,title: location['store_name']
+                        //,icon: site_url+"images/google-map-pointer-green-th.png"//"http://static.snapittoday.com/loading_maroon.gif"
+
+                    });
+                    
+                    //========================================
+                    var contentString = '<div id="m_pop_content">'+
+                            '<div id="siteNotice">'+
+                                '</div>'+
+                                '<h1 id="firstHeading" class="firstHeading">'+location['franchise_name']+'</h1>'+
+                                '<div id="bodyContent">'+
+                                '<p><b>'+location['store_name']+'</b>,<br> '+location["address"]+'</p>'+
+                                ' Registed on '+location['created_on']+'</p>'+
+                                '<p><div class="click_to_know"><a href="javascript:void(0);" franchise_id="'+location["franchise_id"]+'" onclick="click_to_know(this)">Know more</a></div></p>'+
+                                '</div>'+
+                            '</div>';
+                       // var contentString = 'fdsgdfsg';
+
+                        var infowindow = new google.maps.InfoWindow({
+                            content: contentString
+                        });
+
+                        google.maps.event.addListener(marker, 'click', function() {
+                                infowindow.open(map,marker);
+                        });
+                });
+                
+            });
+            
+            
+        marker.setMap(map);
+        
+       
+       
+            //google.maps.event.addDomListener(window, "load", initialize);
+
+                   
+    }
+</script>
+<script>
     
     function _timestamp_to_date(created_on) {
         var fullDate = new Date(created_on*1000);//list.created_on;//new Date();
@@ -281,27 +427,65 @@
         return(output);
     }
     
-    var map = null;
-    function init_map() 
-    {
-        if(map != null)
-            return false;
+    function click_to_know(e) {
         
-        var def_lat = 12.96949928505618;
-        var def_lng = 77.59423840625004;
+        var fran_id = $(e).attr("franchise_id");
+        $(".click_to_know_container").dialog({autoOpen:true
+            ,open:function(e,ui) {
+                $.post(site_url+"admin/ajax_get_franchise_details/"+fran_id, {}, function(resp) {
+            
+                    var fr_reg_diff = Math.ceil( ( resp.time - resp.created_on ) / (24*60*60) );//$.now()
+                    if(fr_reg_diff <= 30)
+                    {
+                            fr_reg_level_color = '#cd0000';
+                            fr_reg_level = 'Newbie';
+                    }
+                    else if(fr_reg_diff > 30 && fr_reg_diff <= 60)
+                    {
+                            fr_reg_level_color = 'orange';
+                            fr_reg_level = 'Mid Level';
+                    }else if(fr_reg_diff > 60)
+                    {
+                            fr_reg_level_color = 'green';
+                            fr_reg_level = 'Experienced';
+                    }
 
+                    $(".click_to_know_container").print('<div id="m_pop_content">'+
+                                '<div id="siteNotice">'+
+                                    '</div>'+
+                                    '<h1 id="firstHeading" class="firstHeading">'+resp['franchise_name']+' <span clss="color_green" style="font-size: 11px; color:'+fr_reg_level_color+' ">(<b>'+fr_reg_level+'</b>)</span></h1>'+
+                                    '<table width="100%" >'+
+                                        '<tr>'+
+                                        '<td width="60%">'+
+                                                '<div class="tab_list" style="clear: both;">'+
+                                                            '<ol>'+
+                                                                    '<li><a class="load_type selected" id="all" href="javascript:void(0)">Basic Details</a><div class="all_pop"></div></li>'+
+                                                                    '<li><a class="load_type" id="shipped" href="javascript:void(0)">Finance</a><div class="shipped_pop"></div></li>'+
+                                                                    '<li><a class="load_type" id="unshipped" href="javascript:void(0)">UnShipped</a><div class="unshipped_pop"></div></li>'+
+                                                            '</ol>'+
+                                                '</div>'+
+                                        '</td>'+
+                                        '<td align="right">'+
+                                    '</td>'+
+                            '</tr>'+
+                            '<tr>'+
+                                '<td><div class="ttl_orders_status_listed"></div></td>'+
+                                '<td align="right"></td>'+
+                            '</tr>'+
 
-        var mapOptions = {
-          zoom: 8,
-          center: new google.maps.LatLng(def_lat,def_lng),
-          mapTypeId: google.maps.MapTypeId.ROADMAP
-        };
+                            '</table>'+
+                                    '<div id="bodyContent">'+
+                                    '<p><b>'+resp['store_name']+'</b>,<br> '+resp["address"]+'</p>'+
+                                    ' Registed on '+resp['created_on']+'</p>'+
+                                    '</div>'+
+                                '</div>');
+
+                }, "json");
+            }
+        });
         
-        map = new google.maps.Map(document.getElementById('map_canv'),mapOptions);
+        
         
     }
-
-    init_map();
-    
 </script>
     

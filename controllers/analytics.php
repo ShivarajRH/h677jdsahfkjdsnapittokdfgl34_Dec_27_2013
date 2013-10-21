@@ -75,7 +75,7 @@ class Analytics extends Voucher
     * function to generate franchise details
     * @param $fran_id
     */
-   function ajax_get_franchise_details($fran_id)
+   /*function ajax_get_franchise_details($fran_id)
    {
         $this->erpm->auth();
         //print_r($_POST);
@@ -87,7 +87,7 @@ class Analytics extends Voucher
         $output['time']=time();
        
         echo json_encode($output);//$this->db->last_query().
-   }
+   }*/
    /**
     * Get all franchise count based on territory and town ids
     */
