@@ -7,7 +7,7 @@
 .sk_theme .fl_left{float: left}
 .sk_theme .fl_right{float: right}
 
-.sk_theme .sidebar{width: 250px;height: 615px;background: #f1f1f1;}
+.sk_theme .sidebar{width: 250px;height: 647px;background: #f1f1f1;}
 .sk_theme .content{width: 75%;height: auto;background: #fafafa}
 
 .sk_theme .sk_module{padding:5px;}
@@ -32,14 +32,22 @@
 .sk_theme .list_view .list_view_item .item_det span{font-size: 11px;}
 
 .sk_theme .list_view .list_view_item .empty_result { font-size: 11px; background-color:tomato; color: #f1f1f1; text-align: center; margin-bottom: 5px;}
-#fr_list{height: 400px;}
+
+
+
+.sk_theme .sidebar #fr_list{height: 591px;}
+.sk_theme .sk_btn{padding:3px 6px;font-size: 11px;font-weight:bold;color: #fcfcfc;background: tomato;border:1px solid tomato;cursor: pointer}
+.sk_theme .sk_btn_small{padding:3px;font-size: 11px;font-weight:bold;color: #fcfcfc;}
+
 .border_warn{border-left:3px solid tomato}
 .border_success{border-left:3px solid #004B91}
 
-.sk_theme .sk_btn{padding:3px 6px;font-size: 11px;font-weight:bold;color: #fcfcfc;background: tomato;border:1px solid tomato;cursor: pointer}
-.sk_theme .sk_btn_small{padding:3px;font-size: 11px;font-weight:bold;color: #fcfcfc;}
-.googlemap_holder { padding:5px 10px 5px 25px;}
+.sk_theme .content .googlemap_holder { padding:5px 10px 5px 25px;}
 .click_to_know { float: right;}
+#m_pop_content {
+    width: 612px;
+    height: 350px;
+}
 </style>
 
 <div id="analytics_dash" class="sk_theme sk_container" >
@@ -92,8 +100,9 @@
         <!-- Content  Start -->
         <div class="content fl_left">
             <div class="stats" id="content_total_log"></diV>
+            <div class="content_holder"></div>
             <div id="map_canv" style="width:100%;height:610px;"></div>
-<!--            <div class="content_holder"></div>-->
+            
         </div>
         <!-- Content  End -->
     </div>
@@ -140,21 +149,8 @@
         load_franchise_details(0);
     }
     var franchise_info={};
-    var curr_franchise_id=0;
-    
-    function highlight_fran(fran_id) {
-        
-        // mark selected item in list 
-        $(".list_view_item.selected").removeClass("selected");
-        $("#div_fran_"+fran_id).addClass("selected");
-        
-        // auto center and zoom to marker [street level] 
-        map.setCenter(franchise_info[fran_id].marker.getPosition());
-        map.setZoom(17);
-        
-        // open marker infowindow 
-            
-    }
+    var last_clicked_marker;
+    var store_markers = {};
     
     function load_franchise_details(terr_id) {
         
@@ -167,13 +163,15 @@
         //alert(terr_id+"\n"+town_id+"\n"+fran_status+"");
         get_fran_total_log();
         
+        
         $.post(site_url+"admin/ajax_get_all_franchise_details/",{terr_id:terr_id,town_id:town_id,franchise_status:fran_status},function(resp) {
             $(".list_view").print('');
-            var rdata='<p><b>Showing:</b> '+resp.total_fran+'</p>';
+                var rdata='<p><b>Showing:</b> '+resp.total_fran+'</p>';
                 
                 if(resp.franchise) {
-                    var total=resp.franchise.length;
-                    $.each(resp.franchise, function(i,list) {i=list.franchise_id;
+                    //var total=resp.franchise.length;
+                    
+                    $.each(resp.franchise, function(i,list) { i=list.franchise_id;
                         //var class_1 = ((i%2) ? "border_warn" : "border_success");
                         var class_1 = (list.is_suspended==1)?"border_warn" : "border_success";
                         var fr_reg_diff = Math.ceil( ( resp.time - list.created_on ) / (24*60*60) );//$.now()
@@ -204,8 +202,8 @@
                             
                                 //franchise_info.push({
                                 //franchise_info[list.franchise_id]=[];
-                                
-                                franchise_info[i]={
+                                var fr_det = franchise_info[i];
+                                fr_det={
                                     'store_name':list.store_name
                                     ,'franchise_id':i
                                     ,'franchise_name':list.franchise_name
@@ -213,26 +211,86 @@
                                     ,'lng':list.long 
                                     ,'address':list.address
                                     ,'created_on': currentDate
+                                    ,"fr_reg_level":fr_reg_level
+                                    ,"fr_reg_level_color":fr_reg_level_color
                                 };
+                                //==========================================================
+                                //Marker generation
                                 
+                                var marker =new google.maps.Marker({
+                                    position: new google.maps.LatLng(fr_det.lat, fr_det.lng)
+                                    ,map:map
+                                    ,title: fr_det.franchise_name
+                                });
+
+                                    contentString = '<div id="m_pop_content">'+
+                                        '<div id="siteNotice">'+
+                                            '</div>'+
+                                            '<h1 id="firstHeading" class="firstHeading">'+fr_det['franchise_name']+'</h1>'+
+                                            '<div id="bodyContent">'+
+                                            '<p><b>'+fr_det['store_name']+'</b>,<br> '+fr_det["address"]+'</p>'+
+                                            ' Registed on '+fr_det['created_on']+'</p>'+
+                                            '<div class="click_to_know"><a href="javascript:void(0);" franchise_id="'+fr_det["franchise_id"]+'" onclick="click_to_know(this)">Know more</a></div>'+
+                                            '</div>'+
+                                        '</div>';
+                                    
+                                marker.infowindow = new google.maps.InfoWindow({
+			            content: contentString
+			        });
                                 
-                                          
+                                store_markers[i] = {"marker": marker };
+                                
+                                google.maps.event.addListener(store_markers[i]["marker"], 'click', function() {
+                                            
+                                    if(last_clicked_marker){
+                                        last_clicked_marker.infowindow.close();
+                                    }
+                                    last_clicked_marker = this;
+                                    this.infowindow.open(map,this);
+
+                                });
+                                store_markers[i]["marker"].setMap(map);
+                                //==========================================================
                     });
+
                 }
                 else {
                     rdata='<div class="list_view_item">\n\
                            <div class="empty_result">'+resp.error+'</div>\n\
                             </div>';
                 }
-                
                 $(".list_view").html(rdata);
-                return false;
-                
+                //return false;
         },'json');
-        
-        
         return false;
     }
+    function highlight_fran(fran_id) {
+        
+        // mark selected item in list 
+        $(".list_view_item.selected").removeClass("selected");
+        $("#div_fran_"+fran_id).addClass("selected");
+        
+        $(".content_holder").print(franchise_info);
+
+            // auto center and zoom to marker [street level] 
+            map.setCenter(store_markers[fran_id]["marker"].getPosition());
+            map.setZoom(17);
+
+
+        // open marker infowindow 
+        $("#div_fran_"+fran_id).bind("myEvent", function (event, message1, message2) { //alert(message1 + ' ' + message2);
+           
+            if(last_clicked_marker){
+                last_clicked_marker.infowindow.close();
+             }
+             last_clicked_marker = message1;
+             message1.infowindow.open(map,message1);
+
+        });
+        $("#div_fran_"+fran_id).trigger("myEvent", store_markers[fran_id]["marker"]);
+           
+    }
+    
     function get_fran_total_log() {
         var terr_id = $("#terr_id").val();
         var town_id = $("#town_id").val();
@@ -263,11 +321,32 @@
         }   
         $('#refine_frlist').toggle();    
     });
-</script>
+    //Initializing google map
+    var map = null;
+    function init_map() 
+    {
+        geocoder = new google.maps.Geocoder();
+        
+        if(map != null)
+            return false;
+        
+        var def_lat = 12.96949928505618;
+        var def_lng = 77.59423840625004;
 
 
-<script>
-    
+        var mapOptions = {
+          zoom: 8
+          ,disableDefaultUI: true
+          ,center: new google.maps.LatLng(def_lat,def_lng)
+          ,mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        
+        map = new google.maps.Map(document.getElementById('map_canv'),mapOptions);
+        
+    }
+
+    init_map();
+    //End initializing google map
     
     function _timestamp_to_date(created_on) {
         var fullDate = new Date(created_on*1000);//list.created_on;//new Date();
@@ -286,70 +365,60 @@
         });
         return(output);
     }
-    
-    var map = null;
-    function init_map() 
-    {
-        if(map != null)
-            return false;
+    $(".click_to_know_container").dialog({
+            height: 580
+            ,width: 780
+            ,autoOpen:false
+//                ,autoOpen: false ,modal: true
+//                ,show: {effect: "blind",duration: 1000}
+//                ,hide: {effect: "bounce",duration: 1000}
+    });
+    function click_to_know(e) {
+        //$(".content_holder").print(franchise_info);
+        var fran_id = $(e).attr("franchise_id");
         
-        var def_lat = 12.96949928505618;
-        var def_lng = 77.59423840625004;
+        $(".click_to_know_container").dialog({autoOpen:true
+            ,title:fran_id
+            ,show:{effect:"explode",duration:"slow"}
+            ,open:function(e,ui) {
+                   var resp=franchise_info[fran_id];
+                   
+                    /*
+                    $(".click_to_know_container").html('<div id="m_pop_content">'+
+                                '<div id="siteNotice">'+
+                                    '</div>'+
+                                    '<h1 id="firstHeading" class="firstHeading">'+resp['franchise_name']+' <span clss="color_green" style="font-size: 11px; color:'+resp["fr_reg_level_color"]+' ">(<b>'+resp["fr_reg_level"]+'</b>)</span></h1>'+
+                                    '<table width="100%" >'+
+                                        '<tr>'+
+                                        '<td width="60%">'+
+                                                '<div class="tab_list" style="clear: both;">'+
+                                                            '<ol>'+
+                                                                    '<li><a class="load_type selected" id="all" href="javascript:void(0)">Basic Details</a><div class="all_pop"></div></li>'+
+                                                                    '<li><a class="load_type" id="shipped" href="javascript:void(0)">Finance</a><div class="shipped_pop"></div></li>'+
+                                                                    '<li><a class="load_type" id="unshipped" href="javascript:void(0)">UnShipped</a><div class="unshipped_pop"></div></li>'+
+                                                            '</ol>'+
+                                                '</div>'+
+                                        '</td>'+
+                                        '<td align="right">'+
+                                    '</td>'+
+                            '</tr>'+
+                            '<tr>'+
+                                '<td><div class="ttl_orders_status_listed"></div></td>'+
+                                '<td align="right"></td>'+
+                            '</tr>'+
 
+                            '</table>'+
+                                    '<div id="bodyContent">'+
+                                    '<p><b>'+resp['store_name']+'</b>,<br> '+resp["address"]+'</p>'+
+                                    ' Registed on '+resp['created_on']+'</p>'+
+                                    '</div>'+
+                                '</div>');*/
 
-        var mapOptions = {
-          zoom: 8
-          ,position:new google.maps.LatLng(def_lat,def_lng)
-          ,center: new google.maps.LatLng(def_lat,def_lng)
-          ,mapTypeId: google.maps.MapTypeId.ROADMAP
-        };
-        
-        map = new google.maps.Map(document.getElementById('map_canv'),mapOptions);
-        
-        $.each(franchise_info,function(i,list) { i=list.franchise_id;
-            
-            
-            franchise_info[i].marker =new google.maps.Marker({
-                    position: new google.maps.LatLng(franchise_info[i].lat, franchise_info[i].lng)
-                    ,title: franchise_info[i].franchise_name
-                });
-
-            alert(franchise_info[i]);
-
-                var fr_det = franchise_info[i];
-                            
-                contentString = '<div id="m_pop_content">'+
-                        '<div id="siteNotice">'+
-                            '</div>'+
-                            '<h1 id="firstHeading" class="firstHeading">'+fr_det['franchise_name']+'</h1>'+
-                            '<div id="bodyContent">'+
-                            '<p><b>'+fr_det['store_name']+'</b>,<br> '+fr_det["address"]+'</p>'+
-                            ' Registed on '+fr_det['created_on']+'</p>'+
-                            '<p><div class="click_to_know"><a href="javascript:void(0);" franchise_id="'+fr_det["franchise_id"]+'" onclick="click_to_know(this)">Know more</a></div></p>'+
-                            '</div>'+
-                        '</div>';
-
-                google.maps.event.addListener(franchise_info[i].marker, 'click', function() {
-                        alert("clicked");
-                                $(".frn_container_popup").dialog({
-                                    autoOpen : true
-                                    ,open:function() {
-                                        $(".frn_container_popup").html(contentString)
-                                    }
-                                });
-                });
-                
-                franchise_info[i].marker.setMap(map);
-                
-                
+                    $(".click_to_know_container").print(franchise_info);
+            }
         });
-        
-                            
-                              
-        
+       // 
     }
-
-    init_map();
     
 </script>
-    
+    <div class="click_to_know_container" style="display: none;" title="Basic dialog"></div>
