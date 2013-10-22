@@ -88,12 +88,11 @@
             </div>
         </div>
         <!-- Sidebar  End -->
-        
+         
         <!-- Content  Start -->
         <div class="content fl_left">
             <div class="stats" id="content_total_log"></diV>
-            <div id="map_canv" style="width:100%;height:610px;"></div>
-<!--            <div class="content_holder"></div>-->
+            <div id="map_canv" style="width:100%;height:610px;clear: both"></div>
         </div>
         <!-- Content  End -->
     </div>
@@ -141,6 +140,8 @@
     }
     var franchise_info={};
     var curr_franchise_id=0;
+    var marker = {};
+    
     
     function highlight_fran(fran_id) {
         
@@ -148,11 +149,19 @@
         $(".list_view_item.selected").removeClass("selected");
         $("#div_fran_"+fran_id).addClass("selected");
         
+        // open marker infowindow 
+        /*var infowindow = new google.maps.InfoWindow({
+                            height:800
+                            ,minWidth:800
+                            ,content:"contentString"});
+        infowindow.open(map, marker[fran_id]);
+        */
+        
         // auto center and zoom to marker [street level] 
-        map.setCenter(franchise_info[fran_id].marker.getPosition());
+        map.setCenter(marker.getPosition());
         map.setZoom(17);
         
-        // open marker infowindow 
+       
             
     }
     
@@ -193,7 +202,7 @@
                         }
                         var currentDate = _timestamp_to_date(list.created_on);
                         
-                        rdata +='<div class="list_view_item '+class_1+'" id="div_fran_'+i+'" onclick="highlight_fran('+i+')" style="">\n\
+                        rdata +='<div class="list_view_item '+class_1+'" id="div_fran_'+list.franchise_id+'" onclick="highlight_fran('+list.franchise_id+')" style="">\n\
                                 <a href="javascript:void(0)"><b class="title">'+list.franchise_name+'</b> \n\
                                     <div class="item_det">\n\
                                         <span clss="color_green" style="font-size: 11px; color:'+fr_reg_level_color+' "><b>'+fr_reg_level+'</b></span>\n\
@@ -207,7 +216,7 @@
                                 
                                 franchise_info[i]={
                                     'store_name':list.store_name
-                                    ,'franchise_id':i
+                                    ,'franchise_id':list.franchise_id
                                     ,'franchise_name':list.franchise_name
                                     ,'lat':list.lat
                                     ,'lng':list.long 
@@ -216,8 +225,8 @@
                                 };
                                 
                                 
-                                          
                     });
+                    
                 }
                 else {
                     rdata='<div class="list_view_item">\n\
@@ -226,6 +235,76 @@
                 }
                 
                 $(".list_view").html(rdata);
+                
+                
+                
+                //map data
+                $.each(franchise_info,function(i,list) {
+                                var fr_det = franchise_info[i];
+                                var fr_det_fid = franchise_info[i].franchise_id;
+                                
+                                 
+                                var marker = new google.maps.Marker({
+                                    position: new google.maps.LatLng(fr_det.lat, fr_det.lng)
+                                    ,title: fr_det.franchise_name
+                                });
+                                
+                               
+
+                                  contentString = '<div id="m_pop_content">'+
+                                        '<div id="siteNotice">'+
+                                            '</div>'+
+                                            '<h1 id="firstHeading" class="firstHeading">'+fr_det['franchise_name']+'</h1>'+
+                                            '<div id="bodyContent">'+
+                                            '<p><b>'+fr_det['store_name']+'</b>,<br> '+fr_det["address"]+'</p>'+
+                                            ' Registed on '+fr_det['created_on']+'</p>'+
+                                            '<p><div class="click_to_know"><a href="javascript:void(0);" franchise_id="'+fr_det["franchise_id"]+'" onclick="click_to_know(this)">Know more</a></div></p>'+
+                                            '</div>'+
+                                        '</div>';
+                                    // open marker infowindow 
+                                
+                                   
+                                //infowindow.open(map, franchise_info[list.franchise_id].marker);
+                                
+                                google.maps.event.addListener(marker, 'click', function() {
+                            
+                                        console.log("sdfhsdfkj");
+                                        
+                                        
+                                            $(".frn_container_popup").dialog({
+                                                autoOpen : true
+                                                ,open:function() {
+                                                    $(".frn_container_popup").html(contentString)
+                                                }
+                                            });
+                                            
+                                            var infowindow = new google.maps.InfoWindow({
+                                                height:800
+                                                ,minWidth:800
+                                                ,position: new google.maps.LatLng(fr_det.lat, fr_det.lng)
+                                                ,center: new google.maps.LatLng(fr_det.lat, fr_det.lng)
+                                                ,content:"contentStringjhdshakshfdsahflkjsahdfdfskjadshf"
+                                            });
+                                            infowindow.open(map, marker);
+                                        
+                                });
+                                /*
+                                  fr_det.marker.infowindow = new google.maps.InfoWindow({
+                                        height:800
+                                        ,width:800
+                                        ,content: contentString
+                                    });
+                                    
+                                google.maps.event.addListener(fr_det.marker, 'click', function() {
+                                     fr_det.marker.infowindow.open(map,fr_det.marker);
+                                });*/
+
+                            marker.setMap(map);
+                  });          
+                //end map data
+                
+                
+                
                 return false;
                 
         },'json');
@@ -305,47 +384,6 @@
         };
         
         map = new google.maps.Map(document.getElementById('map_canv'),mapOptions);
-        
-        $.each(franchise_info,function(i,list) { i=list.franchise_id;
-            
-            
-            franchise_info[i].marker =new google.maps.Marker({
-                    position: new google.maps.LatLng(franchise_info[i].lat, franchise_info[i].lng)
-                    ,title: franchise_info[i].franchise_name
-                });
-
-            alert(franchise_info[i]);
-
-                var fr_det = franchise_info[i];
-                            
-                contentString = '<div id="m_pop_content">'+
-                        '<div id="siteNotice">'+
-                            '</div>'+
-                            '<h1 id="firstHeading" class="firstHeading">'+fr_det['franchise_name']+'</h1>'+
-                            '<div id="bodyContent">'+
-                            '<p><b>'+fr_det['store_name']+'</b>,<br> '+fr_det["address"]+'</p>'+
-                            ' Registed on '+fr_det['created_on']+'</p>'+
-                            '<p><div class="click_to_know"><a href="javascript:void(0);" franchise_id="'+fr_det["franchise_id"]+'" onclick="click_to_know(this)">Know more</a></div></p>'+
-                            '</div>'+
-                        '</div>';
-
-                google.maps.event.addListener(franchise_info[i].marker, 'click', function() {
-                        alert("clicked");
-                                $(".frn_container_popup").dialog({
-                                    autoOpen : true
-                                    ,open:function() {
-                                        $(".frn_container_popup").html(contentString)
-                                    }
-                                });
-                });
-                
-                franchise_info[i].marker.setMap(map);
-                
-                
-        });
-        
-                            
-                              
         
     }
 

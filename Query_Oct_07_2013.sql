@@ -172,3 +172,15 @@ select * from pnh_m_franchise_info fi where fi.franchise_id=5 limit 1
 select * from pnh_m_franchise_info fi where 1=1 order by fi.created_on asc
 select * from pnh_m_franchise_info fi where 1=1 and fi.territory_id=3 and fi.is_suspended=1 order by fi.created_on asc
 select * from pnh_m_franchise_info fi where 1=1 and fi.territory_id=3 order by fi.created_on asc
+
+select * from pnh_menu order by name
+
+select mn.id,mn.name from pnh_menu mn
+
+    where mn.status=1 
+    group by mn.id
+    order by mn.name
+
+    join king_deals deal on deal.menuid=mn.id
+
+select menuid from king_deals group by menuid
