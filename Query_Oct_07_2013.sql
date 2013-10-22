@@ -184,3 +184,11 @@ select mn.id,mn.name from pnh_menu mn
     join king_deals deal on deal.menuid=mn.id
 
 select menuid from king_deals group by menuid
+
+#Oct-22-2013
+select * from king_deals group by menuid
+
+select * from m_product_deal_link dl
+join king_deals as d on d.dealid=dl.itemid
+join m_product_info as pi on pi.product_id=dl.product_id
+where dl.itemid=5348265767
