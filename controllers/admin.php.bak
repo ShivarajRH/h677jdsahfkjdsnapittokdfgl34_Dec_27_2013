@@ -2396,14 +2396,18 @@ class Admin extends Erp {
 	{
 		$this->erpm->auth();
 		
+		/*
 		$inv_bygrpno = $this->db->query("select distinct split_inv_grpno 
 	from shipment_batch_process_invoice_link a 
 	join proforma_invoices b on a.p_invoice_no = b.p_invoice_no 
 	join king_invoice c on c.invoice_no = a.invoice_no  
-where dispatch_id = ? ",$invoice_no)->row()->split_inv_grpno;
+where (b.dispatch_id = ? or c.ref_dispatch_id = ? ) 
+	
+",array($invoice_no,$invoice_no))->row()->split_inv_grpno;
 
 	if($inv_bygrpno)
 		$invoice_no = $inv_bygrpno;
+		 */ 
 		
 //		$batch=$this->db->query("select * from shipment_batch_process_invoice_link where invoice_no=?",$invoice_no)->row_array();
 //		if(!empty($batch) && $batch['packed']==0 && $this->db->query("select invoice_status as s from king_invoice where invoice_no=?",$invoice_no)->row()->s==1)
@@ -2423,10 +2427,10 @@ where dispatch_id = ? ",$invoice_no)->row()->split_inv_grpno;
 						left join king_brands as brand on brand.id=deal.brandid
 						left join pnh_m_offers f on f.id= ordert.offer_refid
 						join king_invoice `in` on in.transid=ordert.transid and in.order_id=ordert.id  
-						where (in.invoice_no=? or split_inv_grpno = ?)
+						where (in.invoice_no=? or split_inv_grpno = ? or ref_dispatch_id = ? )
 						group by in.invoice_no  
 				";
-		$q=$this->db->query($sql,array($invoice_no,$invoice_no));
+		$q=$this->db->query($sql,array($invoice_no,$invoice_no,$invoice_no));
 		
 	 
 		$data['page']="../../body/invoice";
@@ -2440,15 +2444,20 @@ where dispatch_id = ? ",$invoice_no)->row()->split_inv_grpno;
 	
 	
 	
-	function print_allinv($is_active=1,$from="",$to="",$limit='',$st=''){
-		
+	function print_allinv($is_active=1,$from="",$to="",$limit='',$st='',$fid=0){
 
+		
+		$inv_type='customer';
+		
 //		$is_active = $is_active?1:0; 
 		$from = $from?$from:date('Y-m-d');
 		$to = $to?$to:date('Y-m-d');
 
-		$inv_type = 'auditing';
-		$sql = "select distinct invoice_no from king_invoice where date(from_unixtime(createdon)) >= ? and date(from_unixtime(createdon)) <= ?  and invoice_status = ? order by invoice_no ";
+		$cond = '';
+		if($fid)
+			$cond.= ' and franchise_id = '.$fid;	
+		$inv_type = 'aud11iting';
+		$sql = "select distinct a.invoice_no from king_invoice a  join king_orders b on a.order_id = b.id join king_transactions c on c.transid = b.transid where date(from_unixtime(createdon)) >= ? and date(from_unixtime(createdon)) <= ?  and invoice_status = ? $cond group by a.invoice_no order by a.invoice_no ";
 
 		if($limit !== ''){
 			if($st !== '')
@@ -2459,6 +2468,8 @@ where dispatch_id = ? ",$invoice_no)->row()->split_inv_grpno;
 
 
 		$res = $this->db->query($sql,array($from,$to,$is_active));
+		
+		//echo $this->db->last_query();
 
 		
 
@@ -2476,15 +2487,47 @@ where dispatch_id = ? ",$invoice_no)->row()->split_inv_grpno;
 		 
 			join king_invoice `in` on in.transid=ordert.transid and in.order_id=ordert.id
 			where in.invoice_no=?  ";
-			$q=$this->db->query($sql,array($invoice_no));
+			//$q=$this->db->query($sql,array($invoice_no));
+			
+			
+			$sql="select in.invoice_no,item.nlc,item.phc,ordert.*,
+							item.service_tax_cod,item.name,in.invoice_no,
+							brand.name as brandname,
+							in.mrp,in.tax as tax,
+							in.discount,
+							in.phc,in.nlc,
+							in.service_tax,
+							item.pnh_id,f.*
+						from king_orders as ordert
+						join king_dealitems as item on item.id=ordert.itemid 
+						join king_deals as deal on deal.dealid=item.dealid 
+						left join king_brands as brand on brand.id=deal.brandid
+						left join pnh_m_offers f on f.id= ordert.offer_refid
+						join king_invoice `in` on in.transid=ordert.transid and in.order_id=ordert.id  
+						where (in.invoice_no=? )
+						group by in.invoice_no  
+				";
+		$q=$this->db->query($sql,array($invoice_no,$invoice_no));
+		
 			if($q->num_rows()){
-				$data['page_top'] = 900*$i+20;
-				$data['page']="../../body/invoice";
-				$data['orders']=$orders=$q->result_array();
-				$data['invoice_no']=$orders[0]['invoice_no'];
+				//$data['page_top'] = 900*$i+20;
+				//$data['page']="../../body/invoice";
+				//$data['invoice_list']=$orders=$q->result_array();
+				//$data['invoice_no']=$orders[0]['invoice_no'];
+				//$data['trans']=$this->db->query("select * from king_transactions where transid=?",$orders[0]['transid'])->row_array();
+				//$data['inv_type'] = $inv_type;
+				
+				echo '<div style="page-break-after:always">';
+				$data['page']="../../body/invoice_bulk";
+				$data['invoice_list']=$orders=$q->result_array();
+				$data['invoice_no']=$invoice_no;
 				$data['trans']=$this->db->query("select * from king_transactions where transid=?",$orders[0]['transid'])->row_array();
+		
 				$data['inv_type'] = $inv_type;
-				$this->load->view("body/invoice",$data);
+		
+				$this->load->view("body/invoice_bulk",$data);
+				
+				echo '</div>';
 			}
 		}
 		

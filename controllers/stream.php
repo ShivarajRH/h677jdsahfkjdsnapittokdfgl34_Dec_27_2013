@@ -2,6 +2,48 @@
 include APPPATH.'/controllers/analytics.php';
 class Stream extends Analytics 
 {
+    /******** Orders Reservation**************/
+    /**
+     * Dispaly and process transaction batch status as 
+     *          1. Batch Ready
+     *          2. Partial Ready
+     *          3. Not Ready
+     * @param type $s
+     * @param type $e
+     */
+    function trans_reservation_status($s=false,$e=false) {
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+
+        if(!$s)
+                $e=$s=date("Y-m-d");
+        $from=strtotime($s);
+        $to=strtotime("23:59:59 $e");
+
+        $r_orders=$this->db->query("select ti.territory_name,ti.id as territory_id,m.name as menu_name,d.menuid,f.franchise_id,f.franchise_name,t.amount,p.brand_id,p.product_id,o.time,o.transid,i.name as deal,i.id as itemid,p.product_name,sum(s.available_qty) as stock,i.price from king_orders o join king_dealitems i on i.id=o.itemid join king_deals d on d.dealid = i.dealid join king_transactions t on t.transid=o.transid left outer join m_product_deal_link l on l.itemid=i.id left outer join products_group_orders po on po.order_id=o.id left outer join m_product_info p on p.product_id=ifnull(l.product_id,po.product_id) left outer join t_stock_info s on s.product_id=ifnull(p.product_id,po.product_id) left join pnh_m_franchise_info f on f.franchise_id = t.franchise_id left join pnh_menu m on m.id = d.menuid and t.is_pnh = 1 left join pnh_m_territory_info ti on ti.id = f.territory_id where o.time between $from and $to group by o.transid,p.product_id order by o.time desc")->result_array();
+        $order=array();
+        $deal=array();
+        foreach($r_orders as $o)
+        {
+                if(!isset($order[$o['transid']]))
+                        $order[$o['transid']]=array();
+                if(!isset($deal[$o['transid']."-".$o['itemid']]))
+                {
+                        $deal[$o['transid']."-".$o['itemid']]=array();
+                        $order[$o['transid']][]=$o;
+                }
+                $deal[$o['transid']."-".$o['itemid']][]=$o;
+        }
+        $data['orders']=$order;
+        $data['deal']=$deal;
+
+        $data['s']=date("d/m/y",$from);
+        $data['e']=date("g:ia d/m/y",$to);
+
+        $data['page']='trans_reservation_status';
+        $this->load->view("admin",$data);
+    }
+    /********End Orders Reservation**************/
+    
     /**
      * Function to get count of unreplied comments
      * @param type $stream_id

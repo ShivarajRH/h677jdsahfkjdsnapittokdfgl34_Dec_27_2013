@@ -1743,7 +1743,7 @@ class Pnh extends Controller{
 			{
 				if($updated_voucher['not_alloted'])
 				{
-					//$this->pdie("The alloted Voucher Book ".implode(',',$updated_voucher['valid'])." is not activated yet!!! Pleas make a voucher value payment and continue franchising");
+					//$this->pdie("The alloted Voucher Book ".implode(',',$updated_voucher['valid'])." is not activated yet!!! Please make a voucher value payment and continue franchising");
 					$this->erpm->pnh_sendsms($from,"The alloted Voucher Book ".implode(',',$updated_voucher['valid'])." is not activated yet!!! Please make a voucher value payment and continue franchising",$from,0,2);
 					echo "The alloted Voucher Book ".implode(',',$updated_voucher['not_alloted'])." is not activated yet!!! please make a voucher value payment and continue franchising";
 				}
@@ -1825,8 +1825,8 @@ class Pnh extends Controller{
 					if(!empty($is_voucher_activated))
 					{
 						$voucher_offran=$is_voucher_activated['franchise_id'];
-						$voucher_value+=$is_voucher_activated['value'];
-						$voucher_code_used[$v_code] = $is_voucher_activated['value'];
+						$voucher_value+=$is_voucher_activated['customer_value'];
+						$voucher_code_used[$v_code] = $is_voucher_activated['customer_value'];
 						$valid_voucher_count++;//count of correct coupon code entered by user
 					}
 				}

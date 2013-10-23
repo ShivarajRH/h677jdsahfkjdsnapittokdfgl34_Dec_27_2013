@@ -86,12 +86,12 @@ class Admin extends Erp {
 		$this->form_validation->set_rules ( "explo_email", "User name", "required|min_length[4]|max_length[20]|alpha_numeric|trim" );
 		$this->form_validation->set_rules ( "explo_password", "Password", "required|min_length[4]|max_length[15]|callback_authenticate" );
 		if ($this->form_validation->run () !== FALSE) {
-//			print_r($user);echo '<br>';
+			//print_r($user);echo '<br>';
 			$userid = md5 ( strtolower ( $user ) );
 			//print_r($userid);echo '<br>';
 			$userdetails = $this->adminmodel->getUser ( $userid );
-//			print_r($userdetails);
-//			print_r(md5($pass));exit;
+			//print_r($userdetails);
+			//print_r(md5($pass));exit;
 			if ($userdetails != FALSE) {
 				$userPass = $userdetails->password;
 				$usertype = $userdetails->usertype;
@@ -2468,8 +2468,6 @@ where (b.dispatch_id = ? or c.ref_dispatch_id = ? )
 
 
 		$res = $this->db->query($sql,array($from,$to,$is_active));
-		
-		//echo $this->db->last_query();
 
 		
 

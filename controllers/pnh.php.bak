@@ -260,6 +260,9 @@ class Pnh extends Controller{
 		}
 		
 		$name=ucfirst($deal['print_name']);
+		if(!trim($name))
+			$name=ucfirst($deal['name']);
+		  
 		$cost=round($deal['price']-$discount,2);
 		//echo "{$name}\n Mrp : Rs {$deal['mrp']}, Landing Cost : Rs {$cost}";
 		$avail=$this->erpm->do_stock_check(array($deal['id']),array(1),true);
@@ -1762,6 +1765,8 @@ class Pnh extends Controller{
 		 */
 		function create_prepaidorder($from,$msg,$membr)
 		{
+			
+			//check is_membr
 			$is_strkng_membr=$this->db->query("select * from pnh_member_info where mobile=? limit 1",$from)->row_array();
 			if(empty($is_strkng_membr) )
 				$this->pdie("Invalid Mobile number");
@@ -1770,22 +1775,22 @@ class Pnh extends Controller{
 			$msg_det=explode(' ',$msg);
 			$prod_det=$msg_det[0];//product n qty
 			$voucher_code=$msg_det[1];//coupon code
-			
+		
 			$v_type= strlen($voucher_code);
 			$secret_codetype=ctype_alpha($voucher_code);//cheks the entered secret code is charecters
-			 
+			
 			if($secret_codetype)
 				$vcode=0;
-			else
+			else 
 				$vcode=1;
-			 
+			
 			if(empty($prod_det))
 				$this->pdie("Invalid syntax");
 			if(empty($voucher_code))
 				$this->pdie("Please Enter Voucher Scratch Code");
-			 
+			
 			$this->db->query('insert into pnh_sms_log(sender,msg,franchise_id,type,created_on)values(?,?,?,"VOUCHER",unix_timestamp(now()))',array($from,$msg,$is_strkng_membr['franchise_id']));
-
+				
 			if($vcode==0)
 			{
 				if($voucher_code!='usebal')
@@ -1796,20 +1801,20 @@ class Pnh extends Controller{
 			$voucher_count=sizeof($voucher_codes);//count of coupon codes enterd by user
 			$valid_voucher_count=0;
 			$voucher_value=0;
-			 
+			
 			if($vcode==1)
 			{
-
+				
 				$fid=$this->db->query("SELECT GROUP_CONCAT(franchise_id) AS franchise_id,IF(is_alloted=1,1,0),IF(is_activated=1,1,0),IF(status=3,3,0)FROM pnh_t_voucher_details WHERE voucher_code IN(?)",$voucher_codes)->row()->franchise_id;
 				if(empty($fid))
 					$this->pdie("Not Authorized");
+			
+			$fran=$this->db->query("select * from pnh_m_franchise_info where franchise_id in(?)",$fid)->row_array();
+			$is_voucheroffran=$this->db->query("select * from pnh_t_voucher_details where voucher_code in($voucher_code)group by franchise_id");
+			if($is_voucheroffran->num_rows()>1)
+				$this->pdie("Vouchers of two different stores can't be activated");
 
-				$fran=$this->db->query("select * from pnh_m_franchise_info where franchise_id in(?)",$fid)->row_array();
-				$is_voucheroffran=$this->db->query("select * from pnh_t_voucher_details where voucher_code in($voucher_code)group by franchise_id");
-				if($is_voucheroffran->num_rows()>1)
-					$this->pdie("Vouchers of two different stores can't be activated");
-
-				$voucher_code_used = array();
+			$voucher_code_used = array();
 				foreach($voucher_codes as $v_code)
 				{
 						
@@ -1885,15 +1890,15 @@ class Pnh extends Controller{
 				foreach($voucher_codes as $v=> $vscode)
 				{
 					$vdet=$this->db->query("select b.book_id,d.franchise_id
-							from pnh_t_voucher_details a
-							join pnh_t_book_voucher_link b on b.voucher_slno_id = a.id
-							join pnh_t_book_allotment d on d.book_id=b.book_id
-							where voucher_code=? and member_id=?  and is_activated=1 and a.status=?
-							group by b.book_id",array($vscode,$is_strkng_membr['pnh_member_id'],$voucher_status))->row_array();
-						
+															from pnh_t_voucher_details a
+															join pnh_t_book_voucher_link b on b.voucher_slno_id = a.id
+															join pnh_t_book_allotment d on d.book_id=b.book_id
+															where voucher_code=? and member_id=?  and is_activated=1 and a.status=?
+															group by b.book_id",array($vscode,$is_strkng_membr['pnh_member_id'],$voucher_status))->row_array();
+					
 					//get the book menus
 					$vmenus=$this->db->query("select id,name from  pnh_menu where id in (select menu_ids from pnh_t_book_details a join pnh_m_book_template b on b.book_template_id=a.book_template_id where a.book_id=?)",$vdet['book_id'])->result_array();
-						
+					
 					foreach($vmenus as $m)
 					{
 						//check used multiple voucher same menu
@@ -1902,7 +1907,7 @@ class Pnh extends Controller{
 							if(!in_array($m['id'],$vmenu_list))
 								$this->pdie("Sorry not able to use the different menu vouchers at time");
 						}
-
+						
 						//check voucher menu linked to franchise
 						$vmenu_list[]=$m['id'];
 						$fmenu=$this->db->query("select * from pnh_franchise_menu_link where fid=? and menuid=? and status=1",array($vdet['franchise_id'],$m['id']))->row_array();
@@ -1910,18 +1915,18 @@ class Pnh extends Controller{
 						{
 							$this->pdie("Sorry not able to place a order voucher menu not assigned for voucher franchise");
 						}
-
+						
 						//check voucher menu orderd deal menu same
 						if(!in_array($m['id'],$dealmenu))
 						{
 							$this->pdie("Voucher ".$vscode." only for ".$m['name']." products");
 						}
-
+						
 						//check ordered deal menus are same
 						if(count(array_unique($dealmenu))>1)
 							$this->pdie("Voucher ".$vscode." only for ".$m['name']." products");
 					}
-						
+					
 					foreach($dealmenu as $mk=>$dm)
 					{
 						//check ordered deal menu linked to franchise
@@ -1930,11 +1935,11 @@ class Pnh extends Controller{
 						{
 							$this->pdie("Sorry not able to  place a order product menu not assined for voucher franchise ");
 						}
-
+						
 						//check ordered deal menus are same
 						if(count(array_unique($dealmenu))>1)
 							$this->pdie("Sorry not able to place the different menu orders at time");
-
+						
 						//check if the deal is voucher book
 						if($dm==VOUCHERMENU)
 						{
@@ -1945,10 +1950,11 @@ class Pnh extends Controller{
 			}
 
 			//validate the voucher menu link block
-			 
+			
 			$fid=$this->db->query("SELECT GROUP_CONCAT(franchise_id) AS franchise_id,IF(is_alloted=1,1,0),IF(is_activated=1,1,0),IF(status=3,3,0)FROM pnh_t_voucher_details WHERE voucher_code IN(?)",$voucher_codes)->row()->franchise_id;
 			if(empty($fid))
-				echo '<script>alert("Not Authorized");");return false;</script>';
+				$this->pdie("Not Authorized");
+				
 			 
 			$fran=$this->db->query("select * from pnh_m_franchise_info where franchise_id in(?)",$fid)->row_array();
 
@@ -2279,11 +2285,11 @@ class Pnh extends Controller{
 			else
 				$v_bal=0;
 			 
-					$given_vslnos=implode(',',$voucher_code_used['gven_secretcode']);
-					$othr_vslnos=implode(',',$voucher_code_used['othr_secretcode']);
-					$v_balamt=$this->db->query("SELECT SUM(customer_value) AS voucher_bal FROM pnh_t_voucher_details WHERE STATUS in(3,5) AND member_id=?",$is_strkng_membr['pnh_member_id'])->row()->voucher_bal;
-					$this->erpm->pnh_sendsms($from,"your balance after purchase is Rs $v_balamt,redeemed vouchers for rs $c_total are $given_vslnos,$othr_vslnos .Happy Shopping",$from,0,1);
-					//echo "your balance after purchase is Rs $v_balamt,redeemed vouchers for rs $c_total are $given_vslnos,$othr_vslnos.Happy Shopping";
+			$given_vslnos=implode(',',$voucher_code_used['gven_secretcode']);
+			$othr_vslnos=implode(',',$voucher_code_used['othr_secretcode']);
+			$v_balamt=$this->db->query("SELECT SUM(customer_value) AS voucher_bal FROM pnh_t_voucher_details WHERE STATUS in(3,5) AND member_id=?",$is_strkng_membr['pnh_member_id'])->row()->voucher_bal;
+			$this->erpm->pnh_sendsms($from,"your balance after purchase is Rs $v_balamt,redeemed vouchers for rs $c_total are $given_vslnos,$othr_vslnos .Happy Shopping",$from,0,1);
+			//echo "your balance after purchase is Rs $v_balamt,redeemed vouchers for rs $c_total are $given_vslnos,$othr_vslnos.Happy Shopping";
 			
 		}
 		
