@@ -7331,6 +7331,8 @@ order by p.product_name asc
 			foreach($transids[1] as $tr_items)
 				$split_transid_list[] = array($tr_items);	
 		
+                $batch_enabled=1;
+                
 		$trans_grp_ref_no = ($this->db->query("select if(max(trans_grp_ref_no),max(trans_grp_ref_no)+1,400001) as n from king_transactions where trans_grp_ref_no >= 0")->row()->n);
 		
 		foreach($split_transid_list as $items)

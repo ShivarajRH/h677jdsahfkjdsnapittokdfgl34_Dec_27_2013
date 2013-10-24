@@ -5,7 +5,7 @@ class Stream extends Analytics
     /******** Orders Reservation**************/
     /**
      * Dispaly and process transaction batch status as 
-     *          1. Batch Ready
+     *          1. Batch Ready is qty<=avail_qty
      *          2. Partial Ready
      *          3. Not Ready
      * @param type $s start date
@@ -17,50 +17,23 @@ class Stream extends Analytics
         if(!$s)
                 $e=$s=date("Y-m-d",  strtotime("last month")); //date("Y-m-d");
         
-        echo $e.$s;
+        //echo $e.$s;
         $from=strtotime($s);
         $to=strtotime("23:59:59 $e");
         
-        /*select ti.territory_name,ti.id as territory_id,m.name as menu_name,d.menuid,f.franchise_id,f.franchise_name,t.amount,p.brand_id,p.product_id,o.time,o.transid,i.name as deal,i.id as itemid,p.product_name,sum(s.available_qty) as stock,i.price from king_orders o 
-                                join king_dealitems i on i.id=o.itemid 
-                                join king_deals d on d.dealid = i.dealid 
-                                join king_transactions t on t.transid=o.transid 
-                                left outer join m_product_deal_link l on l.itemid=i.id 
-                                left outer join products_group_orders po on po.order_id=o.id 
-                                left outer join m_product_info p on p.product_id=ifnull(l.product_id,po.product_id) 
-                                left outer join t_stock_info s on s.product_id=ifnull(p.product_id,po.product_id) 
-                                left join pnh_m_franchise_info f on f.franchise_id = t.franchise_id 
-                                left join pnh_menu m on m.id = d.menuid and t.is_pnh = 1 
-                                left join pnh_m_territory_info ti on ti.id = f.territory_id 
-                                where o.time between $from and $to group by o.transid,p.product_id order by o.time desc*/
-        
         $r_orders=$this->db->query("select 
-                                    if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready') ,'Partial Ready') as batch_status
-                                    ,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time
-                                    ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
-                                    ,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
-                                    from king_orders o
-                                    join m_product_deal_link pdl on pdl.itemid=o.itemid
-                                    join t_stock_info si on si.product_id=pdl.product_id
-                                    join king_transactions tr using(transid)
-                                    WHERE o.actiontime between $from and $to 
-                                    group by o.transid order by tr.actiontime desc")->result_array();
-       /* $order=array();
-        $deal=array();
-        foreach($r_orders as $o)
-        {
-                if(!isset($order[$o['transid']]))
-                        $order[$o['transid']]=array();
-                if(!isset($deal[$o['transid']."-".$o['itemid']]))
-                {
-                        $deal[$o['transid']."-".$o['itemid']]=array();
-                        $order[$o['transid']][]=$o;
-                }
-                $deal[$o['transid']."-".$o['itemid']][]=$o;
-        }
-        $data['last_query']=$this->db->last_query();
-        $data['orders']=$order;
-        $data['deal']=$deal;*/
+                            if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status
+                            ,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time
+                            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                            ,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+                            from king_orders o
+                            join m_product_deal_link pdl on pdl.itemid=o.itemid
+                            join t_stock_info si on si.product_id=pdl.product_id
+                            join king_transactions tr using(transid) 
+                            WHERE tr.actiontime between $from and $to 
+                            group by o.transid order by tr.actiontime desc")->result_array();
+
+        $data['last_qry']=$this->db->last_query();
         $data['transactions']=$r_orders;
         $data['total_trans']=count($r_orders);
         $data['s']=date("d/m/y",$from);

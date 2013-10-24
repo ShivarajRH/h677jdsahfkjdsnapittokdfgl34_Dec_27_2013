@@ -1,20 +1,27 @@
-<style>
-    table.datagridsort tbody td { padding: 7px; }
-    .datagrid td { padding: 7px; }
-    .datagrid th { background: #443266;color: #C3C3E5; }
-    .subdatagrid {
-        width: 100%;
-    }
-    .subdatagrid td {
-        padding: 3px;
-        font-size: 12px;
-    }
-    .subdatagrid td a {
-        color: #121213;
-    }
+<style type="text/css">
+.leftcont { display: none;}
+table.datagridsort tbody td { padding: 4px; }
+.datagrid td { padding: 1px; }
+.datagrid th { background: #443266;color: #C3C3E5; }
+.subdatagrid {
+    width: 100%;
+}
+.subdatagrid th {
+    padding: 1px !important;
+    font-size: 11px !important;
+    color:#080808;
+    background-color:#F1F0FF; /*rgba(51, 47, 43, 0.61);*/
+}
+.subdatagrid td {
+    padding: 1px;
+    font-size: 11px;
+}
+.subdatagrid td a {
+    color: #121213;
+}
 </style>
 <div class="container" id="account_grn_present">
-    <h2>Stock Overview and Process</h2>
+    <h2>Transaction Reservation Status</h2>
     <div>
         <table class="" width="100%">
                 <tr>
@@ -46,138 +53,89 @@
     </div>
 
     <div style="padding:20px 0px;">
-    <table class="datagrid datagridsort" width="100%">
+    <table class="datagrid" width="100%">
         <thead>
             <tr>
-                <th>Transaction id</th>
-                <th>Order id</th>
-                <th>Product Name</th>
-                <th>Ordered Items</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>Slno</th>
                 <th>Date</th>
+                <th>Transaction Id</th>
+                <th>Stock</th>
+                <th>Orders</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            <?php foreach($transactions as $trans_arr) { 
-     
+            <?php   echo "<pre>".$last_qry."</pre>";
+            foreach($transactions as $i=>$trans_arr) { $i+=1;
+                
                 ?>
             <tr>
-                <td><?php print($trans_arr['transid']); ?></td>
-                <td><?php print($trans_arr['orderid']); ?></td>
-                <td><?php print($trans_arr['name']); ?></td>
-                <td>
+                <td style="width:15px"><?php echo $i; ?></td>
+                <td style="width:180px"><?php echo $trans_arr['str_time']; ?></td>
+                <td><?php echo $trans_arr['transid']; ?></td>
+                <td><?php echo $trans_arr['batch_status']; ?></td>
+                <td style="padding:0px !important;">
                    
-                     <table class="subdatagrid">
+                     <table class="subdatagrid" cellpadding="0" cellspacing="0">
                         
-                        <?php //o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
-                       $trans_orders = $this->db->query("SELECT if(o.quantity<=si.available_qty, 'ready' ,'partial') as batch_status,
+                        <?php $trans_orders = $this->db->query("SELECT if((si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, 'ready' ,'partial')) as batch_status,
                                                             o.id as orderid,o.itemid,o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
                                                             ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
                                                             ,di.id as itemid,di.name as dealname,di.price,di.available,di.pic
                                                             ,pdl.itemid,pdl.product_id,pdl.product_mrp,pdl.qty
                                                             ,si.stock_id,si.product_id,si.available_qty,si.location_id,si.rack_bin_id,si.product_barcode
+                                                            ,if(p.is_sourceable=1,'yes','no') as sorceable
                                                             from king_orders o
                                                             join king_transactions tr on tr.transid=o.transid
                                                             join king_dealitems di on di.id=o.itemid
                                                             join m_product_deal_link pdl on pdl.itemid=o.itemid
                                                             join t_stock_info si on si.product_id=pdl.product_id
+                                                            join m_product_info p on p.product_id=pdl.product_id
                                                             join king_deals deal on deal.dealid=di.dealid
                                                             WHERE tr.transid=?
                                                             group by o.id order by o.actiontime DESC",$trans_arr['transid'])->result_array();
                        
-                        //echo "<pre>";print_r($trans_orders); print $this->db->last_query(); die();
+                                    echo "<pre>"; echo $this->db->last_query();echo "</pre>";
                         ?>
                         <tr>
-                            <th>Transaction id</th>
                             <th>Order id</th>
-                            <th>Product Name</th>
-                            <th>Ordered Items</th>
+                            <th>Prdt Id</th>
+                            <th>Prdt Name</th>
+                            <th>Quantity</th>
                             <th>Status</th>
-                            
-                            <th>Date</th>
+                            <th>Available Stk</th>
+                            <th>Sourceable</th>
                         </tr>
                         <?php
-                        /*foreach($orders as $id=>$order_arr) {*/
-                            foreach($trans_orders as $order) {
+                        foreach($trans_orders as $order) {
                         ?>
                                 <tr>
-                                    <td><?php print($order['transid']); ?></td>
-                                    <td><?php print($order['orderid']); ?></td>
-                                    <td><?php print($order['dealname']); ?></td>
-                                    <td><?php print($order['available']); ?></td>
-                                    <td><?php print($order['batch_status']); ?></td>
-                                    <td><?php print($order['str_time']); ?></td>
-
+                                    <td style="width:100px"><?php echo $order['orderid']; ?></td>
+                                    <td style="width:50px"><?php echo $order['product_id']; ?></td>
+                                    <td style="width:360px"><?php echo $order['dealname']; ?></td>
+                                    <td style="width:50px"><?php echo $order['quantity']; ?></td>
+                                    <td style="width:100px"><?php echo $order['batch_status']; ?></td>
+                                    <td style="width:50px"><?php echo $order['available_qty']; ?></td>
+                                    <td style="width:50px"><?php echo $order['sorceable']; ?></td>
                                 </tr>
-                    <?php 
-                        }
-                   /* }*/
+                        <?php 
+                            }
                         ?>
                         
                     </table>
-                    
+                <td><?php echo "Process Delete"; ?></td>
                 </td>
-                <td><?php print($trans_arr['batch_status']); ?></td>
-                <td><?php print("Process Delete"); ?></td>
-                <td><?php print($trans_arr['str_time']); ?></td>
-
             </tr>
             <?php } ?>
         </tbody>
     </table>
- <?php 
-               
-                /*
-                 * [PNHMMK31572] => Array
-                    (
-                        [0] => Array
-                            (
-                                [str_time] => 23rd September 07:10:40 2013
-                                [id] => 5389
-                                [userid] => 81390
-                                [itemid] => 866577478746
-                                [quantity] => 1
-                                [status] => 0
-                                [bill_person] => Banashankari PayNearHome - 11feet ecommerce Pvt Ltd
-                                [transid] => PNHMMK31572
-                                [amount] => 292
-                                [paid] => 292
-                                [init] => 1379665403
-                                [actiontime] => 1379665403
-                                [is_pnh] => 1
-                                [franchise_id] => 17
-                                [batch_enabled] => 1
-                                [trans_created_by] => 0
-                                [deal] => Lakme Enrich Satin Lip Color - 138
-                                [price] => 221
-                                [available] => 0
-                                [pic] => 4ja9pk73af3h640
-                                [product_id] => 413
-                                [product_mrp] => 225.0000
-                                [qty] => 1
-                                [is_active] => 1
-                                [created_on] => 
-                                [created_by] => 0
-                                [modified_on] => 2013-10-10 15:31:27
-                                [modified_by] => 28
-                                [tmp_pnh_itemid] => 
-                                [stock_id] => 1567
-                                [location_id] => 1
-                                [rack_bin_id] => 25
-                                [mrp] => 225.0000
-                                [available_qty] => 3
-                                [product_barcode] => 8901030324161
-                                [in_transit] => 0
-                                [tmp_brandid] => 0
-                    )
-                 * 
-                 */
-             ?>
+ 
     </div>
 </div>
 
 <script>
+// <![CDATA[
+var GM_TIMING_END_CHUNK1=(new Date).getTime();
 $(document).ready(function() {
         //FIRST RUN
         var reg_date = "<?php echo date('m/d/Y',  time()*60*60*24);?>";
@@ -206,6 +164,7 @@ $(document).ready(function() {
         //loadTableData(0);
         
     });
+// ]]>
 </script>
 
 <?php
