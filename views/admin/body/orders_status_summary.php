@@ -80,6 +80,7 @@ color: #121213;
 </style>	
 
 <div class="container">
+    <!--<h2>Orders Status Summary</h2>-->
     <div class="">
         <form>
             <table width="100%">

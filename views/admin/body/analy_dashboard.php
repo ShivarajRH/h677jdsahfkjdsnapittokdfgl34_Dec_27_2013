@@ -24,7 +24,7 @@
 
 .sk_theme .list_view .list_view_item a{font-size: 13px;margin:2px;color: #888; }
 
-.sk_theme .list_view .list_view_item:hover,.sk_theme .list_view .list_view_item.selected{cursor: pointer;background: #dfdfdf}
+.sk_theme .list_view .list_view_item:hover,.sk_theme .list_view .list_view_item.selected{cursor: pointer;background: #ebf2fc}
 
 
 .sk_theme .list_view .list_view_item .item_det{clear: both;padding:3px;}

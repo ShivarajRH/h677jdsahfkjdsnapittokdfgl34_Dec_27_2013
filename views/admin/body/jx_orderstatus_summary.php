@@ -26,12 +26,13 @@
         $sql_all = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,c.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
                     from king_orders o 
                     join king_transactions c on o.transid = c.transid 
+                    join king_dealitems dl on dl.id=o.itemid
+                    join king_deals deal on deal.dealid=dl.dealid
+                    
                     join pnh_member_info pu on pu.user_id=o.userid 
                     join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
                     join pnh_m_territory_info f on f.id = d.territory_id
                     join pnh_towns e on e.id = d.town_id 
-                    join king_dealitems dl on dl.id=o.itemid
-                    join king_deals deal on deal.dealid=dl.dealid
                     join king_brands br on br.id = deal.brandid 
                     join pnh_menu m on m.id = deal.menuid 
             where c.init between $st_ts and $en_ts $cond
@@ -42,7 +43,7 @@
                             from shipment_batch_process_invoice_link sd
                             join proforma_invoices b on sd.p_invoice_no = b.p_invoice_no
                             join king_transactions c on c.transid = b.transid
-                            join king_orders o on o.id = b.order_id  
+                            join king_orders o on o.id = b.order_id
                             join pnh_member_info pu on pu.user_id=o.userid 
                             join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
                             join pnh_m_territory_info f on f.id = d.territory_id

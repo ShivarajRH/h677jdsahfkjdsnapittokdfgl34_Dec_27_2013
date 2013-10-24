@@ -103,10 +103,10 @@ select * from pnh_menu;
 
 select i.*,d.publish,c.loyality_pntvalue,d.menuid from king_dealitems i join king_deals d on d.dealid=i.dealid JOIN pnh_menu c ON c.id = d.menuid where i.is_pnh=1 and  i.pnh_id='PNH51365' and i.pnh_id!=0
 
-#OCT-09
+####################### OCT-09 ######################
 select * from pnh_order_margin_track order by id desc;
 
-#Oct-10
+####################### Oct-10 ######################
  select * from king_orders order by sno desc
 
 select * from t_stock_info order by created_on desc;
@@ -115,7 +115,7 @@ select * from grn_product_link  order by id desc;
 
 cod_pincodes
 
-#Oct-11
+####################### Oct-11 ######################
 select * from king_deals
 select * from m_product_info
 select * from king_dealitems where id=9893764619
@@ -154,7 +154,7 @@ select d.*,i.*,d.description,d.keywords,d.tagline from king_dealitems i join kin
 
 =============================================================================================================================================================================================
 
-# Oct-17
+####################### Oct-17 ######################
 
 select * from pnh_m_franchise_info fi where 1=1 is_suspended =1
 where fi.territory_id=? and town_id= and franchise_id=?
@@ -164,7 +164,7 @@ select count(*) from pnh_m_franchise_info fi where  fi.is_suspended=0
 
 select count(*) as total from pnh_m_franchise_info
 
-# Oct-18
+####################### Oct-18 ######################
 select count(*) as total from pnh_m_franchise_info where 1=1  and fi.territory_id=14 and fi.town_id=67
 
 select * from pnh_m_franchise_info fi where fi.franchise_id=5 limit 1
@@ -185,7 +185,7 @@ select mn.id,mn.name from pnh_menu mn
 
 select menuid from king_deals group by menuid
 
-#Oct-22-2013
+############ Oct-22-2013 ######################
 select * from king_deals
 
 select * from king_dealitems dl
@@ -199,3 +199,93 @@ where dl.dealid=5348265767
 
 
 select * from king_dealitems
+
+####### Oct-23-2013 ######################
+
+
+select ti.territory_name,ti.id as territory_id,m.name as menu_name,d.menuid,f.franchise_id,f.franchise_name,t.amount,p.brand_id,p.product_id,o.time,o.transid,i.name as deal,i.id as itemid,p.product_name,sum(s.available_qty) as stock,i.price from king_orders o join king_dealitems i on i.id=o.itemid join king_deals d on d.dealid = i.dealid join king_transactions t on t.transid=o.transid left outer join m_product_deal_link l on l.itemid=i.id left outer join products_group_orders po on po.order_id=o.id left outer join m_product_info p on p.product_id=ifnull(l.product_id,po.product_id) left outer join t_stock_info s on s.product_id=ifnull(p.product_id,po.product_id) left join pnh_m_franchise_info f on f.franchise_id = t.franchise_id left join pnh_menu m on m.id = d.menuid and t.is_pnh = 1 left join pnh_m_territory_info ti on ti.id = f.territory_id where o.time between 1186857000 and 1382552999 group by o.transid,p.product_id order by o.time desc
+#IMPSET1
+set @transid='PNHULV52253';
+select 
+if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,"not-ready","ready") ,"partial") as batch_status
+,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+#,o.*
+,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+from king_orders o
+join m_product_deal_link pdl on pdl.itemid=o.itemid
+join t_stock_info si on si.product_id=pdl.product_id
+join king_transactions tr using(transid) 
+where tr.transid=@transid 
+group by o.transid order by tr.actiontime desc
+
+
+
+select * from king_deals
+
+select * from king_dealitems di
+join m_product_deal_link pdl on pdl.itemid=di.id 
+join t_stock_info si on si.product_id=pdl.product_id
+where di.dealid=8626924263
+
+select * from king_orders
+select * from m_product_deal_link;
+select * from t_stock_info where ;
+select * from king_transactions
+#IMPSET2
+#1.
+set @transid='PNHULV52253';set @s=1186857000; set @e=1382550000;
+SELECT
+if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,"not-ready","ready") ,"partial") as batch_status,
+o.id as orderid,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time,o.itemid,o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
+,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+,di.id as itemid,di.name as dealname,di.price,di.available,di.pic
+,pdl.itemid,pdl.product_id,pdl.product_mrp,pdl.qty
+,si.stock_id,si.product_id,si.available_qty,si.location_id,si.rack_bin_id,si.product_barcode
+from king_orders o
+join king_transactions tr on tr.transid=o.transid
+join king_dealitems di on di.id=o.itemid
+join m_product_deal_link pdl on pdl.itemid=o.itemid
+join t_stock_info si on si.product_id=pdl.product_id
+join king_deals deal on deal.dealid=di.dealid
+WHERE o.actiontime between @s and @e and tr.transid=@transid
+group by o.id order by o.actiontime DESC;
+# pdl.product_id=7263 and di.name="Colgate Toothpaste Herbal 100Gm" and 
+#2.
+SELECT if(o.quantity<=si.available_qty, 'ready' ,'partial') as batch_status,
+                                                            o.id as orderid,o.itemid,o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
+                                                            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                                                            ,di.id as itemid,di.name as dealname,di.price,di.available,di.pic
+                                                            ,pdl.itemid,pdl.product_id,pdl.product_mrp,pdl.qty
+                                                            ,si.stock_id,si.product_id,si.available_qty,si.location_id,si.rack_bin_id,si.product_barcode
+                                                            from king_orders o
+                                                            join king_transactions tr on tr.transid=o.transid
+                                                            join king_dealitems di on di.id=o.itemid
+                                                            join m_product_deal_link pdl on pdl.itemid=o.itemid
+                                                            join t_stock_info si on si.product_id=pdl.product_id
+                                                            join king_deals deal on deal.dealid=di.dealid
+                                                            WHERE tr.transid='PNHQGI68526'
+                                                            group by o.id order by o.actiontime DESC
+
+
+SELECT from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time,o.id,o.userid,o.itemid,o.quantity,o.status,o.bill_person, tr.transid,tr.amount,tr.paid,tr.init,tr.actiontime,tr.status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.trans_created_by, di.id as itemid,di.name as deal,di.price,di.available,di.pic, pdl.*, si.* from king_orders o join king_transactions tr using(transid) join king_dealitems di on di.id=o.itemid join m_product_deal_link pdl on pdl.itemid=o.itemid join t_stock_info si on si.product_id=pdl.product_id WHERE o.actiontime between 1379874600 and 1379960999 order by o.actiontime DESC
+
+set @transid='PNHULV52253';set @s=1186857000; set @e=1382550000;
+SELECT
+o.id as orderid,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time,o.itemid,o.quantity,o.status,o.bill_person
+,tr.transid,tr.amount,tr.paid,tr.init,tr.actiontime,tr.status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.trans_created_by
+,di.id as itemid,di.name as deal,di.price,di.available,di.pic
+,pdl.*
+#,si.*
+from king_orders o
+join king_transactions tr on tr.transid=o.transid
+join king_dealitems di on di.id=o.itemid
+join m_product_deal_link pdl on pdl.itemid=o.itemid
+#join t_stock_info si on si.product_id=pdl.product_id
+join king_deals deal on deal.dealid=di.dealid
+WHERE o.actiontime between @s and @e and tr.transid=@transid
+group by o.id order by o.actiontime DESC;
+# pdl.product_id=7263 and di.name="Colgate Toothpaste Herbal 100Gm" and 
+
+
+
+####### Oct- -2013 ######################

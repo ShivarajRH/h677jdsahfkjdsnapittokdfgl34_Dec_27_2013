@@ -170,7 +170,7 @@ WHERE emp.employee_id IS NULL OR emp.name IS NULL ';
                     echo json_encode(array('status'=>"fail",'response'=>$tbl_data_html,'tbl_total_rows'=>$tbl_total_rows,'limit'=>$limit,'pagi_links'=>'','p1'=>'','p2'=>'','c'=>'','pg'=>0,'items_info'=>"Showing <strong>0</strong>"));
             }
     }
-    
+    //END PNH Calls log files
     
     function addproduct()
     {
