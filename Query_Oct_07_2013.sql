@@ -294,16 +294,16 @@ group by o.id order by o.actiontime DESC;
 ####### Oct-24 -2013 ######################
 # Transaction
 select 
-if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status 
-,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time 
-,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled 
-,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone 
-from king_orders o 
-join m_product_deal_link pdl on pdl.itemid=o.itemid 
-join t_stock_info si on si.product_id=pdl.product_id 
-join king_transactions tr using(transid) 
-WHERE tr.actiontime between 1379961000 and 1380047399 
-group by o.id order by tr.actiontime desc
+                            if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status
+                            ,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time
+                            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                            ,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+                            from king_orders o
+                            join m_product_deal_link pdl on pdl.itemid=o.itemid
+                            join t_stock_info si on si.product_id=pdl.product_id
+                            join king_transactions tr using(transid) 
+                            WHERE tr.actiontime between 1379961000 and 1380047399 
+                            group by o.transid order by tr.actiontime desc
 
 #Orders of transaction
 SELECT if((si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, 'ready' ,'partial')) as batch_status,

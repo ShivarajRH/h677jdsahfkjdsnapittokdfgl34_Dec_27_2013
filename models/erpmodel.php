@@ -2,7 +2,494 @@
 
 class Erpmodel extends Model
 {
-	
+    function do_pnh_offline_shipment_batch_process()
+    {
+            ini_set('memory_limit','512M');
+            $i_transid=false;
+            $ttl_num = $num=$this->input->post("num_orders");
+            $process_partial=$this->input->post("process_partial");
+
+            //$user = $this->erpm->auth();
+
+
+            if(empty($num))
+                    show_error("Enter no of orders to process");
+            $i_transid=$this->input->post("transid");
+
+            $ordersby = strtolower($this->input->post("snp_pnh"));
+            $en_date = $this->input->post("en_date");
+
+            $down_import_summ = 0;
+            $cond = '';
+            $is_pnh=1;
+
+            if($ordersby == 'others')
+            {
+                    $is_pnh=0;
+                    $cond .= ' and t.is_pnh = 0 ';
+                    $snp_pnh_part = $this->input->post("snp_pnh_part");
+                    if(count($snp_pnh_part))
+                    {
+                            $cond .= ' and partner_id in ('.implode(',',$snp_pnh_part).') ';	
+                    }else
+                    {
+                            show_error("Please select atleast one partner");
+                    }
+
+
+                    $process_orderby = $this->input->post('process_orderby');
+                    $by_brandid = $this->input->post('by_brandid');
+
+                    //$by_p_oids = $this->input->post('by_p_oids');
+                    if($process_orderby)
+                    {
+                            if(count($snp_pnh_part) == 1)
+                            {
+                                    if($process_orderby == 1)
+                                    {
+                                            $down_import_summ = 1;
+                                            $p_oids = $this->input->post('p_oids');
+
+                                            $p_oids = (explode(',',$p_oids));
+                                            $tmp_poids = array();
+                                            foreach($p_oids as $t_poid)
+                                            {
+                                                    if($t_poid)
+                                                            array_push($tmp_poids,'"'.$t_poid.'"');
+                                            }
+                                            $p_oids = implode(',',$tmp_poids); 
+
+                                            if(!$p_oids)
+                                            {
+                                                    show_error("No Partner Ordernos added.");	
+                                            }else
+                                            {
+                                                    $cond .=  ' and partner_reference_no in ('.$p_oids.')';
+                                                    $down_import_summ = 1;
+                                                    $ttl_num = count(explode(',',$p_oids));
+                                            }
+                                    }else 
+                                    {
+                                            if($by_brandid)
+                                                    $cond .=  ' and d.brandid = '.$by_brandid.' ';
+                                            else 
+                                                    show_error("No brand selected");	
+                                    }
+
+                            }else
+                            {
+                                    show_error("Order ids can be processed only for one partner.");
+                            }
+                    }
+
+
+            }else
+            {
+                    $cond .= ' and t.is_pnh = 1 ';
+                    $is_pnh=1;
+
+                    $by_menu = $this->input->post('by_menu');
+                    if($by_menu)
+                    {
+                            $pmenu_idlist = $this->input->post('pmenu_id');
+                            if($pmenu_idlist)
+                            {
+                                    $cond .= ' and menuid in ('.implode(',',$pmenu_idlist).') ';
+                            }else
+                            {
+                                    show_error(" No menu selected");
+                            }
+                    }
+            }
+
+            $trans=array();
+            $itemids=array();
+
+            if($en_date)
+            {
+                    list($ey,$em,$ed) = explode('-',$en_date);
+                    $en_date_ts = mktime(23,59,59,$em,$ed,$ey);
+                    $cond .= ' and t.init < '.$en_date_ts.' ';
+            }
+
+            if($i_transid)
+            {
+                    $cond = '';
+                    $is_pnh = $this->db->query("select is_pnh from king_transactions where transid = ? ",$i_transid)->row()->is_pnh;
+            }
+
+
+
+
+            if($is_pnh)
+            {
+                    $fr_list = array();
+                    $fr_list_res = $this->db->query("select franchise_id  from pnh_m_franchise_info where is_suspended = 0 ")->result_array();
+                    foreach($fr_list_res as $fr_det)
+                            $fr_list[] = $fr_det['franchise_id'];
+
+                    $cond .= ' and t.franchise_id in ('.implode(',',$fr_list).')';
+            }
+
+
+            if($i_transid)
+                    $raw_trans=$this->db->query("select o.* from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 where t.batch_enabled=1 and t.transid=?",$i_transid)->result_array();
+            else
+                    $raw_trans=$this->db->query("select o.*,t.partner_reference_no from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 join king_dealitems di on di.id = o.itemid join king_deals d on d.dealid = di.dealid  where t.batch_enabled=1 and t.is_pnh=$is_pnh $cond order by t.priority desc, t.init asc")->result_array();
+
+
+
+            $v_transids=array();
+            foreach($raw_trans as $t)
+            {
+                    $transid=$t['transid'];
+                    if(!isset($trans[$transid]))
+                            $trans[$transid]=array();
+                    $trans[$transid][]=$t;
+                    $itemids[]=$t['itemid'];
+                    $v_transids[]=$t['transid'];
+            }
+            if(empty($trans))
+                    show_error("No orders to process");
+
+            $itemids=array_unique($itemids);
+            $raw_prods=$this->db->query("select itemid,qty,product_id from m_product_deal_link where itemid in ('".implode("','",$itemids)."')")->result_array();
+            $products=array();
+            $productids=array();
+            $partials=$not_partials=array();
+            foreach($raw_prods as $p)
+            {
+                    $itemid=$p['itemid'];
+                    if(!isset($products[$itemid]))
+                            $products[$itemid]=array();
+
+                    $products[$itemid][]=$p;
+                    $productids[]=$p['product_id'];
+            }
+            $productids=array_unique($productids);
+
+            $raw_prods=$this->db->query("select * from products_group_orders where transid in ('".implode("','",$v_transids)."')")->result_array();
+
+            foreach($raw_prods as $r)
+            {
+                    $itemid=$this->db->query("select itemid from king_orders where id=? and transid = ? ",array($r['order_id'],$r['transid']))->row()->itemid;
+                    $qty=$this->db->query("select l.qty from products_group_pids p join m_product_group_deal_link l on l.group_id=p.group_id where p.product_id=? and itemid = ? ",array($r['product_id'],$itemid))->row()->qty;
+
+                    if(!isset($products[$itemid]))
+                            $products[$itemid]=array();
+
+                    $products[$itemid][]=array("itemid"=>$itemid,"qty"=>$qty,"product_id"=>$r['product_id'],"order_id"=>$r['order_id']);
+                    $productids[]=$r['product_id'];
+
+            }
+
+            $to_process_orders=array();
+            $raw_stock=$this->db->query("select product_id,sum(available_qty) as stock from t_stock_info where product_id in ('".implode("','",$productids)."') and available_qty > 0 and mrp > 0 group by product_id")->result_array();
+            $stock=array();
+            foreach($productids as $p)
+                    $stock[$p]=0;
+            foreach($raw_stock as $s)
+            {
+                    $pid=$s['product_id'];
+                    $stock[$pid]=$s['stock'];
+            }
+
+
+            $total_orders_process=0;
+            foreach($trans as $transid=>$orders)
+            {
+                    $total_pending[$transid]=count($orders);
+                    $possible[$transid]=0;
+                    $not_partial_flag=true;
+                    $same_order=array();
+
+                    $rem_prod_stock = array(); 
+                    foreach($orders as $order)
+                    {
+                            $itemid=$order['itemid'];
+
+                            if(!isset($products[$itemid]))
+                                    continue;
+
+                            $pflag=true; //process flag
+                            foreach($products[$itemid] as $p)
+                            {
+                                    $process_stk_chk = 0;
+                                    if(isset($p['order_id']))
+                                    {
+                                            if($p['order_id'] == $order['id'])
+                                                    $process_stk_chk = 1;
+                                    }else
+                                    {
+                                            $process_stk_chk = 1;
+                                    }		
+                                    if($process_stk_chk)
+                                    {
+                                            if(!isset($rem_prod_stock[$p['product_id']]))
+                                                    $rem_prod_stock[$p['product_id']] = $stock[$p['product_id']];
+
+                                            //echo ($stock[$p['product_id']]).'-'.$p['product_id'].' - '.$p['qty'].' - '.$order['quantity'].' ';
+                                            if($rem_prod_stock[$p['product_id']]<$p['qty']*$order['quantity'])
+                                            {
+                                                    $pflag=false;
+                                                    break;
+                                            }else
+                                                    $rem_prod_stock[$p['product_id']] -= $p['qty']*$order['quantity'];
+                                    }	
+                            }
+
+                            if($pflag)
+                            {
+                                    $possible[$transid]++;
+                                    if($process_partial)
+                                    {
+                                            $to_process_orders[]=$order['id'];
+                                            $same_order[]=$order['id'];
+                                    }
+                            }
+                            else
+                                    $not_partial_flag=false;
+
+                    }
+
+                    if($not_partial_flag)
+                    {
+                            $same_order=array();
+                            //$to_process_orders=array();
+                            foreach($orders as $order)
+                            {
+                                    $to_process_orders[]=$order['id'];
+                                    $same_order[]=$order['id'];
+                            }
+                            $not_partials[]=$transid;
+                    }else
+                            $partials[]=$transid;
+
+                    if(!empty($same_order))
+                    {
+                            $total_orders_process++;
+                            foreach($orders as $order)
+                            {
+                                    if(in_array($order['id'],$same_order))
+                                    {
+                                            if(!isset($products[$itemid]))
+                                                    continue;
+
+                                            foreach($products[$order['itemid']] as $p)
+                                            {
+                                                    if($stock[$p['product_id']] >= ($p['qty']*$order['quantity']))
+                                                    {
+                                                            $stock[$p['product_id']]-=$p['qty']*$order['quantity'];
+                                                            $to_process_orders[] = $order['id'];
+                                                    }
+                                                    else
+                                                            break ;
+                                            }
+                                    }
+                            }
+                    }
+
+                    if($total_orders_process>=$ttl_num)
+                            break;
+            }
+
+            $orders=array_unique($to_process_orders);
+
+            /*
+            print_r($productids);
+            print_r($orders);
+            print_r($stock);
+            exit;*/
+
+
+            $invoices=$this->erpm->do_proforma_invoice($orders);
+
+            $batch_id=0;
+            $batch_inv_link = array();
+
+            $ttl_invoices = count($invoices);
+            if($ttl_invoices > $num)
+                    $ttl_batchs = ceil($ttl_invoices/$num);
+            else 
+                    $ttl_batchs = 1;	
+
+            $batch_remarks = $this->input->post('batch_remarks');
+
+            if(!empty($invoices))
+            {
+                    for($b=0;$b<$ttl_batchs;$b++)
+                    {
+                            $s = $b*$num;
+                            $ttl_inbatch = ((($s+$num) > $ttl_invoices)?$ttl_invoices-$s:$num);
+
+                            $this->db->query("insert into shipment_batch_process(num_orders,batch_remarks,created_on) values(?,?,?)",array($ttl_inbatch,$batch_remarks,date('Y-m-d H:i:s')));
+                            $batch_id=$this->db->insert_id();
+                            for($k=$s;$k<$s+$ttl_inbatch;$k++)
+                            {
+                                    $inv = $invoices[$k];
+                                    $batch_inv_link[$inv] = $batch_id;
+                                    $cid=0;
+                                    $awb="";
+
+                                    // generate entries for processing splitted orders to invoice no with one proforma invoice
+
+                                    $p_ttl_inv_ords = @$this->db->query("select sum(t) as t from ((select count(*) as t 
+                                                                                    from proforma_invoices a
+                                                                                    join king_orders b on a.order_id = b.id and a.transid = b.transid 
+                                                                                    where a.p_invoice_no = ? and a.invoice_status = 1 and is_ordqty_splitd = 1 
+                                                                                    group by is_ordqty_splitd 
+                                                                                    )union 
+                                                                                    (
+                                                                                    select 1 as t 
+                                                                                    from proforma_invoices a
+                                                                                    join king_orders b on a.order_id = b.id and a.transid = b.transid 
+                                                                                    where a.p_invoice_no = ? and a.invoice_status = 1 and is_ordqty_splitd = 0  
+                                                                                    group by is_ordqty_splitd 
+                                                                                    )) as g ",array($inv,$inv))->row()->t; 
+
+                                    $p_ttl_inv_ords = $p_ttl_inv_ords*1;					
+
+                                    for($k1=0;$k1<$p_ttl_inv_ords;$k1++) 
+                                            $this->db->query("insert into shipment_batch_process_invoice_link(batch_id,p_invoice_no,courier_id,awb) values(?,?,?,?)",array($batch_id,$inv,$cid,$awb));
+
+                            }
+                    }
+            }
+
+
+            $down_summary = array(); 
+            foreach($orders as $o)
+            {
+                    $pinv_det=@$this->db->query("select id,p_invoice_no,transid from proforma_invoices where order_id=? and invoice_status = 1 order by id desc ",$o)->row_array();
+                    if(!$pinv_det)
+                            continue;
+
+                    $invid = $pinv_det['id'];
+                    $pinvno = $pinv_det['p_invoice_no'];
+                    $ptransid = $pinv_det['transid'];
+
+                    $s_prods=$this->db->query("select t.partner_reference_no,o.transid,o.id,p.product_id,p.qty,o.quantity,o.i_orgprice,o.id as order_id from king_orders o join m_product_deal_link p on p.itemid=o.itemid join king_transactions t on t.transid  = o.transid  where o.id=? and o.transid = ? order by o.sno asc",array($o,$ptransid))->result_array();
+
+                    $s_prods_1=$this->db->query("select t.partner_reference_no,o.transid,o.id,go.product_id,p.qty,o.quantity,o.i_orgprice,o.id as order_id 
+                                                                                            from king_orders o 
+                                                                                            join king_transactions t on t.transid  = o.transid 
+                                                                                            join products_group_orders go on go.order_id = o.id 
+                                                                                            join m_product_group_deal_link p on p.itemid=o.itemid 
+                                                                                            where o.id=? and o.transid = ?  order by o.sno asc",array($o,$ptransid))->result_array();
+
+                    $s_prods = array_merge($s_prods,$s_prods_1);
+
+                    // compute stock reduction by order quantity and record stock info ids 
+                    foreach($s_prods as $p)
+                    {
+                            $omrp = $p['i_orgprice'];
+                            $total_qty = $p['quantity']*$p['qty'];
+                            $order_id = $p['order_id'];
+
+                            if($down_import_summ)
+                                    $down_summary[$p['partner_reference_no']] = $pinvno;
+
+                            /*
+                            for($i=1;$i<=$p['quantity']*$p['qty'];$i++)
+                                    $this->db->query("update t_stock_info set available_qty=available_qty-1 where product_id=? and available_qty>=0 order by stock_id asc limit 1",$p['product_id']);
+                            */
+                            $alloted_stock = array();
+
+                            $pen_qty = $total_qty;
+
+                            // query to fetch stock product ordered by exact mrp and followed by asc mrp.  	
+
+                            $sql = "select stock_id,product_id,available_qty,location_id,rack_bin_id,mrp,if((mrp-$omrp),1,0) as mrp_diff 
+                                            from t_stock_info where mrp > 0  and product_id = ? and available_qty > 0 
+                                            order by product_id desc,mrp_diff,mrp ";
+
+
+                            $stk_prod_list = $this->db->query($sql,$p['product_id']);
+
+                            if($stk_prod_list->num_rows())
+                            {
+                                    // iterate all stock product 
+                                    foreach($stk_prod_list->result_array() as $stk_prod)
+                                    {
+                                            $reserv_qty = 0; 
+                                            if($stk_prod['available_qty'] < $pen_qty )
+                                                    $reserv_qty = $stk_prod['available_qty'];
+                                            else
+                                                    $reserv_qty = $pen_qty;
+
+                                                    $tmp = array();
+                                                    $tmp['p_invoice_no'] = $pinvno;
+                                                    $tmp['stock_info_id'] = $stk_prod['stock_id'];
+                                                    $tmp['product_id'] = $stk_prod['product_id'];
+                                                    $tmp['batch_id'] = $batch_id;
+                                                    $tmp['order_id'] = $order_id;
+                                                    $tmp['qty'] = $reserv_qty;
+                                                    $tmp['reserved_on'] = time();
+                                                    array_push($alloted_stock,$tmp);
+
+                                                    $pen_qty = $pen_qty-$reserv_qty;
+
+                                            // if all qty updated 
+                                            if(!$pen_qty)	
+                                                    break;
+
+                                    }
+                            }
+
+                            if(count($alloted_stock))
+                            {
+                                    foreach($alloted_stock as $allot_stk)
+                                    {
+                                            $this->db->insert("t_reserved_batch_stock",$allot_stk);
+                                            $this->erpm->do_stock_log(0,$allot_stk['qty'],$p['product_id'],$invid,false,false,true,-1,0,0,$allot_stk['stock_info_id']);
+                                    }
+                            }
+                    }
+
+            }
+
+            if($down_import_summ)
+            {
+
+                            $csv_oids = array();
+                            $csv_oids[] = '"Partner Reference no","Batch ID","Invoice no"';
+                            $p_oids = $this->input->post('p_oids');
+                            $p_oid_arr = explode(',',$p_oids);
+                            foreach($p_oid_arr as $p_oid)
+                            {
+                                    $tmp = array();
+                                    $tmp['partner_reference_no'] = $p_oid;
+                                    $tmp['batch_id'] = '';
+                                    $tmp['p_invoice_no'] = '';
+                                    if(isset($down_summary[$p_oid]))
+                                    {
+                                            $tmp['p_invoice_no'] = isset($down_summary[$p_oid])?$down_summary[$p_oid]:'';
+                                            $tmp['batch_id'] = isset($batch_inv_link[$tmp['p_invoice_no']])?$batch_inv_link[$tmp['p_invoice_no']]:'';	
+                                    }else
+                                    {
+                                            //$pinv_det = $this->db->query("select ");
+                                    }
+
+                                    array_push($csv_oids,'"'.implode('","',$tmp).'"');
+                            }
+
+                            header('Content-Type: application/csv');
+                            header('Content-Disposition: attachment; filename=import_stat.csv');
+                            header('Pragma: no-cache');
+
+                            echo implode("\r\n",$csv_oids);
+                            exit;
+
+            }else
+            {
+                    if(!count($batch_inv_link))
+                            show_error("INSUFFICIENT STOCK TO PROCESS ANY ORDER");
+                    redirect("admin/batch/$batch_id");		
+            }
+
+    }
+
+
 	function __construct()
 	{
 		parent::__construct();
@@ -1005,12 +1492,12 @@ class Erpmodel extends Model
 			 
 		$orders=array_unique($to_process_orders);
 		
-		/*
+		
 		print_r($productids);
 		print_r($orders);
 		print_r($stock);
 		exit;
-		 * */
+		
 		
 		$invoices=$this->erpm->do_proforma_invoice($orders);
 		

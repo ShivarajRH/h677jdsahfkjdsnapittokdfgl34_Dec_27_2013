@@ -65,7 +65,7 @@ table.datagridsort tbody td { padding: 4px; }
             </tr>
         </thead>
         <tbody>
-            <?php   echo "<pre>".$last_qry."</pre>";
+            <?php  // echo "<pre>".$last_qry."</pre>";
             foreach($transactions as $i=>$trans_arr) { $i+=1;
                 
                 ?>
@@ -95,7 +95,7 @@ table.datagridsort tbody td { padding: 4px; }
                                                             WHERE tr.transid=?
                                                             group by o.id order by o.actiontime DESC",$trans_arr['transid'])->result_array();
                        
-                                    echo "<pre>"; echo $this->db->last_query();echo "</pre>";
+                                    //echo "<pre>"; echo $this->db->last_query();echo "</pre>";
                         ?>
                         <tr>
                             <th>Order id</th>
