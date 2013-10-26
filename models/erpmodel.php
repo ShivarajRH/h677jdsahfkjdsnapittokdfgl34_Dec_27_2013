@@ -2,123 +2,45 @@
 
 class Erpmodel extends Model
 {
-    function do_pnh_offline_shipment_batch_process()
+    function __construct()
+    {
+            parent::__construct();
+    }
+    
+    /**
+     * Process the transactions to batch and generates  performa invoice for Batch enabled trans
+     * @param type $transid
+     * @param type $ttl_num
+     * @param type $batch_remarks
+     * @param type $updated_by
+     */
+    function do_batching_process($transid,$ttl_num,$batch_remarks,$updated_by)
     {
             ini_set('memory_limit','512M');
             $i_transid=false;
-            $ttl_num = $num=$this->input->post("num_orders");
-            $process_partial=$this->input->post("process_partial");
+            $num=$ttl_num;
 
-            //$user = $this->erpm->auth();
+            $user = $this->erpm->auth();
 
 
             if(empty($num))
                     show_error("Enter no of orders to process");
-            $i_transid=$this->input->post("transid");
+            $i_transid=$transid;//$this->input->post("transid");
 
-            $ordersby = strtolower($this->input->post("snp_pnh"));
-            $en_date = $this->input->post("en_date");
 
             $down_import_summ = 0;
             $cond = '';
             $is_pnh=1;
-
-            if($ordersby == 'others')
-            {
-                    $is_pnh=0;
-                    $cond .= ' and t.is_pnh = 0 ';
-                    $snp_pnh_part = $this->input->post("snp_pnh_part");
-                    if(count($snp_pnh_part))
-                    {
-                            $cond .= ' and partner_id in ('.implode(',',$snp_pnh_part).') ';	
-                    }else
-                    {
-                            show_error("Please select atleast one partner");
-                    }
-
-
-                    $process_orderby = $this->input->post('process_orderby');
-                    $by_brandid = $this->input->post('by_brandid');
-
-                    //$by_p_oids = $this->input->post('by_p_oids');
-                    if($process_orderby)
-                    {
-                            if(count($snp_pnh_part) == 1)
-                            {
-                                    if($process_orderby == 1)
-                                    {
-                                            $down_import_summ = 1;
-                                            $p_oids = $this->input->post('p_oids');
-
-                                            $p_oids = (explode(',',$p_oids));
-                                            $tmp_poids = array();
-                                            foreach($p_oids as $t_poid)
-                                            {
-                                                    if($t_poid)
-                                                            array_push($tmp_poids,'"'.$t_poid.'"');
-                                            }
-                                            $p_oids = implode(',',$tmp_poids); 
-
-                                            if(!$p_oids)
-                                            {
-                                                    show_error("No Partner Ordernos added.");	
-                                            }else
-                                            {
-                                                    $cond .=  ' and partner_reference_no in ('.$p_oids.')';
-                                                    $down_import_summ = 1;
-                                                    $ttl_num = count(explode(',',$p_oids));
-                                            }
-                                    }else 
-                                    {
-                                            if($by_brandid)
-                                                    $cond .=  ' and d.brandid = '.$by_brandid.' ';
-                                            else 
-                                                    show_error("No brand selected");	
-                                    }
-
-                            }else
-                            {
-                                    show_error("Order ids can be processed only for one partner.");
-                            }
-                    }
-
-
-            }else
-            {
-                    $cond .= ' and t.is_pnh = 1 ';
-                    $is_pnh=1;
-
-                    $by_menu = $this->input->post('by_menu');
-                    if($by_menu)
-                    {
-                            $pmenu_idlist = $this->input->post('pmenu_id');
-                            if($pmenu_idlist)
-                            {
-                                    $cond .= ' and menuid in ('.implode(',',$pmenu_idlist).') ';
-                            }else
-                            {
-                                    show_error(" No menu selected");
-                            }
-                    }
-            }
-
+           
             $trans=array();
             $itemids=array();
-
-            if($en_date)
-            {
-                    list($ey,$em,$ed) = explode('-',$en_date);
-                    $en_date_ts = mktime(23,59,59,$em,$ed,$ey);
-                    $cond .= ' and t.init < '.$en_date_ts.' ';
-            }
-
+           
+            
             if($i_transid)
             {
                     $cond = '';
                     $is_pnh = $this->db->query("select is_pnh from king_transactions where transid = ? ",$i_transid)->row()->is_pnh;
             }
-
-
 
 
             if($is_pnh)
@@ -134,9 +56,9 @@ class Erpmodel extends Model
 
             if($i_transid)
                     $raw_trans=$this->db->query("select o.* from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 where t.batch_enabled=1 and t.transid=?",$i_transid)->result_array();
-            else
+            /*else
                     $raw_trans=$this->db->query("select o.*,t.partner_reference_no from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 join king_dealitems di on di.id = o.itemid join king_deals d on d.dealid = di.dealid  where t.batch_enabled=1 and t.is_pnh=$is_pnh $cond order by t.priority desc, t.init asc")->result_array();
-
+                    */
 
 
             $v_transids=array();
@@ -292,15 +214,15 @@ class Erpmodel extends Model
                     if($total_orders_process>=$ttl_num)
                             break;
             }
-
+            
             $orders=array_unique($to_process_orders);
 
             /*
             print_r($productids);
             print_r($orders);
             print_r($stock);
-            exit;*/
-
+            exit;
+            */
 
             $invoices=$this->erpm->do_proforma_invoice($orders);
 
@@ -311,9 +233,9 @@ class Erpmodel extends Model
             if($ttl_invoices > $num)
                     $ttl_batchs = ceil($ttl_invoices/$num);
             else 
-                    $ttl_batchs = 1;	
+                    $ttl_batchs = 1;
 
-            $batch_remarks = $this->input->post('batch_remarks');
+            //$batch_remarks = $this->input->post('batch_remarks');
 
             if(!empty($invoices))
             {
@@ -386,20 +308,21 @@ class Erpmodel extends Model
                             $total_qty = $p['quantity']*$p['qty'];
                             $order_id = $p['order_id'];
 
-                            if($down_import_summ)
-                                    $down_summary[$p['partner_reference_no']] = $pinvno;
+//                            if($down_import_summ)
+//                                    $down_summary[$p['partner_reference_no']] = $pinvno;
 
                             /*
                             for($i=1;$i<=$p['quantity']*$p['qty'];$i++)
                                     $this->db->query("update t_stock_info set available_qty=available_qty-1 where product_id=? and available_qty>=0 order by stock_id asc limit 1",$p['product_id']);
                             */
                             $alloted_stock = array();
+                            $alloted_stock2 = array();
 
                             $pen_qty = $total_qty;
 
                             // query to fetch stock product ordered by exact mrp and followed by asc mrp.  	
 
-                            $sql = "select stock_id,product_id,available_qty,location_id,rack_bin_id,mrp,if((mrp-$omrp),1,0) as mrp_diff 
+                            $sql = "select product_barcode,stock_id,product_id,available_qty,location_id,rack_bin_id,mrp,if((mrp-$omrp),1,0) as mrp_diff 
                                             from t_stock_info where mrp > 0  and product_id = ? and available_qty > 0 
                                             order by product_id desc,mrp_diff,mrp ";
 
@@ -425,75 +348,49 @@ class Erpmodel extends Model
                                                     $tmp['order_id'] = $order_id;
                                                     $tmp['qty'] = $reserv_qty;
                                                     $tmp['reserved_on'] = time();
+                                                    
                                                     array_push($alloted_stock,$tmp);
-
+                                                    
+                                                    $tmp['mrp'] = $stk_prod['mrp'];//by S
+                                                    $tmp['product_barcode'] = $stk_prod['product_barcode'];//by S
+                                                    $tmp['location_id'] = $stk_prod['location_id'];//by S
+                                                    $tmp['rack_bin_id'] = $stk_prod['rack_bin_id'];//by S
+                                                    array_push($alloted_stock2,$tmp);
+                                                    
                                                     $pen_qty = $pen_qty-$reserv_qty;
 
                                             // if all qty updated 
-                                            if(!$pen_qty)	
+                                            if(!$pen_qty)
                                                     break;
-
+                                            
                                     }
                             }
 
                             if(count($alloted_stock))
                             {
                                     foreach($alloted_stock as $allot_stk)
-                                    {
                                             $this->db->insert("t_reserved_batch_stock",$allot_stk);
-                                            $this->erpm->do_stock_log(0,$allot_stk['qty'],$p['product_id'],$invid,false,false,true,-1,0,0,$allot_stk['stock_info_id']);
+                                    
+                                    foreach($alloted_stock2 as $stk_prod)
+                                    {
+                                            $stk_movtype=0;
+                                            //$prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg=''
+                                            if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,"PNH Offline Order Placed.")) {
+                                                //echo "Stock log updated.";
+                                            }
+                                            else {
+                                                //echo "Stock log not updated.";
+                                            }
+                                             
                                     }
+                                    
                             }
                     }
 
             }
-
-            if($down_import_summ)
-            {
-
-                            $csv_oids = array();
-                            $csv_oids[] = '"Partner Reference no","Batch ID","Invoice no"';
-                            $p_oids = $this->input->post('p_oids');
-                            $p_oid_arr = explode(',',$p_oids);
-                            foreach($p_oid_arr as $p_oid)
-                            {
-                                    $tmp = array();
-                                    $tmp['partner_reference_no'] = $p_oid;
-                                    $tmp['batch_id'] = '';
-                                    $tmp['p_invoice_no'] = '';
-                                    if(isset($down_summary[$p_oid]))
-                                    {
-                                            $tmp['p_invoice_no'] = isset($down_summary[$p_oid])?$down_summary[$p_oid]:'';
-                                            $tmp['batch_id'] = isset($batch_inv_link[$tmp['p_invoice_no']])?$batch_inv_link[$tmp['p_invoice_no']]:'';	
-                                    }else
-                                    {
-                                            //$pinv_det = $this->db->query("select ");
-                                    }
-
-                                    array_push($csv_oids,'"'.implode('","',$tmp).'"');
-                            }
-
-                            header('Content-Type: application/csv');
-                            header('Content-Disposition: attachment; filename=import_stat.csv');
-                            header('Pragma: no-cache');
-
-                            echo implode("\r\n",$csv_oids);
-                            exit;
-
-            }else
-            {
-                    if(!count($batch_inv_link))
-                            show_error("INSUFFICIENT STOCK TO PROCESS ANY ORDER");
-                    redirect("admin/batch/$batch_id");		
-            }
-
     }
 
 
-	function __construct()
-	{
-		parent::__construct();
-	}
     /**
      * Function to save assigned user
      */
@@ -1492,12 +1389,12 @@ class Erpmodel extends Model
 			 
 		$orders=array_unique($to_process_orders);
 		
-		
+		/*
 		print_r($productids);
 		print_r($orders);
 		print_r($stock);
 		exit;
-		
+		*/
 		
 		$invoices=$this->erpm->do_proforma_invoice($orders);
 		
@@ -5712,7 +5609,7 @@ order by p.product_name asc
 					}
 					*/
 					
-					$p_stk_ref_id = $this->erpm->_upd_product_stock($p['product'],$p['mrp'],$p['barcode'],$p['location'],$p['rackbin'],0,$p['rqty'],4,1,$grn);
+					$p_stk_ref_id = $this->_upd_product_stock($p['product'],$p['mrp'],$p['barcode'],$p['location'],$p['rackbin'],0,$p['rqty'],4,1,$grn);
 					
 					if($this->db->query("select is_serial_required as s from m_product_info where product_id=?",$p['product_id'])->row()->s==1)
 					{
@@ -7615,11 +7512,11 @@ order by p.product_name asc
 		$fran_status_arr[1]="Permanent Suspension";
 		$fran_status_arr[2]="Payment Suspension";
 		$fran_status_arr[3]="Temporary Suspension";
-		$admin = $this->auth(false);
+		$admin = $this->auth(false); 
 		foreach(array("fid","pid","qty","mid","redeem","redeem_points","mid_entrytype") as $i)
 			$$i=$this->input->post($i);
 		
-		
+                $updated_by=$admin["userid"];
 
 		if($redeem)
 			$redeem_points = 150;
@@ -7825,6 +7722,18 @@ order by p.product_name asc
 		foreach($split_transid_list as $items)
 		{
 			$transid=strtoupper("PNH".random_string("alpha",3).$this->p_genid(5));
+                        
+                        
+                        //do packing process
+                        $ttl_num_orders=count($items);
+                        $batch_remarks='Created by pnh offline order system';
+                        
+                        //echo $transid.",".$ttl_num_orders.",".$batch_remarks;
+                        // Process to batch this transaction
+                        //$this->do_batching_process($transid,$ttl_num_orders,$batch_remarks);
+                        //echo ("===TESTING====");
+                        //continue;
+                        
 			if($redeem && count($split_transid_list) == 1)
 			{
 				$total-=$redeem_value;
@@ -7835,16 +7744,13 @@ order by p.product_name asc
 				$this->erpm->do_trans_changelog($transid,"$redeem_points Loyalty points redeemed");
 			}
 			
+                        
+                
 			$this->db->query("insert into king_transactions(transid,amount,paid,mode,init,actiontime,is_pnh,franchise_id,trans_created_by,batch_enabled,trans_grp_ref_no) values(?,?,?,?,?,?,?,?,?,?,?)",array($transid,$d_total,$d_total,3,time(),time(),1,$fran['franchise_id'],$admin['userid'],$batch_enabled,$trans_grp_ref_no));
 					
 			foreach($items as $item)
 			{
-				
-				if(1)
-				{
-					
-					
-					
+				    
 					$inp=array("id"=>$this->p_genid(10,'order'),"transid"=>$transid,"userid"=>$userid,"itemid"=>$item['itemid'],"brandid"=>"");
 					
 					$inp["brandid"]=$this->db->query("select d.brandid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.id=?",$item['itemid'])->row()->brandid;
@@ -7987,10 +7893,10 @@ order by p.product_name asc
 					$bal_discount_amt = ($item['price']*$item['margin']['bal_discount']/100)*$item['qty'];
 					$m_inp=array("transid"=>$transid,"itemid"=>$item['itemid'],"mrp"=>$item['mrp'],"price"=>$item['price'],"base_margin"=>$item['margin']['base_margin'],"sch_margin"=>$item['margin']['sch_margin'],"bal_discount"=>$item['margin']['bal_discount'],"qty"=>$item['qty'],"final_price"=>$item['price']-$item['discount']);
 					$this->db->insert("pnh_order_margin_track",$m_inp);
-				}
+				
 				
 			}
-
+                        
 			// check if franchise is suspended 
 			if($fran_status==0)
 				$this->erpm->do_trans_changelog($transid,"PNH Offline order created");
@@ -8000,9 +7906,15 @@ order by p.product_name asc
 			$trans_amt = $this->db->query("select sum((i_orgprice-(i_discount+i_coup_discount))*quantity) as amt from king_orders where transid = ? and status = 0 ",$transid)->row()->amt; 
 			
 			$this->db->query("update king_transactions set amount = ?,paid=? where transid=?",array($trans_amt,$trans_amt,$transid));
-				
+			
+                        // Process to batch this transaction
+                        //echo "$transid,$ttl_num_orders,$batch_remarks,$updated_by";
+                        
+                        $this->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+                        $this->session->set_flashdata("erp_pop_info","$transid is processed for batch");
+                        
 		}
-
+                //die("TESTING");
 		
 		$bal_discount_amt_msg = '';
 			if($bal_discount_amt)
@@ -8034,11 +7946,14 @@ order by p.product_name asc
 		$inp=array("bill_no"=>$billno,"franchise_id"=>$franid,"transid"=>$transid,"user_id"=>$userid,"status"=>1);
 		$this->db->insert("pnh_cash_bill",$inp);
 		
+                
+                
+                
+                
+                
 		$this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
-		
-	 
-		
-		redirect("admin/pnh_offline_order",'refresh');
+		redirect("admin/trans_reservation_status",'refresh');
+		//redirect("admin/pnh_offline_order",'refresh');
 	}
 	
 	

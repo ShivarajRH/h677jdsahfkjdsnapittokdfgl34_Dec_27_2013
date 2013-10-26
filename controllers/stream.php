@@ -13,23 +13,29 @@ class Stream extends Analytics
      */
     function trans_reservation_status($s=false,$e=false) {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        
-        if(!$s)
-                $e=$s=date("Y-m-d",  strtotime("last month")); //date("Y-m-d");
+                
+        if($this->input->post("date_from") != '') {
+                $s=date("Y-m-d", strtotime($this->input->post("date_from")));
+                $e=date("Y-m-d",strtotime($this->input->post("date_to")));
+        }
+        elseif(!$s) {
+                $s=date("Y-m-d",  strtotime("last month")); //date("Y-m-d");
+                $e=date("Y-m-d",strtotime("today"));
+        }
         
         //echo $e.$s;
         $from=strtotime($s);
         $to=strtotime("23:59:59 $e");
         
         $r_orders=$this->db->query("select 
-                            if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status
-                            ,from_unixtime(o.actiontime,'%D %M %h:%i:%s %Y') as str_time
+                            #if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status,
+                            from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
                             ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
                             ,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
                             from king_orders o
-                            join m_product_deal_link pdl on pdl.itemid=o.itemid
-                            join t_stock_info si on si.product_id=pdl.product_id
-                            join king_transactions tr using(transid) 
+                            #join m_product_deal_link pdl on pdl.itemid=o.itemid
+                            #join t_stock_info si on si.product_id=pdl.product_id
+                            join king_transactions tr on tr.transid=o.transid
                             WHERE tr.actiontime between $from and $to 
                             group by o.transid order by tr.actiontime desc")->result_array();
 

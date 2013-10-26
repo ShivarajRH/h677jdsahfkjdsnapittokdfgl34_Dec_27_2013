@@ -1100,7 +1100,7 @@ $(function(){
 
 			if(mid==0 && menu_id != 112)
 			{
-				if(confirm("Instant Registration is required because Beauty Products are there in the Cart"))
+				if(confirm("Instant Registration is required because Other than Electronics Products are there in cart."))
 					 mem_reg();
 				 return false;
 			}

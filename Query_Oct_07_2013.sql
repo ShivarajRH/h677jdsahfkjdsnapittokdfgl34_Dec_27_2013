@@ -325,3 +325,75 @@ SELECT if((si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, 'read
 
 
 select * from t_stock_info where product_id=87
+
+#################################
+#Oct-25
+
+select franchise_id  from pnh_m_franchise_info where is_suspended = 0 
+
+select 
+                           # if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status,
+			from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+                            ,o.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                            ,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+                            from king_orders o
+                            #join m_product_deal_link pdl on pdl.itemid=o.itemid
+                            #join t_stock_info si on si.product_id=o.product_id
+                            join king_transactions tr on tr.transid=o.transid
+                            WHERE tr.init between 1382553000 and 1382725799 
+                            group by tr.transid order by tr.init desc
+
+
+select distinct c.transid,c.batch_enabled,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
+								from king_orders o 
+								join king_transactions c on o.transid = c.transid 
+								join pnh_member_info pu on pu.user_id=o.userid 
+							where c.init between 1382553000 and 1382725799  
+							group by c.transid  
+							order by c.init desc 
+
+	
+SELECT #if((si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, 'ready' ,'partial')) as batch_status,
+                                                            o.id as orderid,o.itemid,o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
+                                                            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                                                            ,di.id as itemid,di.name as dealname,di.price,di.available,di.pic
+                                                            #,pdl.itemid,pdl.product_id,pdl.product_mrp,pdl.qty
+                                                            #,si.stock_id,si.product_id,si.available_qty,si.location_id,si.rack_bin_id,si.product_barcode
+                                                            #,if(p.is_sourceable=1,'yes','no') as sorceable
+                                                            from king_orders o
+                                                            join king_transactions tr on tr.transid=o.transid
+                                                            join king_dealitems di on di.id=o.itemid
+                                                            #join m_product_deal_link pdl on pdl.itemid=o.itemid
+                                                            #join t_stock_info si on si.product_id=pdl.product_id
+                                                            #join m_product_info p on p.product_id=pdl.product_id
+                                                            join king_deals deal on deal.dealid=di.dealid
+                                                            WHERE tr.transid='PNH42934'
+                                                            group by o.id order by o.actiontime DESC
+
+select * from king_transactions where transid="PNH42934";
+select * from king_deals order by sno desc
+select * from king_dealitems order by sno desc
+select * from m_product_info
+select * from t_stock_info
+select * from t_reserved_batch_stock
+
+select * from (select count(pdl.product_id) as linked_prdt,pdl.* from m_product_deal_link pdl 
+group by product_id order by created_on desc) as res  where res.linked_prdt>1
+
+select is_pnh from king_transactions where transid ="PNH42934";
+select o.* from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 where t.batch_enabled=1 and t.transid="PNH42934";
+
+
+select stock_id,product_barcode,stock_id,product_id,available_qty,location_id,rack_bin_id,mrp,if((mrp),1,0) as mrp_diff 
+                                            from t_stock_info where mrp > 0 and available_qty > 0 
+                                            order by product_id desc,mrp_diff,mrp
+
+
+select a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount from king_orders a
+join king_dealitems b on a.itemid = b.id 
+#where a.transid = ?
+order by a.status 
+
+select product_id,sum(available_qty) as stock from t_stock_info where available_qty > 0 and mrp > 0 group by product_id
+# product_id in ('".implode("','",$productids)."') and
+

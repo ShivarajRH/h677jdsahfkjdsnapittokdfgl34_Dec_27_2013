@@ -19,6 +19,11 @@ table.datagridsort tbody td { padding: 4px; }
 .subdatagrid td a {
     color: #121213;
 }
+.subdatagrid tr.processed_ord td,.subdatagrid tr.shipped_ord td{ text-decoration: line-through;color: green  !important;}
+.subdatagrid tr.processed_ord td a,.subdatagrid tr.shipped_ord td a{text-decoration: line-through;color: green !important;}
+.subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
+.subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
+
 </style>
 <div class="container" id="account_grn_present">
     <h2>Transaction Reservation Status</h2>
@@ -59,38 +64,51 @@ table.datagridsort tbody td { padding: 4px; }
                 <th>Slno</th>
                 <th>Date</th>
                 <th>Transaction Id</th>
-                <th>Stock</th>
+                <th>Process</th>
                 <th>Orders</th>
                 <th>Action</th>
             </tr>
         </thead>
         <tbody>
-            <?php  // echo "<pre>".$last_qry."</pre>";
+            <?php   //echo "<pre>".$last_qry."</pre>";
             foreach($transactions as $i=>$trans_arr) { $i+=1;
-                
+                    $o_item_list = $this->db->query("select a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount from king_orders a
+                            join king_dealitems b on a.itemid = b.id 
+                            where a.transid = ? order by a.status 
+                    ",$trans_arr['transid'])->result_array();
+                    $oi = 0;
+                        foreach($o_item_list as $o_item)
+                        {
+                                $is_cancelled = ($o_item['status']==3)?1:0;
+                                $ord_stat_txt = '';
+                                if($o_item['status'] == 0)
+                                        $ord_stat_txt = 'pending';
+                                else if($o_item['status'] == 1)
+                                        $ord_stat_txt = 'processed';
+                                else if($o_item['status'] == 2)
+                                        $ord_stat_txt = 'shipped';
+                                 else if($o_item['status'] == 3)
+                                        $ord_stat_txt = 'cancelled';
+
+                        }
+                        
                 ?>
             <tr>
                 <td style="width:15px"><?php echo $i; ?></td>
                 <td style="width:180px"><?php echo $trans_arr['str_time']; ?></td>
                 <td><?php echo $trans_arr['transid']; ?></td>
-                <td><?php echo $trans_arr['batch_status']; ?></td>
+                <td><?=$ord_stat_txt;?></td>
                 <td style="padding:0px !important;">
                    
                      <table class="subdatagrid" cellpadding="0" cellspacing="0">
                         
-                        <?php $trans_orders = $this->db->query("SELECT if((si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, 'ready' ,'partial')) as batch_status,
+                        <?php $trans_orders = $this->db->query("SELECT 
                                                             o.id as orderid,o.itemid,o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
                                                             ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
                                                             ,di.id as itemid,di.name as dealname,di.price,di.available,di.pic
-                                                            ,pdl.itemid,pdl.product_id,pdl.product_mrp,pdl.qty
-                                                            ,si.stock_id,si.product_id,si.available_qty,si.location_id,si.rack_bin_id,si.product_barcode
-                                                            ,if(p.is_sourceable=1,'yes','no') as sorceable
                                                             from king_orders o
                                                             join king_transactions tr on tr.transid=o.transid
                                                             join king_dealitems di on di.id=o.itemid
-                                                            join m_product_deal_link pdl on pdl.itemid=o.itemid
-                                                            join t_stock_info si on si.product_id=pdl.product_id
-                                                            join m_product_info p on p.product_id=pdl.product_id
                                                             join king_deals deal on deal.dealid=di.dealid
                                                             WHERE tr.transid=?
                                                             group by o.id order by o.actiontime DESC",$trans_arr['transid'])->result_array();
@@ -99,23 +117,22 @@ table.datagridsort tbody td { padding: 4px; }
                         ?>
                         <tr>
                             <th>Order id</th>
-                            <th>Prdt Id</th>
-                            <th>Prdt Name</th>
+                            <th>Product Id</th>
+                            <th>Product Name</th>
                             <th>Quantity</th>
-                            <th>Status</th>
                             <th>Available Stk</th>
                             <th>Sourceable</th>
                         </tr>
                         <?php
                         foreach($trans_orders as $order) {
+                            
                         ?>
-                                <tr>
+                                <tr class="<?php echo $ord_stat_txt.'_ord'?>">
                                     <td style="width:100px"><?php echo $order['orderid']; ?></td>
                                     <td style="width:50px"><?php echo $order['product_id']; ?></td>
                                     <td style="width:360px"><?php echo $order['dealname']; ?></td>
                                     <td style="width:50px"><?php echo $order['quantity']; ?></td>
-                                    <td style="width:100px"><?php echo $order['batch_status']; ?></td>
-                                    <td style="width:50px"><?php echo $order['available_qty']; ?></td>
+                                    <td style="width:50px"><?php echo $order['available']; ?></td>
                                     <td style="width:50px"><?php echo $order['sorceable']; ?></td>
                                 </tr>
                         <?php 
@@ -123,7 +140,7 @@ table.datagridsort tbody td { padding: 4px; }
                         ?>
                         
                     </table>
-                <td><?php echo "Process Delete"; ?></td>
+                <td><?php echo '<a href="">Process for packing</a>'; ?> </td>
                 </td>
             </tr>
             <?php } ?>
