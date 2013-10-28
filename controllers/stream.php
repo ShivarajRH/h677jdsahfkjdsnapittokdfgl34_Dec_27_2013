@@ -2,7 +2,25 @@
 include APPPATH.'/controllers/analytics.php';
 class Stream extends Analytics 
 {
+    
+    
     /******** Orders Reservation**************/
+    /**
+     * Make transaction enabled for batch and allot stock
+     * @param type $trans
+     * @param type $ttl_num_orders
+     * @param string $batch_remarks
+     * @param type $updated_by
+     */
+    function batching_process($trans,$ttl_num_orders,$batch_remarks,$updated_by) {
+        //do packing process
+        $ttl_num_orders=count($items);
+        $batch_remarks='Created by pnh offline order system';
+        // Process to batch this transaction
+        echo $transid.",".$ttl_num_orders.",".$batch_remarks; die();
+        $this->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+    }
+    
     /**
      * Dispaly and process transaction batch status as 
      *          1. Batch Ready is qty<=avail_qty
@@ -26,19 +44,26 @@ class Stream extends Analytics
         //echo $e.$s;
         $from=strtotime($s);
         $to=strtotime("23:59:59 $e");
+        $data['log_display']="Showing orders between ".$s." to ".$e;
         
+//        select a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount from king_orders a
+//                            join king_dealitems b on a.itemid = b.id 
+//                            where a.transid = ? order by a.status 
+                                    
         $r_orders=$this->db->query("select 
                             #if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status,
                             from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
                             ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
-                            ,o.id as orderid,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.status,o.shipped,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+                            ,o.id as orderid,o.itemid,o.status,o.quantity,o.shipped,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
                             from king_orders o
                             #join m_product_deal_link pdl on pdl.itemid=o.itemid
                             #join t_stock_info si on si.product_id=pdl.product_id
                             join king_transactions tr on tr.transid=o.transid
+                            join king_dealitems di on di.id=o.itemid 
                             WHERE tr.actiontime between $from and $to 
                             group by o.transid order by tr.actiontime desc")->result_array();
-
+        
+        $data['user']=$user;
         $data['last_qry']=$this->db->last_query();
         $data['transactions']=$r_orders;
         $data['total_trans']=count($r_orders);

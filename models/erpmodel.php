@@ -224,12 +224,12 @@ class Erpmodel extends Model
             exit;
             */
 
-            $invoices=$this->erpm->do_proforma_invoice($orders);
+            $p_invoices=$this->erpm->do_proforma_invoice($orders);
 
             $batch_id=0;
             $batch_inv_link = array();
 
-            $ttl_invoices = count($invoices);
+            $ttl_invoices = count($p_invoices);
             if($ttl_invoices > $num)
                     $ttl_batchs = ceil($ttl_invoices/$num);
             else 
@@ -237,7 +237,7 @@ class Erpmodel extends Model
 
             //$batch_remarks = $this->input->post('batch_remarks');
 
-            if(!empty($invoices))
+            if(!empty($p_invoices))
             {
                     for($b=0;$b<$ttl_batchs;$b++)
                     {
@@ -248,7 +248,7 @@ class Erpmodel extends Model
                             $batch_id=$this->db->insert_id();
                             for($k=$s;$k<$s+$ttl_inbatch;$k++)
                             {
-                                    $inv = $invoices[$k];
+                                    $inv = $p_invoices[$k];
                                     $batch_inv_link[$inv] = $batch_id;
                                     $cid=0;
                                     $awb="";

@@ -397,3 +397,50 @@ order by a.status
 select product_id,sum(available_qty) as stock from t_stock_info where available_qty > 0 and mrp > 0 group by product_id
 # product_id in ('".implode("','",$productids)."') and
 
+#Oct-26-2013
+select * from m_product_info where product_id='152346'
+select * from m_product_deal_link
+select * from king_dealitems
+select * from king_orders
+select * from king_transactions where transid='PNH78836' order by init desc
+select * from king_dealitems where id='8191888251'
+
+SELECT 
+                                                            o.id as orderid,o.itemid,o.quantity,o.status,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount
+                                                            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                                                            ,di.id,di.name as dealname,di.price,di.available,di.pic
+							,pdl.product_id
+                                                            from king_orders o
+                                                            join king_transactions tr on tr.transid=o.transid
+                                                            join king_dealitems di on di.id=o.itemid
+								join m_product_deal_link pdl on pdl.itemid=o.itemid
+                                                            join king_deals deal on deal.dealid=di.dealid
+                                                            WHERE tr.transid='PNH95477'
+                                                            group by o.id order by o.actiontime DESC
+
+select * from shipment_batch_process where created_on between 1382553000 and now()  order by batch_id desc
+
+select * from proforma_invoices
+select p_invoice_no as invoice_no,transid,count(order_id) as c from proforma_invoices where p_invoice_no in ('".implode("','",$invoices)."') group by transid
+
+select * from shipment_batch_process_invoice_link order by packed_on desc;
+
+
+#imp to GET BATCH ID 1
+select * from proforma_invoices 
+where transid='PNH78836'  
+#and order_id='6755916991'
+order by createdon desc
+#2
+select * from shipment_batch_process_invoice_link sbp
+join shipment_batch_process sb on sb.batch_id=sbp.batch_id
+where p_invoice_no='111588'
+order by packed_on desc;
+
+#final
+select sb.status from shipment_batch_process_invoice_link sbp
+join proforma_invoices pi on pi.p_invoice_no=sbp.p_invoice_no
+join shipment_batch_process sb on sb.batch_id=sbp.batch_id
+#where pi.transid='PNH78836'
+where sb.status>2
+order by sb.created_on desc;
