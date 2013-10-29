@@ -444,3 +444,60 @@ join shipment_batch_process sb on sb.batch_id=sbp.batch_id
 #where pi.transid='PNH78836'
 where sb.status>2
 order by sb.created_on desc;
+
+#===========================
+#Oct-28
+
+select 
+                    #if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status,
+                    from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+                    ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                    ,o.id as orderid,o.itemid,o.status,o.quantity,o.shipped,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+                    from king_orders o
+                    #join m_product_deal_link pdl on pdl.itemid=o.itemid
+                    #join t_stock_info si on si.product_id=pdl.product_id
+                    join king_transactions tr on tr.transid=o.transid
+                    join king_dealitems di on di.id=o.itemid 
+                    WHERE tr.actiontime between 1377973800 and 1382984999 
+                    group by o.transid order by tr.actiontime desc
+
+select 
+                    #if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status,
+                    from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+                    ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
+                    ,o.id as orderid,o.itemid,o.status,o.quantity,o.shipped,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+                    from king_orders o
+                    #join m_product_deal_link pdl on pdl.itemid=o.itemid
+                    #join t_stock_info si on si.product_id=pdl.product_id
+                    join king_transactions tr on tr.transid=o.transid
+                    join king_dealitems di on di.id=o.itemid 
+                    WHERE tr.actiontime between 1380565800 and 1382984999  and o.status in(1,2)
+                    group by o.transid order by tr.actiontime desc; ==>479 rows 
+
+select * from king_dealitems
+select * from king_transactions
+select * from king_orders
+select * from king_deals
+select * from pnh_m_franchise_info;
+select * from pnh_m_territory_info
+select * from pnh_towns
+
+# menuid,brandid,franchise_id,territory_id,town_id
+select 
+                    from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+                    ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+                    ,o.id as orderid,o.itemid,o.status,o.quantity,o.shipped,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+		,d.brandid,d.menuid
+		#,f.franchise_id	
+                    from king_orders o
+                    join king_transactions tr on tr.transid=o.transid
+                    join king_dealitems di on di.id=o.itemid 
+		join king_deals d on d.dealid=di.dealid
+		join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+		join pnh_m_territory_info ter on ter.id = f.territory_id 
+		join pnh_towns twn on twn.id=f.town_id
+                    WHERE tr.actiontime between 1380565800 and 1382984999  and o.status in(1,2)
+                    group by o.transid order by tr.actiontime desc; 
+	==>334
+
+# select 479-334 => 145 rows removed

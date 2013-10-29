@@ -149,7 +149,7 @@ color: #121213;
                         <td><select id="sel_menu" name="sel_menu" colspan="2">
                                 <option value="00">Select Menu</option>
                                  <?php foreach($pnh_menu as $menu): ?>
-                                        <option value="<?php echo $town['id'];?>"><?php echo $menu['name'];?></option>
+                                        <option value="<?php echo $menu['id'];?>"><?php echo $menu['name'];?></option>
                                 <?php endforeach; ?>
                             </select> &nbsp;
                             <select id="sel_brands" name="sel_brands">

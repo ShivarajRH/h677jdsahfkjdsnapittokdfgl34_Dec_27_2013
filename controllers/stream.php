@@ -2,8 +2,32 @@
 include APPPATH.'/controllers/analytics.php';
 class Stream extends Analytics 
 {
-    
-    
+    function jx_get_transaction_list($batch_type,$from,$to,$pg,$limit=50) {
+        //echo "$batch_type,$from,$to,$pg<br>";
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        
+        if($from != '') {
+                $s=date("Y-m-d", strtotime($from));
+                $e=date("Y-m-d",strtotime($to));
+                                
+        }
+        else {
+                $s=date("Y-m-d",strtotime("last month")); 
+                $e=date("Y-m-d",strtotime("today"));echo '2';
+        }
+        
+        $data['user']=$user;
+        $data['batch_type']=$batch_type;
+        $data['pg']=$pg;
+        $data['limit']=$limit;
+        $data['s']=$s;
+        $data['e']=$e;
+
+       
+        $this->load->view("admin/body/jx_get_transaction_list",$data);
+    }
+
+
     /******** Orders Reservation**************/
     /**
      * Make transaction enabled for batch and allot stock
@@ -12,13 +36,13 @@ class Stream extends Analytics
      * @param string $batch_remarks
      * @param type $updated_by
      */
-    function batching_process($trans,$ttl_num_orders,$batch_remarks,$updated_by) {
+    function batching_process($transid,$ttl_num_orders,$batch_remarks='',$updated_by) {
         //do packing process
-        $ttl_num_orders=count($items);
-        $batch_remarks='Created by pnh offline order system';
+        //$ttl_num_orders=count($items);
+        $batch_remarks=$batch_remarks=='' ? 'Created by transaction reservation system' : $batch_remarks ;
         // Process to batch this transaction
-        echo $transid.",".$ttl_num_orders.",".$batch_remarks; die();
-        $this->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        //echo $transid.",".$ttl_num_orders.",".$batch_remarks.",".$updated_by; die();
+        $this->erpm->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
     }
     
     /**
@@ -32,25 +56,21 @@ class Stream extends Analytics
     function trans_reservation_status($s=false,$e=false) {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
                 
-        if($this->input->post("date_from") != '') {
-                $s=date("Y-m-d", strtotime($this->input->post("date_from")));
-                $e=date("Y-m-d",strtotime($this->input->post("date_to")));
-        }
-        elseif(!$s) {
-                $s=date("Y-m-d",  strtotime("last month")); //date("Y-m-d");
-                $e=date("Y-m-d",strtotime("today"));
-        }
+//        if($this->input->post("date_from") != '') {
+//                $s=date("Y-m-d", strtotime($this->input->post("date_from")));
+//                $e=date("Y-m-d",strtotime($this->input->post("date_to")));
+//        }
+//        elseif(!$s) {
+//                $s=date("Y-m-d",  strtotime("last month")); //date("Y-m-d");
+//                $e=date("Y-m-d",strtotime("today"));
+//        }
         
         //echo $e.$s;
-        $from=strtotime($s);
-        $to=strtotime("23:59:59 $e");
-        $data['log_display']="Showing orders between ".$s." to ".$e;
-        
-//        select a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount from king_orders a
-//                            join king_dealitems b on a.itemid = b.id 
-//                            where a.transid = ? order by a.status 
+//        $from=strtotime($s);
+//        $to=strtotime("23:59:59 $e");
+//        $data['log_display']="Showing orders between ".$s." to ".$e;
                                     
-        $r_orders=$this->db->query("select 
+        /*$r_orders=$this->db->query("select 
                             #if(sum(si.available_qty)=0,'No stock',if(o.quantity<=si.available_qty, if(sum(o.quantity)<=0,'Not Ready','Batch Ready'),'Partial Ready')) as batch_status,
                             from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
                             ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled
@@ -61,12 +81,26 @@ class Stream extends Analytics
                             join king_transactions tr on tr.transid=o.transid
                             join king_dealitems di on di.id=o.itemid 
                             WHERE tr.actiontime between $from and $to 
-                            group by o.transid order by tr.actiontime desc")->result_array();
+                            group by o.transid order by tr.actiontime desc")->result_array();*/
         
+        $data['pnh_menu'] = $this->db->query("select * from pnh_menu order by name")->result_array();
+        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+        $data['pnh_towns'] = $this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+        $data['pnh_menu'] = $this->db->query("select mn.id,mn.name from pnh_menu mn
+                                                    join king_deals deal on deal.menuid=mn.id
+                                                    where mn.status=1 
+                                                    group by mn.id
+                                                    order by mn.name")->result_array();
+
+        $data['pnh_brands'] = $this->db->query("select br.id,br.name from king_brands br
+                                    join king_orders o on o.brandid=br.id
+                                    group by br.id
+                                    order by br.name")->result_array();
+
         $data['user']=$user;
-        $data['last_qry']=$this->db->last_query();
-        $data['transactions']=$r_orders;
-        $data['total_trans']=count($r_orders);
+        //$data['last_qry']=$this->db->last_query();
+        //$data['transactions']=$r_orders;
+        //$data['total_trans']=count($r_orders);
         $data['s']=date("d/m/y",$from);
         $data['e']=date("g:ia d/m/y",$to);
 

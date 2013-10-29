@@ -376,10 +376,10 @@ class Erpmodel extends Model
                                             $stk_movtype=0;
                                             //$prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg=''
                                             if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,"PNH Offline Order Placed.")) {
-                                                //echo "Stock log updated.";
+                                                echo "Stock log updated.";
                                             }
                                             else {
-                                                //echo "Stock log not updated.";
+                                                echo "Stock log not updated.";
                                             }
                                              
                                     }
