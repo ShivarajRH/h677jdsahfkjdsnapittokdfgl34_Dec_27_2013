@@ -796,59 +796,53 @@
 								
 								var i_prod_id = resp.stk.product_id;
 								
-								// allot imeino to pending list
-								var ttl_imeireq = $('.imei'+i_prod_id).length; 
-								var ttl_imeiscanned = $('.imei'+i_prod_id+'_scanned').length;
-									if(ttl_imeireq <= ttl_imeiscanned)
+								var sel_imei_inpele = $('.imei'+i_prod_id+'_unscanned:eq(0)');
+									
+									if(sel_imei_inpele.length)
 									{
-										alert("Required Qty of Imei is already scanned");
-										return false;
+										sel_imei_inpele.parent().append('<a class="remove_scanned" prod_id="'+i_prod_id+'" href="javascript:void(0)" onclick="clear_scannedimeino(this)""><b>X</b></a>');
+										sel_imei_inpele.val(s_imei).removeClass('imei'+i_prod_id+'_unscanned').addClass('imei'+i_prod_id+'_scanned');
+										
+										prod_imeino_list[s_imei] = 0;
+											
+										var imei_map_str = new Array();
+										if(resp.stk.product_barcode.length)
+											imei_map_str.push(resp.stk.product_barcode); 
+										else
+											imei_map_str.push('0_nobc');
+											
+											
+										$.post(site_url+'/admin/jx_get_imei_stockdet','imei='+s_imei+'&p_invno='+sel_imei_inpele.attr('p_invno')+'&order_id='+sel_imei_inpele.attr('order_id'),function(resp){
+											if(resp.status == 'success')
+											{	
+												imei_map_str.push((resp.stk.mrp)*1);
+												imei_map_str.push(resp.stk.location_id);
+												imei_map_str.push(resp.stk.rack_bin_id);
+												imei_map_str.push(resp.stk.stock_id);
+												imei_map_str.push(sel_imei_inpele.attr('itemid'));
+												imei_map_str.push(sel_imei_inpele.attr('order_id'));
+												
+												
+														
+												// allot imeino to pending list
+												var ttl_imeireq = $('.imei'+i_prod_id).length; 
+												var ttl_imeiscanned = $('.imei'+i_prod_id+'_scanned').length;
+													if(ttl_imeireq <= ttl_imeiscanned)
+													{
+														alert("Required Qty of Imei is already scanned");
+														return false;
+													}else
+													{
+															$('#scan_barcode').val(imei_map_str.join('_'));									
+															//6438158558441_1249_1_10_158214_9763765471_7172369123
+															validate_barcode();		
+													}
+											}
+										});
+									
 									}else
 									{
-								
-										var sel_imei_inpele = $('.imei'+i_prod_id+'_unscanned:eq(0)');
-											
-											if(sel_imei_inpele.length)
-											{
-												sel_imei_inpele.parent().append('<a class="remove_scanned" prod_id="'+i_prod_id+'" href="javascript:void(0)" onclick="clear_scannedimeino(this)""><b>X</b></a>');
-												sel_imei_inpele.val(s_imei).removeClass('imei'+i_prod_id+'_unscanned').addClass('imei'+i_prod_id+'_scanned');
-												
-												prod_imeino_list[s_imei] = 0;
-													
-												
-													
-													
-												$.post(site_url+'/admin/jx_get_imei_stockdet','imei='+s_imei+'&p_invno='+sel_imei_inpele.attr('p_invno')+'&order_id='+sel_imei_inpele.attr('order_id'),function(resp){
-													if(resp.status == 'success')
-													{	
-														var imei_map_str = new Array();
-														if(resp.stk.product_barcode.length)
-															imei_map_str.push(resp.stk.product_barcode); 
-														else
-															imei_map_str.push('0_nobc');
-													
-														imei_map_str.push((resp.stk.mrp)*1);
-														imei_map_str.push(resp.stk.location_id);
-														imei_map_str.push(resp.stk.rack_bin_id);
-														imei_map_str.push(resp.stk.stock_id);
-														imei_map_str.push(sel_imei_inpele.attr('itemid'));
-														imei_map_str.push(sel_imei_inpele.attr('order_id'));
-														
-														
-																
-														
-																console.log(imei_map_str.join('_'));
-																$('#scan_barcode').val(imei_map_str.join('_'));									
-																//6438158558441_1249_1_10_158214_9763765471_7172369123
-																validate_barcode();		
-															
-													}
-												},'json');
-											
-											}else
-											{
-												alert("IMEI not found in this proforma for packing.");	
-											}
+										alert("IMEI not found in this proforma for packing.");	
 									}
 							}else
 							{

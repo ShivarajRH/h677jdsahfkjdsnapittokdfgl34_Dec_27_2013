@@ -3936,6 +3936,8 @@ class Erp extends Stream
 		$user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
 		$data['batch']=$this->erpm->getbatch($bid);
 		$data['invoices']=$this->erpm->getbatchinvoices($bid);
+
+
 		$data['page']="batch";
 		$this->load->view("admin",$data);
 	}

@@ -5,10 +5,10 @@ table.datagridsort tbody td { padding: 4px; }
 .datagrid th { background: #443266;color: #C3C3E5; }
 .subdatagrid {    width: 100%; }
 .subdatagrid th {
-    padding: 4px !important;
-    font-size: 11px !important;
-    color:#080808;
-    background-color:#C5C796; /*#F1F0FFrgba(51, 47, 43, 0.61);*/
+    padding: 2px 0 2px 4px !important;
+    font-size: 9px !important;
+    color: #130C09;
+    background-color: rgba(112, 100, 151, 0.51);
 }
 .subdatagrid td {
         /*font-size: 11px !important;*/
@@ -37,8 +37,33 @@ select {
 }
 label {
     margin:10px 0 15px 5px;
-
+    
 }
+.log_display {font-weight:bold;margin-right: 90px;}
+/*Start*/
+.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }
+.datagrid tr.processed_ord a { color: #290715 !important; }
+.datagrid tr.processed_ord { background-color: #80C280  !important; }
+.subdatagrid tr.processed_ord { background-color: #80C280  !important; text-decoration: line-through;}
+
+.datagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
+.datagrid tr.shipped_ord td a{ color: #BDB5AB !important;}
+.subdatagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
+.subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}
+
+.datagrid tr.pending_ord td { background-color: rgba(247, 190, 190, 0.51) !important; }
+.datagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
+.subdatagrid tr.pending_ord td {/*background-color: rgba(247, 190, 190, 0.51) !important*/}
+.subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
+
+.datagrid tr.cancelled_ord td{color: #cd0000 !important;}
+.datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
+.subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
+.subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
+/*   End*/
+.batch_msg {margin-top:20px;}
+.batch_msg .enabled { color: #F1F0FF; }
+.batch_msg .disabled { color: #8C489F; }
 </style>
 <div class="container" id="account_grn_present">
     <h2>Transaction Reservation Status</h2>
@@ -49,6 +74,20 @@ label {
             <tr>
                 <td width="55%">
 
+                    <select id="sel_menu" name="sel_menu" colspan="2">
+                        <option value="00">Select Menu</option>
+                         <?php foreach($pnh_menu as $menu): ?>
+                                <option value="<?php echo $menu['id'];?>"><?php echo $menu['name'];?></option>
+                        <?php endforeach; ?>
+                    </select> &nbsp;
+                    <select id="sel_brands" name="sel_brands">
+                        <option value="00">Select Brands</option>
+                         <?php foreach($pnh_brands as $brand): ?>
+                                <option value="<?php echo $brand['id'];?>"><?php echo $brand['name'];?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <select id="sel_territory" name="sel_territory" >
                         <option value="00">All Territory</option>
                         <?php foreach($pnh_terr as $terr):?>
@@ -64,29 +103,22 @@ label {
                     <select id="sel_franchise" name="sel_franchise">
                         <option value="00">All Franchise</option>
                     </select>
-                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <select id="sel_menu" name="sel_menu" colspan="2">
-                        <option value="00">Select Menu</option>
-                         <?php foreach($pnh_menu as $menu): ?>
-                                <option value="<?php echo $menu['id'];?>"><?php echo $menu['name'];?></option>
-                        <?php endforeach; ?>
-                    </select> &nbsp;
-                    <select id="sel_brands" name="sel_brands">
-                        <option value="00">Select Brands</option>
-                         <?php foreach($pnh_brands as $brand): ?>
-                                <option value="<?php echo $brand['id'];?>"><?php echo $brand['name'];?></option>
-                        <?php endforeach; ?>
-
-                    </select>
                 </td>
-                <td width="45%"><div class="ttl_trans_listed dash_bar"></div>
-                    <br><span class="log_display" style="font-weight:bold;"></span></td>
+                <td width="45%" align="right">
+                   <form id="trans_date_form" method="post">
+                            <b>Show transactions</b> :
+                            <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
+                                    name="date_from" value="<?php echo date('Y-m-d',time()-60*60*24*7*4)?>" />
+                            <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
+                                    name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
+                            <input type="submit" value="Submit">
+                    </form>
+                </td>
             </tr>
-        
             <tr>
                 
                 <td>
-                    <label for="batch_type">Batch Type:</label>
+                    <label for="batch_type" style="float:left;">Batch Type:</label>
                     <select id="batch_type">
                         <option value="00">All</option>
                         <option value="ready">Batch Ready</option>
@@ -94,40 +126,41 @@ label {
                         <option value="not_ready">Not Ready</option>
                     </select>
                 </td>
-                
-                <td align="right"><div >
-                    <form id="trans_date_form" method="post">
-                            <b>Show transactions</b> :
-                            <label for="date_from">Batch Type:From :</label><input type="text" style="width: 90px;" id="date_from"
-                                    name="date_from" value="<?php echo date('Y-m-d',time()-60*60*24*7*4)?>" />
-                            <label for="date_to">Batch Type:To :</label><input type="text" style="width: 90px;" id="date_to"
-                                    name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
-                            <input type="submit" value="Submit">
-                    </form>
-                    </div>
+                <td align="right"> 
+                    <span class="log_display"></span>
+                    <span class="ttl_trans_listed dash_bar"></span>
                 </td>
             </tr>
-            
         </table>
     </div>
-
-    <div style="padding:10px 0px;" id="trans_list_replace_block"></div>
+    <div style="padding:1px 0px;" id="trans_list_replace_block"></div>
 </div>
 
 <script>
 // <![CDATA[
-    $(document).ready(function() {
-        loadTransactionList(0);
-        
-    });
+    //By default load lists
+    loadTransactionList(0);
+    
+    function batch_enable_disable(transid,flag) {
+        var d_msg=(flag==1)?"enable":"disable";
+        if(confirm("Are you sure you want to "+d_msg+" for batch?")) {
+            $.post(site_url+"admin/jx_batch_enable_disable/"+transid+"/"+flag,{},function(rdata) {
+                //$(".batch_status_msg_"+transid).html(rdata);
+                loadTransactionList(0);
+            });
+        }
+    }
+    //Show between date ranges
     $("#trans_date_form").submit(function() {
         loadTransactionList(0);
         return false;
     });
+    //ONCHANGE Batch_type
     $("#batch_type").live("change",function() {
         loadTransactionList(0);
         return false;
     });
+    //Paginations
     $(".trans_pagination a").live("click",function(e) {
         e.preventDefault();
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
@@ -137,11 +170,11 @@ label {
         });
         return false;
     });
+    
     $("#sel_menu").live("change",function() {
             var menuid=$(this).find(":selected").val();//text();
             
-            var url="<?php echo site_url("admin/jx_get_brandsbymenuid"); ?>"+"/"+menuid;
-            $.post(url,function(resp) {
+            $.post("<?php echo site_url("admin/jx_get_brandsbymenuid"); ?>"+"/"+menuid,{},function(resp) {
                     if(resp.status=='success') {
                          var obj = jQuery.parseJSON(resp.brands);
                         $("#sel_brands").html(objToOptions_brands(obj));
@@ -159,9 +192,68 @@ label {
         loadTransactionList(0);
         return false;
     });
+    $("#sel_franchise").live("change",function() {
+                /*var franchiseid=($("#sel_franchise").val()=='00')? 00 :$("#sel_franchise").val();
+                if(franchiseid==00) {
+                    $(".sel_status").html("");
+                }   $.post("<?php echo site_url("admin/jx_franchise_creditnote"); ?>"+"/"+franchiseid,{},function(resp) {
+                    if(resp.status=='success') {
+                         $(".sel_status").html(resp);
+                    }
+                    else {
+                        $(".sel_status").html(resp);
+                    }
+                }).done(done).fail(fail);*/
+                
+        loadTransactionList(0);
+        return false;
+    });
+    
+    //ENTRY 6
+    $("#sel_town").live("change",function() { 
+        var townid=$(this).find(":selected").val();//text();
+        var terrid=$("#sel_territory").find(":selected").val();//text();
+        var url="<?php echo site_url("admin/jx_suggest_fran"); ?>"+"/"+terrid+"/"+townid;
+        $.post(url,function(resp) {
+                if(resp.status=='success') {
+                     var obj = jQuery.parseJSON(resp.franchise);
+                    $("#sel_franchise").html(objToOptions_franchise(obj));
+                }
+                else {
+                    $("#sel_franchise").val($("#sel_franchise option:nth-child(0)").val());
+                    //$(".sel_status").html(resp.message);
+                }
+            },'json').done(done).fail(fail);
+        
+        loadTransactionList(0);
+        return false;
+    });
+    
+    
+    //ONCHANGE Territory
+    $("#sel_territory").live("change",function() {
+        var terrid=$(this).find(":selected").val();//text();
+//        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
+        
+       // $("table").data("sdata", {terrid:terrid});
+        var url="<?php echo site_url("admin/jx_suggest_townbyterrid"); ?>/"+terrid;//  alert(url);
+        $.post(url,function(resp) {
+            if(resp.status=='success') {
+                 //print(resp.towns);
+                 var obj = jQuery.parseJSON(resp.towns);
+                $("#sel_town").html(objToOptions_terr(obj));
+            }
+            else {
+                $("#sel_town").val($("#sel_town option:nth-child(0)").val());
+                $("#sel_franchise").val($("#sel_franchise option:nth-child(0)").val());
+                            //$(".sel_status").html(resp.message);
+            }
+        },'json').done(done).fail(fail);
+        loadTransactionList(0);
+        return false;
+    });
     
     function trans_enable_batch(transid) {
-        $("#action_refresh_"+transid).refresh();return false;
         if(!confirm("Are you sure you want to process \nthis transaction for batch?")) {
             return false;
             //var batch_remarks=prompt("Enter remarks?");
@@ -180,12 +272,19 @@ label {
     function loadTransactionList(pg) 
     {
         var batch_type= ($("#batch_type").val() == "00")?0: $("#batch_type").val();
+        
+        var terrid= ($("#sel_territory").val()=='00')?0:$("#sel_territory").val();
+         var townid=($("#sel_town").val()=='00')?0:$("#sel_town").val();
+         var franchiseid=($("#sel_franchise").val()=='00')?0:$("#sel_franchise").val();
+         var menuid=($("#sel_menu").val()=='00')?0:$("#sel_menu").val();
+         var brandid=($("#sel_brands").val()=='00')?0:$("#sel_brands").val();
+         
         var date_from= $("#date_from").val();
         var date_to= $("#date_to").val();
         
         //alert(batch_type+date_from+date_to+pg);
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
-        $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+"/"+pg,"",function(rdata) {
+        $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+pg,"",function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
         });
@@ -223,31 +322,45 @@ $(document).ready(function() {
         });
 
         prepare_daterange('date_from','date_to');
-        
     });
+    
+    function done(data) { }
+    function fail(xhr,status) { $('#trans_list_replace_block').print("Error: "+xhr.responseText+" "+xhr+" | "+status);}
+    function success(resp) {
+            $('#trans_list_replace_block').html(resp);
+    }
+
+   function objToOptions_brands(obj) {
+        var output='';
+            output += "<option value='00' selected>All Brands</option>\n";
+        $.each(obj,function(key,elt){
+            if(obj.hasOwnProperty(key)) {
+                output += "<option value='"+elt.id+"'>"+elt.name+"</option>\n";
+            }
+        });
+        return(output);
+    }
+    function objToOptions_terr(obj) {
+        var output='';
+            output += "<option value='00' selected>All Towns</option>\n";
+        $.each(obj,function(key,elt){
+            if(obj.hasOwnProperty(key)) {
+                output += "<option value='"+elt.id+"'>"+elt.town_name+"</option>\n";
+            }
+        });
+        return(output);
+    }
+    function objToOptions_franchise(obj) {
+        var output='';
+            output += "<option value='00' selected>All Franchise</option>\n";
+        $.each(obj,function(key,elt){
+            if(obj.hasOwnProperty(key)) {
+                output += "<option value='"+elt.franchise_id+"'>"+elt.franchise_name+"</option>\n";
+            }
+        });
+        return(output);
+    }
 // ]]>
 </script>
-<style type="text/css">
 
-.datagrid tr.processed_ord td { color: green  !important; }
-.datagrid tr.processed_ord td a { color: green !important; }
-.subdatagrid tr.processed_ord td { text-decoration: line-through;color: green  !important; }
-.subdatagrid tr.processed_ord td a { text-decoration: line-through;color: green  !important; }
-
-.datagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
-.datagrid tr.shipped_ord td a{ color: #BDB5AB !important;}
-.subdatagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
-.subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}
-
-.datagrid tr.pending_ord td{color: rgb(221, 148, 14) !important;}
-.datagrid tr.pending_ord td a{color: rgb(221, 148, 14) !important;}
-.subdatagrid tr.pending_ord td{color: rgb(221, 148, 14) !important;}
-.subdatagrid tr.pending_ord td a{color: rgb(221, 148, 14) !important;}
-
-.datagrid tr.cancelled_ord td{color: #cd0000 !important;}
-.datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
-.subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
-.subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
-
-</style>
 <?php

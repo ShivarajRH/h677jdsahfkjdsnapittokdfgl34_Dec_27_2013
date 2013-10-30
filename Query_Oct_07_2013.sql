@@ -501,3 +501,21 @@ select
 	==>334
 
 # select 479-334 => 145 rows removed
+
+#Oct-29_2013
+select 
+                    from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+                    ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+                    ,o.id as orderid,o.itemid,o.status,o.quantity,o.shipped,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+		,d.brandid,d.menuid
+		#,f.franchise_id	
+                    from king_orders o
+                    join king_transactions tr on tr.transid=o.transid
+                    join king_dealitems di on di.id=o.itemid 
+		join king_deals d on d.dealid=di.dealid
+		join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+		join pnh_m_territory_info ter on ter.id = f.territory_id 
+		join pnh_towns twn on twn.id=f.town_id
+                    WHERE tr.actiontime between 1380565800 and 1383071399 and tr.batch_enabled=1 and tr.transid='PNH76511'
+#and o.status in(1,2)
+                    group by o.transid order by tr.actiontime desc 

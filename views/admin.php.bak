@@ -45,6 +45,8 @@ if(!defined("APL_VER"))
 <link type="text/css" rel="stylesheet" href="<?=base_url()?>/min/index.php?g=erp_css&<?php echo strtotime(date('Y-m-d'));?>&1=2">
 <script type="text/javascript" src="<?=base_url()?>/min/index.php?g=erp_js&<?php echo strtotime(date('Y-m-d'));?>&1=1"></script>
 
+<!--<script type="text/javascript" src="<?=base_url()?>/js/jQl.min.js"></script>
+<script>jQl.loadjQ("../js/jquery-1.8.1.min.js"); </script>-->
 
 <style>
 table{font-size:inherit;}

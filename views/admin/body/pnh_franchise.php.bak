@@ -471,10 +471,10 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 							<th>IMEI Slno</th>
 							<th>Selling Price</th>
 							<th>Orderd On</th>
+							<th>Scheme Type</th>
 							<th>Is Activated</th>
-							<th>Applied Credit</th>
-							<th>Credit Value(Rs)</th>
 							<th>Activated on</th>
+							<th>Activation Credit</th>
 						</thead>
 						<tbody></tbody>
 					</table>	
@@ -2840,8 +2840,6 @@ $("#pnh_membersch").dialog({
 									b.is_imei_activated='No';
 								else
 									b.is_imei_activated='Yes';
-								if(b.imei_activated_on === null)
-									b.imei_activated_on='--na--';
 								shipped_imeilist_html += '<tr>'
 														+'<td>'+(pg+a+1)+'</td>'
 														+'<td>'+b.product_name+'</td>'
@@ -2849,12 +2847,10 @@ $("#pnh_membersch").dialog({
 														+'<td>'+b.imei_no+'</td>'
 														+'<td>'+b.paid+'</td>'
 														+'<td>'+b.orderd_on+'</td>'
+														+'<td>'+resp.imei_credit_type[b.scheme_type]+'</td>'
 														+'<td>'+b.is_imei_activated+'</td>'
-														+'<td>'+b.credit_value+''+resp.imei_cre_type[b.scheme_type]+'</td>'
-														
-														
-														+'<td>'+b.imei_activation_credit+'</td>'
 														+'<td>'+b.imei_activated_on+'</td>'
+														+'<td>'+b.credit_value+'</td>'
 													+'</tr>';
 							});
 						$('#shipped_imeimobslno .module_cont_block_grid .datagrid tbody').html(shipped_imeilist_html);

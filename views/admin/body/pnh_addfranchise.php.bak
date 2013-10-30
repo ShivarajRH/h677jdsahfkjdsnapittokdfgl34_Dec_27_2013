@@ -131,25 +131,17 @@ function init_frmap() {
 <tr><td>Working Time : </td><td>
 <select name="shop_from">
 <?php for($i=1;$i<=24;$i++){?>
-<?php /* <option value="<?=$i?>" <?=(($v&&date("h",$v['store_open_time'])==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option> */ ?>
-<option value="<?=$i?>" <?=(($v&&$v['store_open_time']==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option> 
+<option value="<?=$i?>" <?=(($v&&date("h",$v['store_open_time'])==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>
 <?php }?>
 </select>
 to 
 <select name="shop_to">
 <?php for($i=1;$i<=24;$i++){?>
-<?php /*<option value="<?=$i?>" <?=(($v&&date("h",$v['store_close_time'])==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>*/?>
-<option value="<?=$i?>" <?=(($v&&$v['store_close_time']==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>
+<option value="<?=$i?>" <?=(($v&&date("h",$v['store_close_time'])==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>
 <?php }?>
 </select>
 </td></tr>
-<tr>
-	<td>Own Property? :</td>
-	<td>
-		<?php /*<input type="checkbox" name="own" value="<?=$v&&$v['own_rented']==1?"1":"0"?>">**/?>
-		<input type="checkbox" name="own" value="1" <? echo $v&&$v['own_rented']==1?"checked":''?>>
-	</td>
-</tr>
+<tr><td>Own Property? :</td><td><input type="checkbox" name="own" value="<?=$v&&$v['own_rented']==1?"1":"0"?>"></td></tr>
 <tr><td>Website :</td><td><input type="text" name="website" size=50 value="<?=$v?$v['website_name']:""?>"></td></tr>
 <tr><td>If Internet Available,mention ISP :</td><td><input type="text" name="internet" size=50 value="<?=$v?$v['internet_available']:""?>"></td></tr>
 <tr><td>TIN No :</td><td><input type="text" name="shop_tin" class="inp" value="<?=$v?$v['store_tin_no']:""?>" size=30  maxlength="40"></td></tr> 

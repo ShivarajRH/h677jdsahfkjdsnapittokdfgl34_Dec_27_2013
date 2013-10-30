@@ -153,12 +153,9 @@
 
 <table class="datagrid" width="100%" id="prods_order">
 <thead><tr><th>Sno</th><th>Product Image-PID</th><th>Product Name</th><th>MRP</th><th>Offer price / <br> DP price</th>
-	<th>MemberShip Fee</th>
-	<th>Qty</th>
-	<th>Sub Total</th><th>Quote</th><th>Actions</th></tr>
-
-
-</thead>
+			<th>MemberShip Fee</th>
+			<th>Qty</th>
+			<th>Sub Total</th><th>Quote</th><th>Actions</th></tr></thead>
 <tbody>
 </tbody>
 </table>
@@ -1100,7 +1097,7 @@ $(function(){
 
 			if(mid==0 && menu_id != 112)
 			{
-				if(confirm("Instant Registration is required because Other than Electronics Products are there in cart."))
+				if(confirm("Instant Registration is required because Other than Electronics Products are there in the Cart"))
 					 mem_reg();
 				 return false;
 			}

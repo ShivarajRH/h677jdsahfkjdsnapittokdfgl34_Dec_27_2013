@@ -10,7 +10,7 @@ $d=$deal;
 
 <table cellpadding=5 id="deal">
 <tr><td>Deal Name : </td><td><input type="text" name="name" class="inp" size=50 value="<?=$d?$d['name']:""?>"></td></tr>
-<tr><td>Print Name : </td><td><input type="text" name="print_name" class="inp" size=50 value="<?=$d?$d['print_name']:""?>"></td></tr>
+<tr><td>Print Name : </td><td><input type="text" name="print_name"  id="print_name" class="inp" size=50 value="<?=$d?$d['print_name']:""?>"><div class="hint">(If it is empty, deal name will be considered as print name.)</div></td></tr>
 <tr><td>Tagline : </td><td><input type="text" name="tagline" class="inp" size=30 value="<?=$d?$d['tagline']:""?>"></td></tr>
 <tr><td>MRP : </td><td>Rs <input type="text" name="mrp" <?=$d?"readonly":""?> class="inp" size="5" value="<?=$d?$d['orgprice']:""?>"></td></tr>
 <tr><td>Offer Price : </td><td>Rs <input type="text" name="offer_price" class="inp chk_price" size="5" value="<?=$d?$d['price']:""?>"></td></tr>
@@ -19,7 +19,7 @@ $d=$deal;
 <tr><td>Gender Attribute : </td><td><input type="text" name="gender_attr" class="inp" size=15 value="<?=$d?$d['gender_attr']:""?>"></td></tr>
 <tr><td>Tax : </td><td><input type="text" class="inp" name="tax" size=2 value="<?=$d?($d['tax']/100):""?>"> %</td></tr>
 <tr><td>Is Combo : </td><td><input type="checkbox" name="is_combo" value="1" <?=$d&&$d['is_combo']?"checked":""?>></td></tr>
-<tr><td>Max Allowed Qty <br> (for franchise per day) : </td><td><input type="text" name="max_allowed_qty" class="inp" size=4 value="<?=$d?$d['max_allowed_qty']:""?>"></td></tr>
+<tr><td>Max order qty(per day) : </td><td><input type="text" name="max_allowed_qty" class="inp" size=4 value="<?=$d?$d['max_allowed_qty']:""?>"></td></tr>
 <tr><td>Image : </td><td><input type="file" name="pic" class="inp">
 <?php if($d){?>To replace, upload a image<?php }?>
 </td></tr>
@@ -154,6 +154,7 @@ Search : <input type="text" class="inp" size=60 id="po_g_search">
 </div>
 <style>
 .error_inp{border:1px solid #cd0000 !important;}
+.hint {font-size: 9px;color: #666;}
 </style>
 <script>
 
@@ -263,7 +264,12 @@ $(function(){
 				return false;
 			}
 		}
-		
+		if($("#print_name").val()=='') {
+                    if(!confirm("Print name is empty you want deal name as print name?")) {
+                        $("#print_name").focus();
+                        return false;
+                    }
+                }
 		return true;
 	});
 	

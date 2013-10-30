@@ -77,9 +77,6 @@
 				<?php	
 					}
 				?>
-				<tr>
-					<td colspan="8" align="right"><?php echo $pagination;?></td>
-				</tr>
 			</tbody>
 		</table>
 		<?php 

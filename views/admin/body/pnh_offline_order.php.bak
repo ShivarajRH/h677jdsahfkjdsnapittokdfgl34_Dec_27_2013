@@ -153,42 +153,39 @@
 
 <table class="datagrid" width="100%" id="prods_order">
 <thead><tr><th>Sno</th><th>Product Image-PID</th><th>Product Name</th><th>MRP</th><th>Offer price / <br> DP price</th>
-	<th>MemberShip Fee</th>
-	<th>Qty</th>
-	<th>Sub Total</th><th>Quote</th><th>Actions</th></tr>
-
-
-</thead>
+			<th>MemberShip Fee</th>
+			<th>Qty</th>
+			<th>Sub Total</th><th>Quote</th><th>Actions</th></tr></thead>
 <tbody>
 </tbody>
 </table>
 
-    <div style="padding:5px 0px 0px 0px;">
-        <div style="float:right;"><input type="submit" style="font-size:120%;border: 0px;border: 1px solid #FFF;font-size: 115%;padding: 5px 10px;border-radius: 3px;font-weight: normal;background: #68a54b;color: #FFF;cursor: pointer" id="pnh_ordeR_submit" value="Place order"  class="myButton_placeorder1"></div>
-        <div><input type="button" value="Request From Franchisee" id="reqq_but" style="font-size:120%;border: 0px;border: 1px solid #FFF;font-size: 115%;padding: 5px 10px;border-radius: 3px;font-weight: normal;cursor: pointer;background: #68a54b;color: #FFF" onclick='request_quote()' class="myButton_reqfran1" style="font-size:12px;">
-        </div>
+<div style="padding:5px 0px 0px 0px;">
+<div style="float:right;"><input type="submit" style="font-size:120%;border: 0px;border: 1px solid #FFF;font-size: 115%;padding: 5px 10px;border-radius: 3px;font-weight: normal;background: #68a54b;color: #FFF;cursor: pointer" id="pnh_ordeR_submit" value="Place order"  class="myButton_placeorder1"></div>
+<div><input type="button" value="Request From Franchisee" id="reqq_but" style="font-size:120%;border: 0px;border: 1px solid #FFF;font-size: 115%;padding: 5px 10px;border-radius: 3px;font-weight: normal;cursor: pointer;background: #68a54b;color: #FFF" onclick='request_quote()' class="myButton_reqfran1" style="font-size:12px;">
+</div>
 
-        <div class="clear"></div>
-        </form>
-    </div>
+<div class="clear"></div>
+</form>
+</div>
 </div>
 <div id="last_confirm" style="display:none">
 
 <div id="price_changes" style="float:right;margin-right:10px;width:800px;margin-top:-15px">
 </div>
 
-    <table class="datagrid noprint">
-        <thead><tr><th colspan="100%">Order Confirmation</th></tr></thead>
-        <tbody>
-            <tr><td>Total Amount : </td><td>Rs <span id="final_amount"></span></td></tr>
-            <tr><td>Commission : </td><td>Rs <span id="final_com"></span></td></tr>
-            <tr><td>Amount to be deducted</td><td>Rs <span id="final_ded"></span></td></tr>
-            <tr><td>Current Balance : </td><td>Rs <span id="final_bal"></span></td></tr>
-            <tr><td>Balance After deduction : </td><td>Rs <span id="final_abal"></span></td></tr>
-            <tr><td><input type="button" value="Confirm" onclick='final_confirm()'></td><td><input type="button" value="Cancel" onclick='final_cancel()'></td></tr>
-        </tbody>
-    </table>
-    <div class="clear"></div>
+<table class="datagrid noprint">
+<thead><tr><th colspan="100%">Order Confirmation</th></tr></thead>
+<tbody>
+<tr><td>Total Amount : </td><td>Rs <span id="final_amount"></span></td></tr>
+<tr><td>Commission : </td><td>Rs <span id="final_com"></span></td></tr>
+<tr><td>Amount to be deducted</td><td>Rs <span id="final_ded"></span></td></tr>
+<tr><td>Current Balance : </td><td>Rs <span id="final_bal"></span></td></tr>
+<tr><td>Balance After deduction : </td><td>Rs <span id="final_abal"></span></td></tr>
+<tr><td><input type="button" value="Confirm" onclick='final_confirm()'></td><td><input type="button" value="Cancel" onclick='final_cancel()'></td></tr>
+</tbody>
+</table>
+<div class="clear"></div>
 
 </div>
 
@@ -198,55 +195,53 @@
 </div>
 
 <table id="template" style="display:none">
-    <tbody>
-    <tr pid="%pid%"  pimage="%pimage% %pid%" pname="%pname%" mrp="%mrp%" price="%price%" lcost="%lcost%" margin="%margin%" >
-        <td>%sno%</td>
-        <td style="text-align: center;padding:10px 0px 0px;width: 100px;background: #FFF;"><img alt="" height="100" src="<?=IMAGES_URL?>items/%pimage%.jpg"><b style="display: block;background: #f7f7f7;padding:2px;;text-align: center">%pid%</b></td>
-        <td><input class="pids" type="hidden" name="pid[]" value="%pid%"><span>%pname%</span>
-            <input type="hidden" name="menu[]" value="%menuid%" class="menuids">
-            <div style="margin-top: 5px;font-size: 12px;">
-                    <div class="p_extra"><b>Category :</b> %cat%</div>
-                    <div class="p_extra"><b>Brand:</b> %brand%</div>
+<tbody>
+<tr pid="%pid%"  pimage="%pimage% %pid%" pname="%pname%" mrp="%mrp%" price="%price%" lcost="%lcost%" margin="%margin%" >
+<td>%sno%</td>
+<td style="text-align: center;padding:10px 0px 0px;width: 100px;background: #FFF;"><img alt="" height="100" src="<?=IMAGES_URL?>items/%pimage%.jpg"><b style="display: block;background: #f7f7f7;padding:2px;;text-align: center">%pid%</b></td>
+<td><input class="pids" type="hidden" name="pid[]" value="%pid%"><span>%pname%</span>
+<input type="hidden" name="menu[]" value="%menuid%" class="menuids">
+<div style="margin-top: 5px;font-size: 12px;">
+	<div class="p_extra"><b>Category :</b> %cat%</div>
+	<div class="p_extra"><b>Brand:</b> %brand%</div>
+	
+	<div class="p_stk">Stock Suggestion: %stock%</div>
+	<div class="p_attr">%attr%</div>
+	<div class="p_attr">%confirm_stock%</div>
+</div>
+</td>
 
-                    <div class="p_stk">Stock Suggestion: %stock%
-                        <input type="hidden" class="avail_stock" size=2 name="avail_stock[]" id="avail_stock" value="%avail_stock%" /></div>
-                    <div class="p_attr">%attr%</div>
-                    <div class="p_attr">%confirm_stock%</div>
-            </div>
-        </td>
-
-        <td>
-                <b style="font-size: 13px">%mrp%</b>
-                <div class="p_extra" style="display: %dspmrp%;
-                font-size: 11px;
-                margin-top: 10px;
-                line-height: 19px;
-                padding: 10px;
-                font-weight: bold;
-                background: wheat !important;
-                text-align: center;width: 60px;"><b>OldMRP:</b> <span style="color: #cd0000;font-size: 13px;">%oldmrp%</span></div>
-        </td>
-        <td><span class="price">%price%</span></td>
-        <td>
-                <span style="display:none" class="lcost"><b>%lcost%</b></span>
-                Rs %margin_amt% <br><br>
-                (%margin%%) <br>
-                <b>Rs %lcost%</b>
-                %imei_sch_disc%  
-        </td>
-        <!--<td>%src%</td>-->
-        <td>
-                <input type="text" class="qty" pmax_ord_qty="%max_oqty%" size=2 name="qty[]" value="1">
-                %max_ord_qty%
-        </td>
-        <td><span class="stotal">%lcost%</span></td>
-        <td><input type="text" name="quote[]" size=4></td>
-        <td>
-            <a href="javascript:void(0)" onclick='remove_psel(this)'>remove</a><br>
-            <a href="<?=site_url("admin/pnh_deal")?>/%pid%" target="_blank">view</a>
-        </td>
-        </tr>
-    </tbody> 
+<td>
+	<b style="font-size: 13px">%mrp%</b>
+	<div class="p_extra" style="display: %dspmrp%;
+font-size: 11px;
+margin-top: 10px;
+line-height: 19px;
+padding: 10px;
+font-weight: bold;
+background: wheat !important;
+text-align: center;width: 60px;"><b>OldMRP:</b> <span style="color: #cd0000;font-size: 13px;">%oldmrp%</span></div>
+</td>
+<td><span class="price">%price%</span></td>
+<td>
+	<span style="display:none" class="lcost"><b>%lcost%</b></span>
+	Rs %margin_amt% <br><br>
+	(%margin%%) <br>
+	<b>Rs %lcost%</b>
+	%imei_sch_disc%  
+</td>
+<!--<td>%src%</td>-->
+<td>
+	<input type="text" class="qty" pmax_ord_qty="%max_oqty%" size=2 name="qty[]" value="1">
+	%max_ord_qty%
+</td>
+<td><span class="stotal">%lcost%</span></td>
+<td><input type="text" name="quote[]" size=4></td>
+<td><a href="javascript:void(0)" onclick='remove_psel(this)'>remove</a><br>
+<a href="<?=site_url("admin/pnh_deal")?>/%pid%" target="_blank">view</a>
+</td>
+</tr>
+</tbody> 
 </table>
 
 <script>
@@ -1071,7 +1066,7 @@ $(function(){
 		ppids=[];
 		qty=[];
 		menuids=[];
-		avail_stock=[];
+		
 		$("#prods_order .stotal").each(function(){
 			total+=parseFloat($(this).html());
 		});
@@ -1086,10 +1081,6 @@ $(function(){
 		$("#prods_order .qty").each(function(){
 			qty.push($(this).val());
 		});
-                $("#prods_order .avail_stock").each(function(){
-			avail_stock.push($(this).val());
-		});
-                
 		var menu_qty=qty;
 		var menuid=menuids;
 		var mid = $("input[name='mid']",$(this)).val().length;
@@ -1106,7 +1097,7 @@ $(function(){
 
 			if(mid==0 && menu_id != 112)
 			{
-				if(confirm("Instant Registration is required because Beauty Products are there in the Cart"))
+				if(confirm("Instant Registration is required because Other than Electronics Products are there in Cart"))
 					 mem_reg();
 				 return false;
 			}
@@ -1128,9 +1119,8 @@ $(function(){
 			$("#order_form").hide();
 			attr=$(".attr").serialize();
 			
-			$.post("<?=site_url("admin/pnh_jx_checkstock_order")?>",{attr:attr,pids:ppids.join(","),qty:qty.join(","),fid:$('#i_fid').val(),mid:$("input[name='mid']",$(this)).val(),avail_stock:avail_stock.join(",")},function(data){
-//				alert(data); return false;
-                                obj=$.parseJSON(data);
+			$.post("<?=site_url("admin/pnh_jx_checkstock_order")?>",{attr:attr,pids:ppids.join(","),qty:qty.join(","),fid:$('#i_fid').val(),mid:$("input[name='mid']",$(this)).val()},function(data){
+				obj=$.parseJSON(data);
 				if(obj.e==0)
 				{
 					goodtogo=1;

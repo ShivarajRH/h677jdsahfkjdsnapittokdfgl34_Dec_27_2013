@@ -1394,7 +1394,7 @@ class Erpmodel extends Model
 		print_r($orders);
 		print_r($stock);
 		exit;
-		*/
+		 * */
 		
 		$invoices=$this->erpm->do_proforma_invoice($orders);
 		
@@ -3569,7 +3569,7 @@ courier disable ends
 	{
 		$f=@fopen($_FILES['deals']['tmp_name'],"r");
 		$head=fgetcsv($f);
-		$template=array("name","print_name","tagline","max_allowed_qty","catid","brandid","mrp","price","store_price","nyp_price","gender_attr","pic","tax","description","products","products_group","keywords","menu","shipsin","publish");
+		$template=array("name","print_name","tagline","catid","brandid","mrp","price","store_price","nyp_price","gender_attr","max_allowed_qty","pic","tax","description","products","products_group","keywords","menu","shipsin","publish");
 		if(empty($head) || count($head)!=count($template))
 			show_error("Invalid template structure");
 		while(($data=fgetcsv($f))!=false)
@@ -3668,7 +3668,7 @@ courier disable ends
 	    ob_clean();
 	    flush();
 	    echo $csv;
-	    redirect("admin/deals_bulk_upload");
+	    redirect("admin/pnh_deals_bulk_upload");
 	    exit;
 	}
 	
@@ -5609,7 +5609,7 @@ order by p.product_name asc
 					}
 					*/
 					
-					$p_stk_ref_id = $this->_upd_product_stock($p['product'],$p['mrp'],$p['barcode'],$p['location'],$p['rackbin'],0,$p['rqty'],4,1,$grn);
+					$p_stk_ref_id = $this->erpm->_upd_product_stock($p['product'],$p['mrp'],$p['barcode'],$p['location'],$p['rackbin'],0,$p['rqty'],4,1,$grn);
 					
 					if($this->db->query("select is_serial_required as s from m_product_info where product_id=?",$p['product_id'])->row()->s==1)
 					{
@@ -6514,7 +6514,7 @@ order by p.product_name asc
 		$prices_det=$this->db->query("select orgprice,price from king_dealitems where id=? and is_pnh=1",$itemid)->row_array();
 		
 		$msg_flag=0;
-		foreach(array("gender_attr","menu","keywords","name","print_name","tagline","max_allowed_qty","mrp","offer_price","store_offer_price","nyp_offer_price","brand","category","description","pid","qty","tax","shipsin","p_price") as $q)
+		foreach(array("gender_attr","print_name","max_allowed_qty","menu","keywords","tagline","name","mrp","offer_price","store_offer_price","nyp_offer_price","brand","category","description","pid","qty","tax","shipsin","p_price") as $q)
 			$$q=$this->input->post($q);
 		$imgname = randomChars ( 15 );
 		if (isset ( $_FILES ['pic'] ) && $_FILES ['pic'] ['error'] == 0)
@@ -6546,7 +6546,7 @@ order by p.product_name asc
 			$is_price_update=1;
 			
 		
-		$this->db->query("update king_dealitems set name=?,print_name=?,max_allowed_qty=?,orgprice=?,price=?,store_price=?,nyp_price=?,gender_attr=?,tax=?,shipsin=?,modified=?,modified_on=?,modified_by=? where id=?",array($name,$print_name,$max_allowed_qty,$mrp,$offer_price,$store_offer_price,$nyp_offer_price,$gender_attr,$tax*100,$shipsin,time(),date('Y-m-d H:i:s'),$user_det['userid'],$itemid));
+		$this->db->query("update king_dealitems set max_allowed_qty=?,print_name=?,name=?,orgprice=?,price=?,store_price=?,nyp_price=?,gender_attr=?,tax=?,shipsin=?,modified=?,modified_on=?,modified_by=? where id=?",array($max_allowed_qty,$print_name,$name,$mrp,$offer_price,$store_offer_price,$nyp_offer_price,$gender_attr,$tax*100,$shipsin,time(),date('Y-m-d H:i:s'),$user_det['userid'],$itemid));
 		$this->db->query("update king_deals set description=?,keywords=?,menuid=?,keywords=?,catid=?,brandid=?,tagline=? where dealid=?",array($description,$keywords,$menu,$keywords,$category,$brand,$tagline,$dealid));
 		
 		
@@ -6625,7 +6625,7 @@ order by p.product_name asc
 	{
 		$user=$this->erpm->getadminuser();
 		
-		foreach(array("gender_attr","menu","keywords","name","print_name","tagline","max_allowed_qty","mrp","offer_price","store_offer_price","nyp_offer_price","brand","category","description","pid","qty","tax","shipsin","pid_g","qty_g") as $q)
+		foreach(array("gender_attr","max_allowed_qty","print_name","menu","keywords","tagline","name","mrp","offer_price","store_offer_price","nyp_offer_price","brand","category","description","pid","qty","tax","shipsin","pid_g","qty_g") as $q)
 			$$q=$this->input->post($q);
 		$imgname = randomChars ( 15 );
 		if (isset ( $_FILES ['pic'] ) && $_FILES ['pic'] ['error'] == 0)
@@ -6660,8 +6660,8 @@ order by p.product_name asc
 		
 		$inp=array($dealid,$menu,$keywords,$category,$brand,$imgname,$tagline,$description,1);
 		$this->db->query("insert into king_deals(dealid,menuid,keywords,catid,brandid,pic,tagline,description,publish) values(?,?,?,?,?,?,?,?,?)",$inp);
-		$inp=array($itemid,$dealid,$name,$print_name,$max_allowed_qty,$imgname,$mrp,$offer_price,$store_offer_price,$nyp_offer_price,$gender_attr,1,$pnh_id,$tax*100,$shipsin,1,time(),date("Y-m-d H:i:s"),$user['userid']);
-		$this->db->query("insert into king_dealitems(id,dealid,name,print_name,max_allowed_qty,pic,orgprice,price,store_price,nyp_price,gender_attr,is_pnh,pnh_id,tax,shipsin,live,created,created_on,created_by) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",$inp);
+		$inp=array($itemid,$dealid,$print_name,$max_allowed_qty,$name,$imgname,$mrp,$offer_price,$store_offer_price,$nyp_offer_price,$gender_attr,1,$pnh_id,$tax*100,$shipsin,1,time(),date("Y-m-d H:i:s"),$user['userid']);
+		$this->db->query("insert into king_dealitems(id,dealid,print_name,max_allowed_qty,name,pic,orgprice,price,store_price,nyp_price,gender_attr,is_pnh,pnh_id,tax,shipsin,live,created,created_on,created_by) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",$inp);
 		if(!empty($pid))
 		foreach($pid as $i=>$p)
 			$this->db->query("insert into m_product_deal_link(product_id,itemid,qty,created_on,created_by) values(?,?,?,?,?)",array($p,$itemid,$qty[$i],date('Y-m-d H:i:s'),$user['userid']));
@@ -7265,9 +7265,14 @@ order by p.product_name asc
 		}
 		
 		
-		$cols=array("franchise_name", "address", "locality", "city","state", "postcode","login_mobile1","login_mobile2","email_id", "store_name","business_type","no_of_employees", "store_area","lat","long","store_open_time", "store_close_time","website_name","internet_available","class_id","territory_id","town_id", "security_question", "security_answer","security_question2","security_answer2","security_custom_question","security_custom_question2","store_pan_no","store_tin_no","store_service_tax_no","store_reg_no","is_lc_store","modified_by","modified_on");
-		foreach(array("name","address","locality","city","state","postcode","login_mobile1","login_mobile2","login_email","shop_name","business_type","shop_emps","shop_area","lat","long","shop_from","shop_to","website","internet","class","territory","town","sec_q","sec_a","sec_q2","sec_a2","sec_cq","sec_cq2","shop_pan","shop_tin","shop_stax","shop_reg","is_lc_store") as $i=>$a)
+		$cols=array("franchise_name", "address", "locality", "city","state", "postcode","login_mobile1","login_mobile2","email_id", "store_name","business_type","no_of_employees", "store_area","lat","long","store_open_time", "store_close_time","website_name","internet_available","class_id","territory_id","town_id", "security_question", "security_answer","security_question2","security_answer2","security_custom_question","security_custom_question2","store_pan_no","store_tin_no","store_service_tax_no","store_reg_no","is_lc_store","own_rented","modified_by","modified_on");
+		foreach(array("name","address","locality","city","state","postcode","login_mobile1","login_mobile2","login_email","shop_name","business_type","shop_emps","shop_area","lat","long","shop_from","shop_to","website","internet","class","territory","town","sec_q","sec_a","sec_q2","sec_a2","sec_cq","sec_cq2","shop_pan","shop_tin","shop_stax","shop_reg","is_lc_store","own") as $i=>$a)
+		{
 			$data[$cols[$i]]=$this->input->post($a);
+		}
+		
+		$data['own_rented']=$data['own_rented']?1:0;
+		
 		if($this->input->post("sec_q")!="-1")
 			$data['security_custom_question']="";
 		if($this->input->post("sec_q2")!="-1")
@@ -7289,12 +7294,16 @@ order by p.product_name asc
 	function do_pnh_addfranchise()
 	{
 //		$this->debug_post();
+		
 		$user=$this->erpm->getadminuser();
 		foreach(array("name","address","own","locality","city","state","postcode","class","territory","town","login_mobile1","login_mobile2","login_email","internet","shop_name","shop_emps","shop_area","store_menu","lat","long","shop_from","shop_to","website","assign_to","dev_sno","dev_type","cnt_name","cnt_desgn","cnt_mob1","cnt_mob2","cnt_telephone","cnt_fax","cnt_email1","cnt_email2","sec_amount","sec_type","sec_bank","sec_no","sec_date","business_type","sec_q","sec_a","sec_q2","sec_a2","sec_msg","shop_reg","shop_tin","shop_pan","shop_stax","is_lc_store") as $i)
 			$$i=$this->input->post($i);
 		if($this->db->query("select 1 from pnh_m_franchise_info where (login_mobile1=? and login_mobile1!='') || (login_mobile1=? and login_mobile1!='') || (login_mobile2=? and login_mobile2!='') || (login_mobile2=? and login_mobile2!='')",array($login_mobile1,$login_mobile2,$login_mobile1,$login_mobile2))->num_rows()!=0)
 			show_error("Already a franchise exists with given login mobile");
 		$fid="3".$this->erpm->p_genid(7);
+		
+		$own=$own?1:0;
+		
 		$inp=array("town_id"=>$town,"business_type"=>$business_type,"pnh_franchise_id"=>$fid,"franchise_name"=>$name,"address"=>$address,"locality"=>$locality,"city"=>$city,"postcode"=>$postcode,"state"=>$state,"territory_id"=>$territory,"class_id"=>$class,"security_deposit"=>0,"login_mobile1"=>$login_mobile1,"login_mobile2"=>$login_mobile2,"email_id"=>$login_email,"assigned_to"=>$assign_to,"no_of_employees"=>$shop_emps,"store_name"=>$shop_name,"store_area"=>$shop_area,"lat"=>$lat,"long"=>$long,"store_open_time"=>mktime($shop_from),"store_close_time"=>mktime($shop_to),"own_rented"=>$own,"internet_available"=>$internet,"website_name"=>$website,"created_by"=>$user['userid'],"security_question"=>$sec_q,"security_answer"=>$sec_a,"security_question2"=>$sec_q2,"security_answer2"=>$sec_a2,"created_on"=>time(),"store_tin_no"=>$shop_tin,"store_pan_no"=>$shop_pan,"store_service_tax_no"=>$shop_stax,"store_reg_no"=>$shop_reg,"is_lc_store"=>$is_lc_store);
 //		$sql="insert into pnh_m_franchise_info(pnh_franchise_id,franchise_name,address,locality,city,postcode,state,territory_id,class_id,security_deposit,login_mobile1,login_mobile2,email_id,assigned_to,no_of_employees,store_name,store_area,store_open_time,store_close_time,own_rented,internet_available,website_name,created_by,created_on)
 //																																			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
@@ -7512,7 +7521,7 @@ order by p.product_name asc
 		$fran_status_arr[1]="Permanent Suspension";
 		$fran_status_arr[2]="Payment Suspension";
 		$fran_status_arr[3]="Temporary Suspension";
-		$admin = $this->auth(false); 
+		$admin = $this->auth(false);
 		foreach(array("fid","pid","qty","mid","redeem","redeem_points","mid_entrytype") as $i)
 			$$i=$this->input->post($i);
 		
@@ -7750,7 +7759,7 @@ order by p.product_name asc
 					
 			foreach($items as $item)
 			{
-				    
+				
 					$inp=array("id"=>$this->p_genid(10,'order'),"transid"=>$transid,"userid"=>$userid,"itemid"=>$item['itemid'],"brandid"=>"");
 					
 					$inp["brandid"]=$this->db->query("select d.brandid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.id=?",$item['itemid'])->row()->brandid;
@@ -7896,7 +7905,7 @@ order by p.product_name asc
 				
 				
 			}
-                        
+
 			// check if franchise is suspended 
 			if($fran_status==0)
 				$this->erpm->do_trans_changelog($transid,"PNH Offline order created");
@@ -7946,14 +7955,11 @@ order by p.product_name asc
 		$inp=array("bill_no"=>$billno,"franchise_id"=>$franid,"transid"=>$transid,"user_id"=>$userid,"status"=>1);
 		$this->db->insert("pnh_cash_bill",$inp);
 		
-                
-                
-                
-                
-                
-		$this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
-		redirect("admin/trans_reservation_status",'refresh');
-		//redirect("admin/pnh_offline_order",'refresh');
+        $this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
+		//redirect("admin/trans_reservation_status",'refresh');
+
+
+		redirect("admin/pnh_offline_order",'refresh');
 	}
 	
 	
@@ -9344,6 +9350,31 @@ order by action_date";
 			$red_prd_det['det']=$ret_prod_list_res->result_array();
 		return $red_prd_det;
 	}
+	
+	
+	function get_returns_reship_det($access)
+	{
+		$red_prd_det=array();
+		// return product list details
+		$ret_prod_list_res = $this->db->query("select a.is_packed,a.readytoship,d.franchise_id,e.franchise_name,a.is_refunded,a.is_shipped,a.is_stocked,
+				a.id as return_product_id,a.return_id,a.order_id,a.product_id,d.transid,od.bill_person,od.userid,
+				b.product_name,qty,a.barcode,a.imei_no,condition_type,a.status,i.name as handled_by_name,c.invoice_no,f.returned_on,f.order_from
+				from pnh_invoice_returns_product_link a
+				join pnh_invoice_returns f on f.return_id = a.return_id
+				join m_product_info b on a.product_id = b.product_id
+				join king_invoice c on c.invoice_no = f.invoice_no
+				join king_transactions d on d.transid = c.transid
+				left join pnh_m_franchise_info e on e.franchise_id = d.franchise_id
+				join king_admin i on f.handled_by = i.id
+				join king_orders od on od.transid=d.transid
+				where a.status=3 and a.readytoship=1 and f.order_from in (".implode(",",$access).") and f.order_from!=0
+				group by a.id
+				");
+		$red_prd_det['det']=$ret_prod_list_res->result_array();
+		
+		return $red_prd_det;
+	}
+	
 	/**
 	 * Process to create bulk PO request by File 
 	 *

@@ -19,7 +19,7 @@
 			<br />
 			<div id="inv_return_scan_list">
 				<form action="<?php echo site_url('admin/process_add_pnh_invoice_return') ?>" method="post">
-					<input type="hidden" value="" id="inv_for" name="inv_for">
+					<input type="hidden" value="<?php echo $type;?>" name="inv_for">
 					<table class="datagrid" width="100%">
 						<thead>
 							<th width="100"><b>Invoice</b></th>	
@@ -86,8 +86,7 @@ var return_prod_imei_list = new Array();
 						$('input[name="scaninp"]',this).focus();
 					}else
 					{
-							$("#inv_for").val(resp.inv_for);
-						
+							
 							return_condhtml = '';
 							$.each(resp.return_cond,function(a,b){
 								return_condhtml += '<option value="'+a+'">'+b+'</option>';

@@ -106,10 +106,10 @@ if($is_pnh)
 			<thead>
 				<tr>
 					<th>#</th>
-					<th width="100">Total proforma invoices </th>
-					<th width="100">Total transactions</th>
+					<th>Total proforma invoices </th>
+					<th>Total transactions</th>
 					<th>Franchise</th>
-					<th width="100">Action</th>
+					<th>Action</th>
 				</tr>
 			</thead>
 			<tbody>

@@ -45,7 +45,7 @@ Upload file : <input type="file" name="deals"><input type="submit" value="Upload
         .hightlight { font-weight:bold; color: #A55319; }
 </style>
 <script>
-$(function(){
+    $(function(){
 	$("#bk_form").submit(function(){
 		window.setTimeout(function(){location="<?=site_url("admin/deals_bulk_upload")?>";},5000);
 		return true;
