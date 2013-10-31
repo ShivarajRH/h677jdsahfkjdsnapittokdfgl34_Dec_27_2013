@@ -41,17 +41,17 @@ label {
 }
 .log_display {font-weight:bold;margin-right: 90px;}
 /*Start*/
-.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }
+/*.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }*/
 .datagrid tr.processed_ord a { color: #290715 !important; }
-.datagrid tr.processed_ord { background-color: #80C280  !important; }
-.subdatagrid tr.processed_ord { background-color: #80C280  !important; text-decoration: line-through;}
+/*.datagrid tr.processed_ord { background-color: #80C280  !important; }*/
+/*.subdatagrid tr.processed_ord { background-color: #80C280  !important; text-decoration: line-through;}*/
 
 .datagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
 .datagrid tr.shipped_ord td a{ color: #BDB5AB !important;}
 .subdatagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
 .subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}
 
-.datagrid tr.pending_ord td { background-color: rgba(247, 190, 190, 0.51) !important; }
+/*.datagrid tr.pending_ord td { background-color: rgba(247, 190, 190, 0.51) !important; }*/
 .datagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
 .subdatagrid tr.pending_ord td {/*background-color: rgba(247, 190, 190, 0.51) !important*/}
 .subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
@@ -60,10 +60,16 @@ label {
 .datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
 .subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
 .subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
+
+.datagrid tr.disabled_ord td{color: #D8D3D2 !important;}
+.datagrid tr.disabled_ord td a{color: #D8D3D2 !important;}
+.subdatagrid tr.disabled_ord td{text-decoration: none;color: #D8D3D2 !important;}
+.subdatagrid tr.disabled_ord td a{text-decoration: none;color: #D8D3D2 !important;}
+
+
 /*   End*/
-.batch_msg {margin-top:20px;}
-.batch_msg .enabled { color: #F1F0FF; }
-.batch_msg .disabled { color: #8C489F; }
+.batch_msg_enabled { margin-top:20px; cursor: pointer;color: #EC0009 !important; }
+.batch_msg_disabled { margin-top:20px; cursor: pointer;color: #36EC4C !important; }
 </style>
 <div class="container" id="account_grn_present">
     <h2>Transaction Reservation Status</h2>
@@ -108,9 +114,9 @@ label {
                    <form id="trans_date_form" method="post">
                             <b>Show transactions</b> :
                             <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
-                                    name="date_from" value="<?php echo date('Y-m-d',time()-60*60*24*7*4)?>" />
+                                    name="date_from" value="<?php echo date('Y-m-1',time()-60*60*24*7*4)?>" />
                             <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
-                                    name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
+                                    name="date_to" value="<?php echo date('Y-m-d',time()-60*60*24*7*2)?>" /> 
                             <input type="submit" value="Submit">
                     </form>
                 </td>
@@ -146,6 +152,7 @@ label {
         if(confirm("Are you sure you want to "+d_msg+" for batch?")) {
             $.post(site_url+"admin/jx_batch_enable_disable/"+transid+"/"+flag,{},function(rdata) {
                 //$(".batch_status_msg_"+transid).html(rdata);
+                alert(rdata);
                 loadTransactionList(0);
             });
         }

@@ -519,3 +519,118 @@ select
                     WHERE tr.actiontime between 1380565800 and 1383071399 and tr.batch_enabled=1 and tr.transid='PNH76511'
 #and o.status in(1,2)
                     group by o.transid order by tr.actiontime desc 
+
+#Oct-30-2013
+
+select * from king_transactions;
+select * from proforma_invoices where transid='PNH58326'
+select * from king_dealitems;
+select * from king_deals;
+select 
+            from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+            ,o.id as orderid,o.itemid,o.status,o.quantity,o.shipped,o.ship_person,o.ship_address,o.ship_city,o.quantity,o.ship_pincode,o.ship_state,o.ship_email,o.ship_phone
+        ,d.brandid,d.menuid
+        #,f.franchise_id	
+            from king_orders o
+            join king_transactions tr on tr.transid=o.transid
+            join king_dealitems di on di.id=o.itemid 
+        join king_deals d on d.dealid=di.dealid
+        join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        join pnh_m_territory_info ter on ter.id = f.territory_id 
+        join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380652200 and 1383157799 #  and tr.batch_enabled=1 and o.status IN (1,2) 
+            group by o.transid order by tr.actiontime desc 
+
+select sb.status,sb.batch_id,sb.num_orders,sb.*
+			from shipment_batch_process_invoice_link sbp
+                        left join proforma_invoices pi on pi.p_invoice_no=sbp.p_invoice_no
+                        left join shipment_batch_process sb on sb.batch_id=sbp.batch_id
+                        #where pi.transid='PNH76511'
+                        order by sb.created_on desc
+
+select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount 
+                                                                        from king_orders a
+                                                                        join king_dealitems b on a.itemid = b.id
+                                                                        join king_deals dl on dl.dealid = b.dealid
+                                                                        join king_transactions t on t.transid = a.transid   
+                                                                        left join proforma_invoices c on c.order_id = a.id 
+                                                                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                                                                        left join king_invoice e on e.invoice_no = sd.invoice_no
+                                                                where a.transid = '".$o['transid']."'
+                                                                    $order_cond order by c.p_invoice_no desc
+
+
+select 
+            from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+            from king_transactions tr
+        join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        join pnh_m_territory_info ter on ter.id = f.territory_id 
+        join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380565800 and 1383157799  
+            order by tr.actiontime desc
+==>401
+
+select 
+            from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time
+            ,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+            from king_transactions tr
+         join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+         join pnh_m_territory_info ter on ter.id = f.territory_id 
+         join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380565800 and 1383157799 and batch_enabled=1 
+            order by tr.actiontime desc 
+==> 1680
+
+select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount 
+                                                                    from king_orders a
+                                                                    join king_dealitems b on a.itemid = b.id
+                                                                    join king_deals dl on dl.dealid = b.dealid
+                                                                    join king_transactions t on t.transid = a.transid   
+                                                                    left join proforma_invoices c on c.order_id = a.id 
+                                                                    left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                                                                    left join king_invoice e on e.invoice_no = sd.invoice_no
+                                                            where a.status in (0,1) and a.transid = 'PNH93579'
+                                                            order by c.p_invoice_no desc
+
+
+select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount,dl.brandid,dl.menuid
+                                                                    from king_orders a
+                                                                    join king_dealitems b on a.itemid = b.id
+                                                                    join king_deals dl on dl.dealid = b.dealid
+                                                                    join king_transactions t on t.transid = a.transid   
+                                                                    left join proforma_invoices c on c.order_id = a.id 
+                                                                    left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                                                                    left join king_invoice e on e.invoice_no = sd.invoice_no
+                                                            where a.status in (0,1) and a.transid = 'PNH15791' 
+                                                            order by c.p_invoice_no desc   ==>155782
+
+#1
+select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount,dl.brandid,dl.menuid
+                                                                    from king_orders a
+                                                                    join king_dealitems b on a.itemid = b.id
+                                                                    join king_deals dl on dl.dealid = b.dealid
+                                                                    join king_transactions t on t.transid = a.transid   
+                                                                    left join proforma_invoices c on c.order_id = a.id 
+                                                                    left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                                                                    left join king_invoice e on e.invoice_no = sd.invoice_no
+                                                            where a.status in (0,1) and a.transid = 'PNH15791' 
+                                                            order by c.p_invoice_no desc   ==>155782
+
+#2
+select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount,dl.brandid,dl.menuid
+                                                                    from king_orders a
+                                                                    join king_dealitems b on a.itemid = b.id
+                                                                    join king_deals dl on dl.dealid = b.dealid
+                                                                    join king_transactions t on t.transid = a.transid   
+                                                                    left join proforma_invoices c on c.order_id = a.id 
+                                                                    left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                                                                    left join king_invoice e on e.invoice_no = sd.invoice_no
+														
+								left join pnh_m_franchise_info  f on f.franchise_id=t.franchise_id
+								left join pnh_m_territory_info ter on ter.id = f.territory_id 
+								left join pnh_towns twn on twn.id=f.town_id
+
+                                                            where a.status in (0,1) and a.transid = 'PNH15791' 
+                                                            order by c.p_invoice_no desc   ==>155782

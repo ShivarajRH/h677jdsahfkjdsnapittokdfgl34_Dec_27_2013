@@ -8,12 +8,14 @@ class Stream extends Analytics
      */
     function jx_batch_enable_disable($transid,$flag=1)
     {
-            $user=$this->auth(true);
+            $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
             //if($this->db->query("select batch_enabled from king_transactions where transid=?",$transid)->row()->batch_enabled==1)
             //        $flag=0;
             
             $this->db->query("update king_transactions set batch_enabled=? where transid=? limit 1",array($flag,$transid));
             $this->erpm->do_trans_changelog($transid,"Transaction ".($flag==1?"ENABLED":"DISABLED")." for batch process");
+            
+            echo "Transaction ".$transid." ".($flag==1?"enabled":"disabled")." for batch process";
     }
     
     /**
