@@ -68,8 +68,30 @@ label {
 
 
 /*   End*/
+.retry_link {
+    margin-top: 20px;
+    cursor: pointer;
+    color:#f4f4f4;
+    background-color: #3B3BB9 !important;
+    padding: 5px;
+    margin: 5px;
+    border-radius: 6px;
+}
 .batch_msg_enabled { margin-top:20px; cursor: pointer;color: #EC0009 !important; }
-.batch_msg_disabled { margin-top:20px; cursor: pointer;color: #36EC4C !important; }
+.batch_msg_disabled { margin-top: 20px;
+    cursor: pointer;
+    color: #f4f4f4;
+    background-color: #ff7777 !important;
+    padding: 5px;
+    margin: 5px;
+    border-radius: 6px; }
+.proceed_link { margin-top: 20px;
+    cursor: pointer;
+    color: #f4f4f4;
+    background-color: #36EC4C !important;
+    padding: 5px;
+    margin: 5px;
+    border-radius: 6px; }
 </style>
 <div class="container" id="account_grn_present">
     <h2>Transaction Reservation Status</h2>
@@ -146,16 +168,45 @@ label {
 // <![CDATA[
     //By default load lists
     loadTransactionList(0);
+    var pg=0;
     
-    function batch_enable_disable(transid,flag) {
+    function cancel_proforma_invoice(p_invoice_no,pg) {
+        if(!confirm("Are you sure you want to cancel proforma invoice?")) {
+            return false;
+        }
+        $.post(site_url+"admin/cancel_proforma_invoice/"+p_invoice_no,{},function() {
+            loadTransactionList(pg);
+        });
+        return false;
+    }
+    
+    function batch_enable_disable(transid,flag,pg) {
         var d_msg=(flag==1)?"enable":"disable";
         if(confirm("Are you sure you want to "+d_msg+" for batch?")) {
             $.post(site_url+"admin/jx_batch_enable_disable/"+transid+"/"+flag,{},function(rdata) {
                 //$(".batch_status_msg_"+transid).html(rdata);
-                alert(rdata);
-                loadTransactionList(0);
+//                $(".pg").val(pg);
+                
+                loadTransactionList(pg);
+                
             });
         }
+    }
+    
+    function reserve_stock_batch(transid,pg) {
+        if(!confirm("Are you sure you want to process \nthis transaction for batch?")) {
+            return false;
+            //var batch_remarks=prompt("Enter remarks?");
+        }
+        var ttl_num_orders=$("."+transid+"_total_orders").val();
+        var batch_remarks='';
+        var updated_by = "<?=$user['userid']?>";
+        
+        $.post('batching_process/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
+            loadTransactionList(pg);
+        });
+        
+        return false;
     }
     //Show between date ranges
     $("#trans_date_form").submit(function() {
@@ -260,21 +311,7 @@ label {
         return false;
     });
     
-    function trans_enable_batch(transid) {
-        if(!confirm("Are you sure you want to process \nthis transaction for batch?")) {
-            return false;
-            //var batch_remarks=prompt("Enter remarks?");
-        }
-        var ttl_num_orders=$("."+transid+"_total_orders").val();
-        var batch_remarks='';
-        var updated_by = "<?=$user['userid']?>";
-        
-        $.post('batching_process/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
-            loadTransactionList(0);
-        });
-        
-        return false;
-    }
+
     
     function loadTransactionList(pg) 
     {
@@ -289,7 +326,9 @@ label {
         var date_from= $("#date_from").val();
         var date_to= $("#date_to").val();
         
-        //alert(batch_type+date_from+date_to+pg);
+        //var pg= ($(".pg_num").val()== 'undefined')?$(".pg_num").val():pg;
+        
+        //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
         $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+pg,"",function(rdata) {
             $("#trans_list_replace_block").html(rdata);
