@@ -17,12 +17,14 @@
 <table cellpadding=3 class="datagrid">
 <tr><td>PNH PID :</td><Td><?=$deal['pnh_id']?></Td></tr>
 <tr><td>Deal Name :</td><Td style="font-weight:bold;"><?=$deal['name']?></Td></tr>
+<tr><td>Print Name :</td><Td style="font-weight:bold;"><?=$deal['print_name']?$deal['print_name']:$deal['name']?></Td></tr>
 <tr><td>Tagline :</td><td><?=$deal['tagline']?></td></tr>
 <tr><td>MRP :</td><td>Rs <?=$deal['orgprice']?></td></tr>
 <tr><td>Offer price/Dealer Price :</td><td>Rs <?=$deal['price']?></td></tr>
 <tr><td>Store price :</td><td>Rs <?=$deal['store_price']?></td></tr>
 <tr><td>NYP price :</td><td>Rs <?=$deal['nyp_price']?></td></tr>
 <tr><Td>Gender Attribute :</Td><td><?=$deal['gender_attr']?></td></tr>
+<tr><Td>Max Allowed Qty <br>(for franchise per day):</Td><td><?=$deal['max_allowed_qty']?></td></tr>
 <tr><td>Brand :</td><Td style="font-weight:bold;"><?=$deal['brand']?></Td></tr>
 <tr><td>Category :</td><Td style="font-weight:bold;"><?=$deal['category']?></Td></tr>
 <tr>

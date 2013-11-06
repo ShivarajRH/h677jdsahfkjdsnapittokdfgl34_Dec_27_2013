@@ -700,6 +700,7 @@ select distinct o.*,from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, coun
             group by tr.transid order by tr.actiontime desc 
 
 select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.batch_id,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount 
+					,dl.menuid
                                                                         from king_orders a
                                                                         join king_dealitems b on a.itemid = b.id
                                                                         join king_deals dl on dl.dealid = b.dealid
@@ -711,3 +712,87 @@ select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.batch_id,sd.shipped
 								#c.p_invoice_no = '45134'
                                                                 order by c.p_invoice_no desc
 select * from proforma_invoices;
+
+#Nove_01_2013
+#1
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+		,o.*
+		from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380565800 and 1382120999 and o.status in (0,1) and batch_enabled=1 
+            group by tr.transid order by tr.actiontime desc 
+==>189 515s
+#2
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.franchise_id,tr.batch_enabled,tr.franchise_id
+		,o.*
+		,f.franchise_name
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+		from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380565800 and 1382120999 and o.status in (0,1) and batch_enabled=1 
+            group by tr.transid order by tr.actiontime desc
+==>189 - 609s>624s =>1216
+
+select * from king_orders;
+desc king_orders;
+desc king_transactions;
+desc king_deals;
+desc king_dealitems;
+desc pnh_m_franchise_info;
+desc pnh_m_territory_info;
+desc pnh_towns;
+desc pnh_menu;
+desc king_brands;
+
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled,tr.franchise_id
+		,o.*
+		,f.franchise_name,f.territory_id,f.town_id
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+		from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		left join king_dealitems di on di.id=o.itemid
+		left join king_deals dl on dl.dealid=di.dealid
+		left join pnh_menu m on m.id = dl.menuid
+		left join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380565800 and 1382120999 and o.status in (0,1) and batch_enabled=1 
+            group by tr.transid order by tr.actiontime desc
+==>1248s 189
+
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,o.*
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+		from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+            WHERE tr.actiontime between 1380565800 and 1382120999 and o.status in (0,1) and batch_enabled=1  and dl.menuid=112 and dl.brandid=74323882 and f.territory_id=11
+            group by tr.transid order by tr.actiontime desc

@@ -75,7 +75,7 @@ class Stream extends Analytics
      */
     function trans_reservation_status() {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        /*$data['pnh_menu'] = $this->db->query("select * from pnh_menu order by name")->result_array();
+        $data['pnh_menu'] = $this->db->query("select * from pnh_menu order by name")->result_array();
         $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
         $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
         $data['pnh_menu'] = $this->db->query("select mn.id,mn.name from pnh_menu mn
@@ -87,7 +87,7 @@ class Stream extends Analytics
         $data['pnh_brands'] = $this->db->query("select br.id,br.name from king_brands br
                                     join king_orders o on o.brandid=br.id
                                     group by br.id
-                                    order by br.name")->result_array();*/
+                                    order by br.name")->result_array();
 
         $data['user']=$user;
         //$data['s']=date("d/m/y",$from);
@@ -182,7 +182,7 @@ class Stream extends Analytics
                 $data['page']="streams";
                 $this->load->view("admin",$data);
     }
-	/**
+    /**
      * Function to add stream
      */
 	function stream_create() 

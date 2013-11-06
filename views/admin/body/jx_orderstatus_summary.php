@@ -3,145 +3,146 @@
 //          join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
 //          join pnh_towns e on e.id = d.town_id 
 
-    $fil_menulist = array();
-    $fil_brandlist = array();
-    
-    $cond = '';
-   if($menuid!=0) {
-        $cond .= ' and deal.menuid='.$menuid;
-    }
-   if($brandid!=0) {
-        $cond .= ' and deal.brandid='.$brandid;
-    }
-   if($terrid!=0) {
-        $cond .= ' and d.territory_id='.$terrid;
-    }
-    if($townid!=0) {
-        $cond .= ' and d.town_id='.$townid;
-    }
-    if($franchiseid!=0) {
-        $cond .= ' and d.franchise_id='.$franchiseid;
-    }
+$fil_menulist = array();
+$fil_brandlist = array();
+
+$cond = '';
+if($menuid!=0) {
+    $cond .= ' and deal.menuid='.$menuid;
+}
+if($brandid!=0) {
+    $cond .= ' and deal.brandid='.$brandid;
+}
+if($terrid!=0) {
+    $cond .= ' and d.territory_id='.$terrid;
+}
+if($townid!=0) {
+    $cond .= ' and d.town_id='.$townid;
+}
+if($franchiseid!=0) {
+    $cond .= ' and d.franchise_id='.$franchiseid;
+}
 //    echo $cond; die();
-        $sql_all = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,c.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
-                    from king_orders o 
-                    join king_transactions c on o.transid = c.transid 
-                    join king_dealitems dl on dl.id=o.itemid
-                    join king_deals deal on deal.dealid=dl.dealid
-                    
+$sql_all = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,c.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
+            from king_orders o 
+            join king_transactions c on o.transid = c.transid 
+            join king_dealitems dl on dl.id=o.itemid
+            join king_deals deal on deal.dealid=dl.dealid
+
+            join pnh_member_info pu on pu.user_id=o.userid 
+            join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
+            join pnh_m_territory_info f on f.id = d.territory_id
+            join pnh_towns e on e.id = d.town_id 
+            join king_brands br on br.id = deal.brandid 
+            join pnh_menu m on m.id = deal.menuid 
+    where c.init between $st_ts and $en_ts $cond
+    group by c.transid  
+    order by c.init desc  ";
+
+$sql_shipped = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
+                    from shipment_batch_process_invoice_link sd
+                    join proforma_invoices b on sd.p_invoice_no = b.p_invoice_no
+                    join king_transactions c on c.transid = b.transid
+                    join king_orders o on o.id = b.order_id
                     join pnh_member_info pu on pu.user_id=o.userid 
                     join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
                     join pnh_m_territory_info f on f.id = d.territory_id
                     join pnh_towns e on e.id = d.town_id 
+                    join king_dealitems dl on dl.id=o.itemid
+                    join king_deals deal on deal.dealid=dl.dealid
                     join king_brands br on br.id = deal.brandid 
                     join pnh_menu m on m.id = deal.menuid 
-            where c.init between $st_ts and $en_ts $cond
-            group by c.transid  
-            order by c.init desc  ";
-        
-        $sql_shipped = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
-                            from shipment_batch_process_invoice_link sd
-                            join proforma_invoices b on sd.p_invoice_no = b.p_invoice_no
-                            join king_transactions c on c.transid = b.transid
-                            join king_orders o on o.id = b.order_id
-                            join pnh_member_info pu on pu.user_id=o.userid 
-                            join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
-                            join pnh_m_territory_info f on f.id = d.territory_id
-                            join pnh_towns e on e.id = d.town_id 
-                            join king_dealitems dl on dl.id=o.itemid
-                            join king_deals deal on deal.dealid=dl.dealid
-                            join king_brands br on br.id = deal.brandid 
-                            join pnh_menu m on m.id = deal.menuid 
 
-                            where o.status in (1,2) and sd.shipped = 1 and c.is_pnh = 1 $cond and sd.shipped_on between from_unixtime($st_ts) and from_unixtime($en_ts) 
-                            group by b.transid 
-                            order by sd.shipped_on desc";
-        
-        $sql_unshipped = "select distinct b.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,b.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id
-                                from king_orders o 
-                                join king_transactions b on o.transid = b.transid 
-                                left join proforma_invoices c on c.order_id = o.id and c.invoice_status = 1 
-                                left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
-                                join pnh_member_info pu on pu.user_id=o.userid 
-                                join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
-                                join pnh_m_territory_info f on f.id = d.territory_id
-                                join pnh_towns e on e.id = d.town_id 
-                                join king_dealitems dl on dl.id=o.itemid
-                                join king_deals deal on deal.dealid=dl.dealid
-                                join king_brands br on br.id = deal.brandid 
-                                join pnh_menu m on m.id = deal.menuid 
+                    where o.status in (1,2) and sd.shipped = 1 and c.is_pnh = 1 $cond and sd.shipped_on between from_unixtime($st_ts) and from_unixtime($en_ts) 
+                    group by b.transid 
+                    order by sd.shipped_on desc";
 
-                                where o.status in (0,1) and b.init between $st_ts and $en_ts $cond
-                                group by b.transid 
-                                order by b.init desc";
-        
-        $sql_cancelled = "select distinct b.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,b.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id  
-                            from king_orders o  
-                            join king_transactions b on o.transid = b.transid 
-                            left join proforma_invoices c on c.order_id = o.id
-                            left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no and sd.shipped = 0 
-                            join pnh_member_info pu on pu.user_id=o.userid 
-                            join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
-                            join pnh_m_territory_info f on f.id = d.territory_id
-                            join pnh_towns e on e.id = d.town_id 
-                            join king_dealitems dl on dl.id=o.itemid
-                            join king_deals deal on deal.dealid=dl.dealid
-                            join king_brands br on br.id = deal.brandid 
-                            join pnh_menu m on m.id = deal.menuid 
+$sql_unshipped = "select distinct b.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,b.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id
+                        from king_orders o 
+                        join king_transactions b on o.transid = b.transid 
+                        left join proforma_invoices c on c.order_id = o.id and c.invoice_status = 1 
+                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                        join pnh_member_info pu on pu.user_id=o.userid 
+                        join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+                        join pnh_m_territory_info f on f.id = d.territory_id
+                        join pnh_towns e on e.id = d.town_id 
+                        join king_dealitems dl on dl.id=o.itemid
+                        join king_deals deal on deal.dealid=dl.dealid
+                        join king_brands br on br.id = deal.brandid 
+                        join pnh_menu m on m.id = deal.menuid 
 
-                            where o.status = 3  and o.actiontime between $st_ts and $en_ts $cond
-                            group by b.transid 
-                            order by b.init desc  ";
-        
-        $sql_removed="select distinct tr.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,tr.transid,sum(o.i_coup_discount) as com,tr.amount,o.transid,o.status,o.time,o.actiontime,mi.user_id as userid,mi.pnh_member_id from king_orders o
-                                join king_transactions tr on tr.transid=o.transid
-                                join pnh_member_info mi on mi.user_id=o.userid 
-                                join pnh_m_franchise_info d on d.franchise_id = tr.franchise_id
-                                join pnh_m_territory_info f on f.id = d.territory_id
-                                join pnh_towns e on e.id = d.town_id 
-                                join king_dealitems dl on dl.id=o.itemid
-                                join king_deals deal on deal.dealid=dl.dealid
-                                join king_brands br on br.id = deal.brandid 
-                                join pnh_menu m on m.id = deal.menuid 
-                                where tr.batch_enabled=0 and o.status=0 and o.actiontime between $st_ts and $en_ts $cond
-                                group by tr.transid
-                                order by tr.init desc";
-        
-		if($type == 'all') {
-			$sql=$sql_all;
-			$str_total_invoice="Total ordered items value ";
-		}elseif($type == 'shipped') {
-                    	$sql=$sql_shipped;
-			$order_cond = " and a.status = 2 and sd.shipped = 1 and sd.shipped_on between from_unixtime($st_ts) and from_unixtime($en_ts) ";
-                        $str_total_invoice="Total shipped invoice value ";
-			 
-		}elseif($type == 'unshipped') {
-                    	$sql=$sql_unshipped;
-                        $order_cond = " and a.status in (null,0,1) and (sd.shipped = 0 or sd.shipped is null ) and t.init between $st_ts and $en_ts   ";	
-                        $str_total_invoice="Total unshipped value ";
-                        
-		}elseif($type == 'cancelled') {
-                    	$sql=$sql_cancelled;
-			$order_cond = " and a.status = 3 and a.actiontime between $st_ts and $en_ts  ";
-                        $str_total_invoice="Total cancelled items value ";
-		}
-                elseif($type == 'removed') {
-                    	$sql=$sql_removed;
-                        $order_cond = " a.actiontime between $st_ts and $en_ts  ";
-                        $str_total_invoice="Disabled from batch value ";
-                }
+                        where o.status in (0,1) and b.init between $st_ts and $en_ts $cond
+                        group by b.transid 
+                        order by b.init desc";
 
-                $total_results=$total_results_all=$total_results_shipped=$total_results_unshipped=$total_results_cancelled='';
+$sql_cancelled = "select distinct b.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,b.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id  
+                    from king_orders o  
+                    join king_transactions b on o.transid = b.transid 
+                    left join proforma_invoices c on c.order_id = o.id
+                    left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no and sd.shipped = 0 
+                    join pnh_member_info pu on pu.user_id=o.userid 
+                    join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+                    join pnh_m_territory_info f on f.id = d.territory_id
+                    join pnh_towns e on e.id = d.town_id 
+                    join king_dealitems dl on dl.id=o.itemid
+                    join king_deals deal on deal.dealid=dl.dealid
+                    join king_brands br on br.id = deal.brandid 
+                    join pnh_menu m on m.id = deal.menuid 
 
-                $total_results=$this->db->query($sql)->num_rows();
+                    where o.status = 3  and o.actiontime between $st_ts and $en_ts $cond
+                    group by b.transid 
+                    order by b.init desc  ";
+
+$sql_removed="select distinct tr.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,tr.transid,sum(o.i_coup_discount) as com,tr.amount,o.transid,o.status,o.time,o.actiontime,mi.user_id as userid,mi.pnh_member_id from king_orders o
+                        join king_transactions tr on tr.transid=o.transid
+                        join pnh_member_info mi on mi.user_id=o.userid 
+                        join pnh_m_franchise_info d on d.franchise_id = tr.franchise_id
+                        join pnh_m_territory_info f on f.id = d.territory_id
+                        join pnh_towns e on e.id = d.town_id 
+                        join king_dealitems dl on dl.id=o.itemid
+                        join king_deals deal on deal.dealid=dl.dealid
+                        join king_brands br on br.id = deal.brandid 
+                        join pnh_menu m on m.id = deal.menuid 
+                        where tr.batch_enabled=0 and o.status=0 and o.actiontime between $st_ts and $en_ts $cond
+                        group by tr.transid
+                        order by tr.init desc";
+        
+if($type == 'all') {
+        $sql=$sql_all;
+        $str_total_invoice="Total ordered items value ";
+}elseif($type == 'shipped') {
+        $sql=$sql_shipped;
+        $order_cond = " and a.status = 2 and sd.shipped = 1 and sd.shipped_on between from_unixtime($st_ts) and from_unixtime($en_ts) ";
+        $str_total_invoice="Total shipped invoice value ";
+
+}elseif($type == 'unshipped') {
+        $sql=$sql_unshipped;
+        $order_cond = " and a.status in (null,0,1) and (sd.shipped = 0 or sd.shipped is null ) and t.init between $st_ts and $en_ts   ";	
+        $str_total_invoice="Total unshipped value ";
+
+}elseif($type == 'cancelled') {
+        $sql=$sql_cancelled;
+        $order_cond = " and a.status = 3 and a.actiontime between $st_ts and $en_ts  ";
+        $str_total_invoice="Total cancelled items value ";
+}
+elseif($type == 'removed') {
+        $sql=$sql_removed;
+        $order_cond = " a.actiontime between $st_ts and $en_ts  ";
+        $str_total_invoice="Disabled from batch value ";
+}
+
+        $total_results=$total_results_all=$total_results_shipped=$total_results_unshipped=$total_results_cancelled='';
+
+        $total_results=$this->db->query($sql)->num_rows();
 				
 				 
                 
-                $rslt=$this->db->query($sql)->result_array();
-                foreach ($rslt as $amt) {
-                    $total_amount+=$amt['amount'];
-                }
-		$sql .=" limit $pg,$limit ";
+        #$rslt=$this->db->query($sql)->result_array();
+        #foreach ($rslt as $amt) {
+            #$total_amount+=$amt['amount'];
+        #}
+                
+        $sql .=" limit $pg,$limit ";
                 
 //                echo '<pre>'.$sql."<br>".$total_results_shipped."<br>".$total_results_unshipped."<br>".$total_results_cancelled."<br>".$total_amount."<br>"; die("TESTING");
                 
@@ -177,9 +178,9 @@
                     <thead><tr><th>Slno</th><th>Time</th><th>Order</th><th>Amount</th><th>Commission</th><th>Deal/Product details</th><th>Status</th><th>Last action</th></tr></thead>
                     <tbody>';
                 
-                    $str_total_invoice.=number_format($total_amount);
-                    $resonse.='<script>$(".ttl_orders_status_listed,.c2,.all_pop, .shipped_pop, .unshipped_pop, .cancelled_pop, .removed_pop, .show_totalamount").css({"display":"block"});</script>';
-                    $resonse.='<script>$(".show_totalamount").html("'.$str_total_invoice.' ");</script>';
+                    
+                    $resonse.='<script>$(".ttl_orders_status_listed,.c2,.all_pop, .shipped_pop, .unshipped_pop, .cancelled_pop, .removed_pop, .show_totalamount").html("").css({"display":"block"});</script>';
+                    
                     
                         $k = 0;$slno=1; $total_amount=0;
                         foreach($res->result_array() as $o) {
@@ -205,11 +206,18 @@
                             if(!$o_item_list)
                                 continue;
                             $k++;
-                            $orders=$this->erpm->getordersfortransid($o['transid']); $order=$orders[0];
+							$orders=$this->erpm->getordersfortransid($o['transid']); $order=$orders[0];
+                            
+                            
+							$trans_created_by = @$this->db->query("select username from king_admin a join king_transactions b on a.id = b.trans_created_by where transid = ? ",$o['transid'])->row()->username;
+								if($trans_created_by) 
+									$trans_created_by .= '<br><br> by <b>'.($trans_created_by).'</b>';
+		
+		
 //                           echo '<pre>';print_r($order); die();
                             $resonse.='<tr>
                             <td>'.$slno.'</td>
-                            <td>'.format_datetime(date('Y-m-d H:i:s',$o['time'])).'</td>
+                            <td>'.format_datetime(date('Y-m-d H:i:s',$o['time'])).($trans_created_by).'</td>
                             <td width="200">
                                     <span><a href="'.site_url("admin/trans/{$o['transid']}").'" target="_blank">'.$o['transid'].'</a> <br /></span>
                                     <span>Member ID: <a href="'.site_url("admin/pnh_viewmember/{$o['userid']}").'" target="_blank">'.$o['pnh_member_id'].'</a><br></span>
@@ -285,7 +293,7 @@
                                                         }
                                                         $is_shipped = ($is_shipped && $o_item['invoice_status']) ?'Yes':'No';
                                                           $amount=round($o_item['i_orgprice']-($o_item['i_coup_discount']+$o_item['i_discount']),2);
-//                                                          $total_amount+=$amount;
+                                                          $total_amount += $amount;
                                                         
                                                         
 
@@ -341,12 +349,15 @@
                 $total_results_cancelled=$this->db->query($sql_cancelled)->num_rows();
                 $total_results_removed=$this->db->query($sql_removed)->num_rows();
 
-                
+                //Total amount display
+                $str_total_invoice.=number_format($total_amount);
+                $resonse.='<script>$(".show_totalamount").html("'.$str_total_invoice.' ");</script>';
                 
                    
                 }
                 echo $resonse;
                 /******* Extra operations *********/
+                
                 
                 $endlimit=($pg+1*$limit);
                 $endlimit=($endlimit>$total_results)?$total_results : $endlimit;

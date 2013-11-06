@@ -1,6 +1,3 @@
-<style>
-	.leftcont{display:none}
-</style>
 <div class="container" >
 
 <?php 
@@ -71,7 +68,7 @@ Vendor : <select id="grn_vendor">
 </div>
 <div id="grn">
 	<table class="datagrid">
-		<thead><tr><th>S.no</th><th>Product</th><th>PO Qty</th><th>Invoice Qty<div style="font-size:80%;">reset to<br><input type="text" id="reset_inv" value="0" style="width:20px;font-size:90%;padding:0px;"><input type="button" value="ok" style="font-size:85%;padding:0px;" onclick='reset_inv_f()'></div></th><th>Receiving Qty<div style="font-size:80%">reset to<br><input type="text" id="reset_rec" value="0" style="width:20px;font-size:90%;padding:0px;"><input type="button" value="ok" onclick='reset_rec_f()' style="font-size:85%;padding:0px;"></div></th><th>PO MRP</th><th>MRP</th><th>PO DP Price</th><th>PO Purchase Price</th><th>Purchase Price</th><th>Storage</th><th>Received<br>Till Date</th><th>Pending Qty</th><th>FOC</th><th>Has Offer</th><th>Expiry date</th></tr></thead>
+		<thead><tr><th>S.no</th><th>Product</th><th>PO Qty</th><th>Invoice Qty<div style="font-size:80%;">reset to<br><input type="text" id="reset_inv" value="0" style="width:20px;font-size:90%;padding:0px;"><input type="button" value="ok" style="font-size:85%;padding:0px;" onclick='reset_inv_f()'></div></th><th>Receiving Qty<div style="font-size:80%">reset to<br><input type="text" id="reset_rec" value="0" style="width:20px;font-size:90%;padding:0px;"><input type="button" value="ok" onclick='reset_rec_f()' style="font-size:85%;padding:0px;"></div></th><th>PO MRP</th><th>MRP</th><th>PO Purchase Price</th><th>Purchase Price</th><th>Storage</th><th>Received<br>Till Date</th><th>Pending Qty</th><th>FOC</th><th>Has Offer</th><th>Expiry date</th></tr></thead>
 		<tbody>
 <?php if(isset($po)){?>
 		<?php foreach($po_items as $i){?>
@@ -83,7 +80,6 @@ Vendor : <select id="grn_vendor">
 		<td><input type="text" class="inp rqty qtychange" name="rqty<?=$i['po_id']?>[]" size=3 value="<?=$i['order_qty']-$i['received_qty']?>"></td>
 		<td><?=$i['mrp']?></td>
 		<td><input type="text" class="inp" name="mrp<?=$i['po_id']?>[]" size=5 value="<?=$i['mrp']?>"></td>
-		<td><input type="text" class="inp" name="dp_price<?=$i['po_id']?>[]" size=5 value="<?=$i['dp_price']?>"><?=$i['dp_price']?></td>
 		<td><?=$i['purchase_price']?></td>
 		<td><input type="text" class="inp" name="price<?=$i['po_id']?>[]" size=5 value="<?=$i['purchase_price']?>"></td>
 		<td>
@@ -162,18 +158,8 @@ Vendor : <select id="grn_vendor">
 			<td><input type="text" class="inp rqty qtychange" name="rqty%pid%[]" size=3 value="%pqty%"></td>
 			<td>%po_mrp%</td>
 			<td><input type="text" class="inp prod_mrp" name="mrp%pid%[]" size=5 pmrp="%mrp%" value="%mrp%">
-				<div class="upd_pmrp_blk" align="center"> 
+				<div class="upd_pmrp_blk" >Update Deal and product MRP 
 					<input type="checkbox" value="1" class="upd_pmrp" name="upd_pmrp%pid%[%prodid%]" >
-					<div>Update Deal and product MRP</div>
-				</div>
-			</td>
-			<td>
-				<div style="visibility:%dp_price_inp%">
-					<input type="text" class="inp dp_price" name="dp_price%pid%[]" size=5 dp_price="%dp_price%" value="%dp_price%">
-					<div class="upd_dp_price_blk" align="center"> 
-						<input type="checkbox" value="1" class="upd_dp_price" name="upd_dp_price%pid%[%prodid%]" >
-						<div>Update DP Price</div>
-					</div>
 				</div>
 			</td>
 			<td>%price%</td>
@@ -227,7 +213,7 @@ Vendor : <select id="grn_vendor">
 .highlightprow{
 background:#ff9900;
 }
-.upd_pmrp_blk,.upd_dp_price_blk {display: block;background: #f1f1f1;font-weight: bold;font-size: 10px;text-align:center;display: none;padding:2px;}
+.upd_pmrp_blk {display: block;background: #f1f1f1;font-weight: bold;font-size: 10px;text-align:center;display: none;padding:2px;}
 .unscanned{
 	background: #b4defe !important;
 }
@@ -309,22 +295,6 @@ $(function(){
 				upd_mrp_blk.hide();	
 			}
 	});
-	
-	$('#apply_grn_form .dp_price').live('keyup',function(){
-		
-		var dp_price = $(this).attr('dp_price')*1;
-		var upd_dp_price_blk = $(this).parent().find('.upd_dp_price_blk');
-			if($(this).attr('dp_price')*1 != $(this).val()*1){
-				$('.upd_dp_price',upd_dp_price_blk).attr('checked',true);
-				upd_dp_price_blk.show();
-			}
-			else
-			{
-				$('.upd_dp_price',upd_dp_price_blk).attr('checked',false);
-				upd_dp_price_blk.hide();	
-			}
-	});
-	
 	var chk_for_vendor_ids = 1;
 	$("#apply_grn_form").submit(function(){
 		flag=true;
@@ -639,20 +609,7 @@ function loadpo(pid)
 			
 			grow=grow.replace(/%pqty%/g,parseInt(poi.order_qty)-parseInt(poi.received_qty));
 			grow=grow.replace(/%po_mrp%/g,poi.mrp);
-			
 			grow=grow.replace(/%mrp%/g,poi.prod_mrp);
-			if(poi.is_serial_required*1)
-			{
-				grow=grow.replace(/%dp_price%/g,poi.dp_price);
-				grow=grow.replace(/%dp_price_inp%/g,'visible');
-			}
-			else
-			{
-				grow=grow.replace(/%dp_price%/g,0);
-				grow=grow.replace(/%dp_price_inp%/g,'hidden');
-			}
-				
-				
 			grow=grow.replace(/%price%/g,poi.purchase_price);
 			grow=grow.replace(/%rqty%/g,poi.received_qty);
 			

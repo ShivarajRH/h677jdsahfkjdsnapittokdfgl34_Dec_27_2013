@@ -55,8 +55,7 @@ define('GM_SECRET','t6mpkZ5R0xo=');
 
 define('GMAP_KEY','ABQIAAAAeNP67zzDfiHO9x8bftOY2hR2xb83VVuvy_z2dBdLSs4PrqlsDRTq2xdzrgkulx3f5mTw1MTDO-tH9Q');
 
-
-define("CS_TELEPHONE","080-26718801");
+define("CS_TELEPHONE","+91-92-4340-4342");
 define("CS_EMAIL","hello@snapittoday.com");
 
 define('REQUEST_URI',$_SERVER['REQUEST_URI']);

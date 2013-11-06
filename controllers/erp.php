@@ -4063,6 +4063,9 @@ select a.product_id,a.p_invoice_no,c.product_name,concat(rack_name,bin_name) as 
 group by product_id,mrp ) as g
 	join proforma_invoices e on e.p_invoice_no = g.p_invoice_no and invoice_status = 1 
 group by g.product_id ");
+
+		$data['stk_rsv_list'] = $this->db->query("select p_invoice_no,transid from proforma_invoices where p_invoice_no in (".$_POST['tids'].") and invoice_status = 1 group by p_invoice_no ");
+
 		
 		$this->load->view("admin/body/product_proc_list_transids",$data);
 	}
@@ -4073,18 +4076,15 @@ group by g.product_id ");
 		//$data['prods']=$this->erpm->getprodproclist($bid);
 		
 		$data['prods'] = $this->db->query("select product_id,product,location,sum(rqty) as qty from ( 
-		select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
-			from t_reserved_batch_stock a 
-			join t_stock_info b on a.stock_info_id = b.stock_id 
-			join m_product_info c on c.product_id = b.product_id 
-			join m_rack_bin_info d on d.id = b.rack_bin_id 
-			join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
-			where e.batch_id in (?)
-		group by a.id  ) as g 
-		group by product_id,location",$bid)->result_array();
-		
-		$data['username'] = $this->db->query("select name from king_admin where id=?",$user['userid'])->row()->name;
-		
+select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
+	from t_reserved_batch_stock a 
+	join t_stock_info b on a.stock_info_id = b.stock_id 
+	join m_product_info c on c.product_id = b.product_id 
+	join m_rack_bin_info d on d.id = b.rack_bin_id 
+	join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
+	where e.batch_id in (?)
+group by a.id  ) as g 
+group by product_id,location",$bid)->result_array();
 		
 		$this->load->view("admin/body/product_proc_list",$data);
 	}
@@ -24227,16 +24227,16 @@ die; */
 	{
 		$user=$this->auth();
 		
-		
-		if(!$terrid  && !$townid)
-		{
-			$res_list = $this->db->query("select * from pnh_m_franchise_info order by franchise_name ");
-		}
-		else
-		{
-			$res_list = $this->db->query("select * from pnh_m_franchise_info where town_id in ('".$townid."') and territory_id='".$terrid."' order by franchise_name ");	
-		}
-		
+		$cond = "";
+		if($terrid)
+			$cond .= ' and territory_id = '.$terrid;
+			
+		if($townid)
+			$cond .= ' and town_id in ('.$townid.') ';	
+			
+		$sql = "select * from pnh_m_franchise_info where 1 $cond order by franchise_name";
+		$res_list = $this->db->query($sql);
+				
 		if($res_list->num_rows())
 		{
 			$data['fr_details'] = $res_list->result_array();
@@ -24266,6 +24266,301 @@ die; */
 	
 			echo json_encode($output);
 	}
-	
-	
+
+	/**
+	 * function to update lr nos 
+	 */
+	function update_bulk_lrdetails()
+	{
+		$user=$this->erpm->auth(PNH_SHIPMENT_MANAGER);
+		
+		if($_POST)
+		{
+			$manifesto_id = $this->input->post('manifest_id');
+			$lr_no = $this->input->post('lr_no');
+			$amount_list = $this->input->post('amt');
+			$no_ofboxes=$this->input->post('no_ofboxes');
+			
+			$send_sms=array();
+			$send_sms[]=$territory_manager=$this->input->post('tm');
+			$send_sms[]=$bussniss_executive=$this->input->post('be');
+			$send_sms=array_filter($send_sms);
+			
+			foreach($manifesto_id as $ri=>$m)
+			{
+				if(!$m)
+					continue;
+				
+				$l = $lr_no[$ri];
+				$boxno = $this->db->query('select (max(ref_box_no))+1 as no from pnh_m_manifesto_sent_log ')->row()->no;
+				$ttl_boxes = $no_ofboxes[$ri];
+				$amt = $amount_list[$ri]; 
+				$this->db->query("update pnh_m_manifesto_sent_log set status=3,modified_on=?,modified_by=?,lrno=?,amount=?,lrn_updated_on=?,no_ofboxes=?,ref_box_no=? where id in ($m) and lrn_updated_on is null ",array(cur_datetime(),$user['userid'],$l,$amt,cur_datetime(),$ttl_boxes,$boxno));
+				
+				if($this->db->affected_rows())
+				{
+					$manifesto_id_det=$this->db->query("select id,sent_invoices,manifesto_id,pickup_empid from pnh_m_manifesto_sent_log where id in ($m) ")->result_array();
+					foreach($manifesto_id_det as $manifest_det)
+					{
+						$sent_log_id = $manifest_det['id'];
+						$manifesto_id=$manifest_det['manifesto_id'];
+						$pick_up_emp_id=$manifest_det['pickup_empid'];
+						$invoices=$manifest_det['sent_invoices'];
+							
+						//inert transaction table log
+						foreach(explode(',',$invoices) as $inv)
+						{
+							$trans_logprm=array();
+							$trans_logprm['transid']=$this->db->query("select transid from king_invoice where invoice_no=? limit 1",$inv)->row()->transid;
+							$trans_logprm['admin']=$user['userid'];
+							$trans_logprm['time']=time();
+							$trans_logprm['msg']='invoice ('.$inv.') Shipped';
+							$this->db->insert("transactions_changelog",$trans_logprm);
+						}
+						
+						//update manifesto id to shipment_batch_process_invoice_link
+						$this->db->query("update shipment_batch_process_invoice_link set shipped=?,shipped_on=?,shipped_by=?,awb=? where inv_manifesto_id in($manifesto_id) and shipped = 0 ",array(1,cur_datetime(),$user['userid'],$l));
+						if($this->db->affected_rows() > 0)
+						{
+							$this->erpm->sendsms_franchise_shipments($invoices);
+						}
+
+						// mark shipped status in orders table
+						$inv_order_list = $this->db->query(" select order_id
+															from shipment_batch_process_invoice_link a
+															join king_invoice b on a.invoice_no = b.invoice_no
+															where a.inv_manifesto_id in ($manifesto_id) 
+															group by order_id");
+											
+						if($inv_order_list->num_rows())
+						{
+							foreach($inv_order_list->result_array() as $row)
+							{
+								$this->db->query("update king_orders set status = 2,actiontime = unix_timestamp() where id = ? and status = 1 ",$row['order_id']);
+							}
+						}
+					
+						//sent a sms
+						$sent_invoices_info=$this->db->query("select a.id as sent_log_id,a.lrno,a.hndlby_type,a.hndlby_roleid,a.sent_invoices,b.name,a.hndleby_name,b.contact_no,a.hndleby_contactno,a.hndleby_vehicle_num,
+							c.name as  bus_name,d.contact_no as des_contact,e.courier_name,a.id
+							from pnh_m_manifesto_sent_log a
+							left join m_employee_info b on b.employee_id = a.hndleby_empid   
+							left join pnh_transporter_info c on c.id=a.bus_id
+							left join pnh_transporter_dest_address d on d.id=a.bus_destination and d.transpoter_id=a.bus_id
+							left join m_courier_info e on e.courier_id = a.hndleby_courier_id
+							where a.id in ($sent_log_id) ")->result_array();
+						foreach($sent_invoices_info as $sent_invoices)
+						{
+							
+							$lr_number=$sent_invoices['lrno'];
+							$manifesto_id=$sent_invoices['sent_log_id'];
+							$invoices=$sent_invoices['sent_invoices'];
+							$hndbyname=$sent_invoices['name'];
+							$hndbycontactno=$sent_invoices['contact_no'];
+							$vehicle_num=$sent_invoices['hndleby_vehicle_num'];
+								
+							if($sent_invoices['hndlby_roleid']==6)
+							{
+								$hndbyname='Driver '.$sent_invoices['hndleby_name'];
+								$hndbycontactno=$sent_invoices['hndleby_contactno'];
+							}else if($sent_invoices['hndlby_roleid']==7)
+							{
+								$hndbyname='Fright Co-ordinator '.$sent_invoices['hndleby_name'];
+								$hndbycontactno=$sent_invoices['hndleby_contactno'];
+							}else if($sent_invoices['hndlby_type']==4)
+							{
+								$hndbyname='Courier '.$sent_invoices['courier_name'];
+							}else if($sent_invoices['hndlby_type']==3 && $sent_invoices['bus_name'])
+							{
+								$hndbyname='Transporter '.$sent_invoices['bus_name'];
+								$hndbycontactno=$sent_invoices['des_contact'];
+							}
+								
+							$this->db->query("update pnh_invoice_transit_log set status = 1,logged_on=now() where sent_log_id in($sent_log_id) and status = 0 ");
+							
+							if(1)
+							{
+								$pick_up_by_details=$this->db->query("select a.employee_id,a.job_title2,a.name,a.contact_no from m_employee_info a where employee_id=?",$pick_up_emp_id)->row_array();
+							
+								$employees_list=$this->erpm->get_emp_by_territory_and_town($invoices);
+							
+								if($employees_list)
+								{
+									$town_list=array();
+									foreach($employees_list as $emp)
+									{
+										$emp_name=$emp['name'];
+										$emp_id=$emp['employee_id'];
+										$town_name=$emp['town_name'];
+										$territory_id=$emp['territory_id'];
+										$town_id=$emp['town_id'];
+										$town_list[]=$emp['town_name'];
+										$job_title=$emp['job_title2'];
+										$send_sms_status=$emp['send_sms'];
+										$emp_contact_nos = explode(',',$emp['contact_no']);
+											
+										if(!in_array($job_title,$send_sms))
+										{
+											continue;
+										}
+											
+							
+										$sms_msg = 'Dear '.$emp_name.',Shipment for the town '.$town_name.' sent via '.ucwords($hndbyname).'('.$hndbycontactno.') Lr no: '.$lr_number.'.Manifesto Id : '.$manifesto_id;
+										$temp_emp=array();
+										foreach($emp_contact_nos as $emp_mob_no)
+										{
+											if(isset($temp_emp[$emp_id]))
+												continue;
+											$temp_emp[$emp_id]=1;
+							
+											if($send_sms_status)
+												$this->erpm->pnh_sendsms($emp_mob_no,$sms_msg);
+											//	echo $emp_mob_no,$sms_msg;
+											$log_prm=array();
+											$log_prm['emp_id']=$emp_id;
+											$log_prm['contact_no']=$emp_mob_no;
+											$log_prm['type']=4;
+											$log_prm['territory_id']=$territory_id;
+											$log_prm['town_id']=$town_id;
+											$log_prm['grp_msg']=$sms_msg;
+											$log_prm['created_on']=cur_datetime();
+											$this->erpm->insert_pnh_employee_grpsms_log($log_prm);
+										}
+							
+									}
+								}
+							
+								if($pick_up_by_details)
+								{
+									$pemp_name=$pick_up_by_details['name'];
+									$pemp_id=$pick_up_by_details['employee_id'];
+									$pemp_contact_nos = explode(',',$pick_up_by_details['contact_no']);
+							
+									//pick up by
+									if($town_list)
+									{
+										$town_list=array_unique($town_list);
+										$town_list=array_filter($town_list);
+									}else{
+										$town_list=array();
+									}
+							
+									$sms_msg = 'Dear '.$pemp_name.',Shipment for the town '.implode(',',$town_list).' sent via '.ucwords($hndbyname).'('.$hndbycontactno.') Lr no:'.$lr_number.'.Manifesto Id : '.$manifesto_id;
+							
+									$temp_emp=array();
+									foreach($pemp_contact_nos as $emp_mob_no)
+									{
+										if(isset($temp_emp[$pemp_id]))
+											continue;
+										$temp_emp[$pemp_id]=1;
+											
+										$this->erpm->pnh_sendsms($emp_mob_no,$sms_msg);
+											
+										$log_prm2=array();
+										$log_prm2['emp_id']=$pemp_id;
+										$log_prm2['contact_no']=$emp_mob_no;
+										$log_prm2['type']=4;
+										$log_prm2['grp_msg']=$sms_msg;
+										$log_prm2['created_on']=cur_datetime();
+										$this->db->insert("pnh_employee_grpsms_log",$log_prm2);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
+			$this->session->set_flashdata("erp_pop_info","Manifesto Status updated");
+			redirect('admin/update_bulk_lrdetails','refresh');
+			exit;
+		}
+
+		$data['page']='pnh_bulk_update_lrno';
+		$this->load->view("admin",$data);
+	}
+
+	function _validate_check_productid($id)
+	{
+		// Check if product exists
+		if($this->db->query("select count(*) as t from m_product_info where product_id = ? ",$id)->row()->t)
+		{
+			// check if product is already linked for other group or deals 
+			if($this->db->query('select count(*) as t from m_product_deal_link where product_id = ? and is_active = 1 ',$id)->row()->t)
+			{
+				$this->form_validation->set_message('_validate_check_productid','Product is already Linked to Other Deal ');
+				return false;
+			}
+
+			// check if product is already linked for other group or deals 
+			if($this->db->query('select count(*) as t from products_group_pids where product_id = ? ',$id)->row()->t)
+			{
+				$this->form_validation->set_message('_validate_check_productid','Product is already Linked to Other Group ');
+				return false;
+			}
+		}else
+		{
+			$this->form_validation->set_message('_validate_check_productid','Invalid ProductID Entered');
+			return false;
+		}
+			
+	}
+
+	/**
+	 * function to add product to group  
+	 */
+	function jx_upd_producttogroup()
+	{
+		$this->erpm->auth(true);
+		$attr_list = $this->input->post('new_prod_attr');
+		$attr_name_list = $this->input->post('new_prod_attr_names');
+		
+		$this->load->library('form_validation');
+		$this->form_validation->set_rules('group_id','Group','required');
+		$this->form_validation->set_rules('new_prod_id','Product ID','required|callback__validate_check_productid');
+		foreach($attr_list as $a_id=>$v)
+			$this->form_validation->set_rules('new_prod_attr['.$a_id.']',$attr_name_list[$a_id],'required');	
+		
+		$output = array();
+		if($this->form_validation->run() === FALSE)
+		{
+			$output['status'] = 'error';
+			$output['error'] = validation_errors();
+		}else
+		{
+			$grp_id = $this->input->post('group_id');
+			$prod_id = $this->input->post('new_prod_id');
+			foreach($attr_list as $attr_name_id=>$v)
+			{
+				// check if attribute is already available 
+				$attr_val_id = @$this->db->query('select count(*) as t from products_group_attribute_values where group_id = ? and attribute_value = ? ',array($grp_id,$v))->row()->attribute_value_id;
+				
+				if(!$attr_val_id)
+				{
+					// update attr value to group attrs and get value reference id 
+					$ins_data = array();
+					$ins_data['group_id'] = $grp_id;
+					$ins_data['attribute_name_id'] = $attr_name_id;
+					$ins_data['attribute_value'] = $v;
+					$this->db->insert('products_group_attribute_values',$ins_data);
+					$attr_val_id = $this->db->insert_id();	
+				}
+				
+				$ins_data = array();
+				$ins_data['group_id'] = $grp_id;
+				$ins_data['product_id'] = $prod_id;
+				$ins_data['attribute_name_id'] = $attr_name_id;
+				$ins_data['attribute_value_id'] = $attr_val_id;
+				$this->db->insert('products_group_pids',$ins_data);
+				
+			}
+			
+			$output['status'] = 'success';
+				
+		}
+
+		echo json_encode($output);
+		
+	}	
+
 }

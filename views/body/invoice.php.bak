@@ -8,7 +8,7 @@ $ttl_inv_amt = 0;
 $ttl_inv_list = array();
 // check if the invoice is split invoice 	
 $mem_det = array();	
-$invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(amount) as amount from t_invoice_credit_notes a where invoice_no in (select invoice_no from king_invoice where split_inv_grpno = ? or invoice_no = ? ) ",array($invoice_no,$invoice_no));
+$invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(amount) as amount from t_invoice_credit_notes a where invoice_no in (select invoice_no from king_invoice where split_inv_grpno = ? or ref_dispatch_id = ? or invoice_no = ? ) ",array($invoice_no,$invoice_no,$invoice_no));
 
 //echo $this->db->last_query();
 
@@ -27,8 +27,8 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 											from proforma_invoices a 
 											join shipment_batch_process_invoice_link b on a.p_invoice_no = b.p_invoice_no
 											join king_invoice c on c.invoice_no = b.invoice_no  
-											where (b.invoice_no = ?  or split_inv_grpno = ? or ref_dispatch_id = ? ) 
-										group by a.p_invoice_no ",array($invoice_no,$invoice_no,$invoice_no))->row()->dispatch_id;
+											where (b.invoice_no = ?  or split_inv_grpno = ? ) 
+										group by a.p_invoice_no ",array($invoice_no,$invoice_no))->row()->dispatch_id;
 					if($dispatch_id)
 					{					
 				?>
@@ -91,8 +91,7 @@ table{
 							in.discount,
 							in.phc,in.nlc,
 							in.service_tax,
-							item.pnh_id,f.offer_text,f.immediate_payment,
-							in.invoice_qty as quantity 
+							item.pnh_id,f.offer_text,f.immediate_payment
 						from king_orders as ordert
 						join king_dealitems as item on item.id=ordert.itemid 
 						join king_deals as deal on deal.dealid=item.dealid 
@@ -230,7 +229,7 @@ table{
 					?>
 					</td>
 					<td align="right" valign="top">
-						<table border=1 cellspacing	=0 cellpadding=5>
+						<table border=1 cellspacing=0 cellpadding=5>
 							<tr><td>Invoice<br>No:</td><td width=100><b><?=isset($invoice_no)?$invoice_no:$order['invoice_no']?>
 							</b></td>
 							<td>Invoice<br>Date:</td><td width="100"><b><?=date("d/m/Y",$inv_createdon)?></b></td>
@@ -337,13 +336,12 @@ table{
 				if($invdet['invoice_status']==1)
 					continue;
 			}
-
-			$consider_item_total = 1;
-		
+			
 			$ptax=$order['tax']/100;
 			$p1tax=$order['tax'];
 			$qty=$order['quantity'];
-			$discount += round($consider_item_total*$order['discount']*$qty,2);
+			//$discount += round($consider_item_total*$order['discount']*$qty,2);
+			$discount += round($order['discount']*$qty,2);
 			$mrp_total += round($order['mrp']*$qty,2);
 			$tpc += $product_rate = round(($order['nlc']*$qty*100/(100+$ptax)),2);
 			$tpc_tax += $product_rate_tax = round(($order['nlc']*$qty-$product_rate),2);

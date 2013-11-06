@@ -121,7 +121,6 @@ return round($diff / 86400);
 <th>Order Qty</th>
 <th>Received Qty</th>
 <th>MRP</th>
-<th>DP Price</th>
 <th>Margin</th>
 <th>Scheme Discount</th>
 <th>Purchase Price</th>
@@ -138,7 +137,6 @@ return round($diff / 86400);
 <td><?=$i['order_qty']?></td>
 <td><?=$i['received_qty']?></td>
 <td><?=$i['mrp']?></td>
-<td><?=$i['dp_price']?></td>
 <td><?=$i['margin']?>%</td>
 <td><?=$i['scheme_discount_value']?></td>
 <td><?=$i['purchase_price']?></td>
@@ -154,12 +152,6 @@ return round($diff / 86400);
 </div>
 
 <script>
-/*var button = $('<input type="button" value="save" id="po_deliverydate_button">');
-$('#po_deliverydate_button').after(button);
-if("#po_deliverydate_button").click(function(){
-	var value = $(this).prev().val();
-	 save(value);
-});*/
 
 $("#po_deliverydate").datepicker({});
 function closepo()
@@ -168,11 +160,7 @@ function closepo()
 		location="<?=site_url("admin/closepo/{$po['po_id']}")?>";
 }
 
-function updateexpected_podeliverydate()
-{
-	if(confirm("Are you sure?"))
-		location="<?=site_url("admin/updatedeliverydate/{$po['po_id']}")?>";
-}
+
 </script>
 
 <?php

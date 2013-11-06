@@ -60,13 +60,12 @@ define("CS_EMAIL","hello@snapittoday.com");
 
 define('REQUEST_URI',$_SERVER['REQUEST_URI']);
 
-//if($_SERVER['HTTP_HOST']=='localhost') {
-//    define('IMAGES_URL',"http://".$_SERVER['HTTP_HOST']."/snapitto/images/");
-//}
-//else {
+if($_SERVER['HTTP_HOST']=='localhost') {
+    define('IMAGES_URL',"http://".$_SERVER['HTTP_HOST']."/snapitto/images/");
+}
+else {
     define('IMAGES_URL',"http://static.snapittoday.com/");
-//}
-
+}
 
 define('ERP_IMAGES_URL',"http://".$_SERVER['HTTP_HOST']."/images/erp_images/");
 define('ERP_PHYSICAL_IMAGES',"images/erp_images/");

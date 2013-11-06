@@ -39,43 +39,29 @@ view by Tax : <select id="prod_disp_tax">
 <table class="datagrid" width="100%">
 <thead>
 <tr>
-<th width="20"><input type="checkbox" class="chk_all"></th>
-<th width="450">Product Name</th>
-<th width="50">MRP</th>
-<th width="100" >Stock</th>
-<th width="100">Barcode</th>
-<th width="150">Brand</th>
-<th ></th>
+<th><input type="checkbox" class="chk_all"></th>
+<th>Product Name</th>
+<th>MRP</th>
+<th>Stock</th>
+<th>Barcode</th>
+<th>Brand</th>
+<th></th>
 </tr>
 </thead>
 <?php foreach($products as $p){?>
-<tr style="background:<?=$p['is_sourceable']?'rgba(170, 255, 170, 0.80)':'rgba(255, 170, 170, 0.80)'?>;">
-<td ><input type="checkbox" value="<?=$p['product_id']?>" class="p_check"></td>
-<td ><a class="link" href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_name']?></a></td>
+<tr style="background:<?=$p['is_sourceable']?'#afa':'#faa'?>;">
+<td><input type="checkbox" value="<?=$p['product_id']?>" class="p_check"></td>
+<td><a class="link" href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_name']?></a></td>
 <td><?=$p['mrp']?></td>
-<td style="padding:0px 5px">
-	<?=$p['stock']*1?>
-	<?php
-		$p_mrpstk_arr = $this->db->query("select mrp,sum(available_qty) as qty from t_stock_info where product_id = ? and available_qty > 0 group by mrp order by mrp asc ",$p['product_id'])->result_array();
-		if($p_mrpstk_arr)
-		{
-			echo '<div style="background:#ffffe0;font-size:10px;padding:2px 5px;min-width:60px;border-radius:3px;">';
-			foreach($p_mrpstk_arr as $p_mrpstk)
-				echo '<div class="clearboth"><b>Rs '.round($p_mrpstk['mrp']).'</b>  <b class="fl_right">'.($p_mrpstk['qty']).'</b></div>';
-			echo '</div>';
-		}
-			
-		
-	?>
-</td>
+<td><?=$p['stock']?></td>
 <td>
 <img src="<?=IMAGES_URL?>loading_maroon.gif" class="busy">
 <form action="<?=site_url("admin/update_barcode")?>" method="post" class="barcode_forms">
 <input type="hidden" name="pid" value="<?=$p['product_id']?>">
-	<input type="text" class="barcode_inp" name="barcode" value="<?=(string)$p['barcode']?>" size=15>
+	<input type="text" class="barcode_inp" name="barcode" value="<?=(string)$p['barcode']?>" size=10>
 </form>
 </td>
-<td width="100"><?=$p['brand']?></td>
+<td><?=$p['brand']?></td>
 <td>
 <a href="<?=site_url("admin/editproduct/{$p['product_id']}")?>">edit</a> &nbsp;&nbsp;&nbsp;&nbsp; 
 <a href="<?=site_url("admin/viewlinkeddeals/{$p['product_id']}")?>">view linked deals</a>

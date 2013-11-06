@@ -1253,7 +1253,8 @@ class Pnh extends Controller{
 
 			$bank_det_arr = array();
 			$bank_det_arr['hdfc'] = 'Acc no:50200000198194,Accname:Local Cube Commerce Pvt Ltd,Branch:BSK 2nd stage,IFSC code:HDFC0002858';
-			$bank_det_arr['icici'] = 'Acc no:025105006977 ,Accname:Local Cube Commerce Pvt Ltd,Branch:JAYANAGAR 7th BLOCK,IFSC code:ICIC0000251';
+			//$bank_det_arr['icici'] = 'Acc no:025105006977 ,Accname:Local Cube Commerce Pvt Ltd,Branch:JAYANAGAR 7th BLOCK,IFSC code:ICIC0000251';
+			$bank_det_arr['icici'] = 'Acc no:263705000001 ,Accname:Local Cube Commerce Pvt Ltd,Branch:Kumbalagodu,IFSC code:ICIC0002637';
 			$bank_det_arr['kotak'] = 'Acc no:2211241104 ,Accname:Local Cube Commerce Pvt Ltd,Branch:BSK 3rd stage,IFSC code:KKBK0000427';
 
 			$resp_msg = '';

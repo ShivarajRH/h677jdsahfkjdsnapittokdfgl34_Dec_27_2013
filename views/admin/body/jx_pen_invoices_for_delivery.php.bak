@@ -53,7 +53,7 @@
 			foreach($franchise_inv_link as $franchise=> $inv)
 			{
 				echo '<div style="margin-bottom:10px;background:#FCFCFC;padding:5px;">';
-				echo '	<h4 style="margin:3px 0px;">'.$franchise.' <span style="float:right;">'.count($inv).' <input type="checkbox" name="select" value="'.strip_tags(implode(',',$inv)).'" ></span></h4>';
+				echo '	<h4 style="margin:3px 0px;">'.$franchise.' <span style="float:right;">'.count($inv).'</span></h4>';
 				echo '	<p style="margin:3px 0px;font-size:12px;">'.implode(', ',$inv).'</p>';
 				echo '</div>';
 

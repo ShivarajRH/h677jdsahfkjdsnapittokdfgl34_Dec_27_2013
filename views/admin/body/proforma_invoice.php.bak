@@ -41,7 +41,7 @@ foreach($orders as $o){
 	$o_det = $this->db->query("select b.invoice_no,a.i_orgprice as mrp,(a.i_orgprice-(i_discount)) as offer_price,(a.i_orgprice-(i_discount+i_coup_discount)) as amt,i_coup_discount as coup_discount,a.quantity,d.shipped
 	from king_orders a 
 	join king_invoice b on a.id = b.order_id 
-	join proforma_invoices c on c.order_id = b.order_id and c.invoice_status = 1 
+	join proforma_invoices c on c.order_id = b.order_id
 	join shipment_batch_process_invoice_link d on d.p_invoice_no = c.p_invoice_no 
 	where c.p_invoice_no = ? and a.id = ? 
 group by a.id,b.invoice_no  

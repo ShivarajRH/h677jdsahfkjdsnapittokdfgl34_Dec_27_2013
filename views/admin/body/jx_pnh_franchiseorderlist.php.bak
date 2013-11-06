@@ -125,16 +125,7 @@
 			
 	?>
 	<tr class="order_summ_det">
-	<td width="150">
-		<?=format_datetime(date('Y-m-d H:i:s',$o['time']))?>
-		
-		<?php
-			$trans_created_by = @$this->db->query("select username from king_admin a join king_transactions b on a.id = b.trans_created_by where transid = ? ",$o['transid'])->row()->username;
-			if($trans_created_by) 
-				echo '<br><br> By <b>'.($trans_created_by).'</b>'
-		?>
-		
-	</td>
+	<td width="150"><?=format_datetime(date('Y-m-d H:i:s',$o['time']))?></td>
 	<td width="150">
 		<a href="<?=site_url("admin/trans/{$o['transid']}")?>" class="link"><?=$o['transid']?></a> <br />
 		Batch Enabled : <?php echo $o['batch_enabled']?'yes':'no' ?>

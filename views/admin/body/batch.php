@@ -29,18 +29,12 @@
 		$fil_couriers = array();
 
 		if(empty($inv['transid'])) $inv['transid']=$inv['pi_transid'];
-		if($this->db->query("select is_pnh from king_transactions where transid=?",$inv['transid'])->row()->is_pnh==1){ $is_pnh=true; 
+		 
 	?>
 
 	<div style="float:right;margin:20px 8px 8px;"><a target="_blank" href="<?=site_url("admin/product_proc_list_for_batch/{$batch['batch_id']}")?>">Generate product procurement list</a></div>	
-	
-	<div style="float:right;margin:20px 8px 8px;">
-		<?php if($is_pnh) {?>
-			<a style="text-decoration: underline;" href="<?php echo site_url('admin/process_batch_by_fran/'.$batch['batch_id']); ?>">Process batch by franchise</a>
-		<?php }?>
-	</div>
 
-	<h2>Shipment Batch Process : BATCH<?=$batch['batch_id']?> - 
+	<h2 >Shipment Batch Process : BATCH<?=$batch['batch_id']?> - 
 		<b style="font-size: 90%">
 			<?php
 				if($batch['status'] == 0)
@@ -54,43 +48,42 @@
 	</h2>
 
 	<?php
+		if($this->db->query("select is_pnh from king_transactions where transid=?",$inv['transid'])->row()->is_pnh==1){ $is_pnh=true; }
+					
+		
 		$trans_ids = array();
 		if(empty($inv['transid'])) $inv['transid']=$inv['pi_transid'];
 		foreach($invoices as $inv)
 		{
 			array_push($trans_ids,"'".$inv['transid']."'");
-			
 		}
 	?>
-
-	<div class="dash_bar dash_bar_right dashbar_width">
-			Pending :<?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
-			join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
-			where batch_id=? and invoice_status = 1 and invoice_no = 0 ",$batch['batch_id'])->row()->t;?>
-	</div>
-
-
-	<div class="dash_bar dash_bar_right dashbar_width">
-			Cancelled :<?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
-			join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
-			where batch_id=? and invoice_status = 0 ",$batch['batch_id'])->row()->t;?>
-	</div>
-
-
-	<div class="dash_bar dash_bar_right dashbar_width">
-			Packed : <?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
-			join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
-			where batch_id=? and invoice_status = 1 and invoice_no != 0 ",$batch['batch_id'])->row()->t;?>
+	<div style="clear:both;float: left;">
+		<div class="dash_bar dash_bar_right dashbar_width">
+				Total : <b><?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
+				join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
+				where batch_id=? ",$batch['batch_id'])->row()->t;?></b>
+		</div>
+		<div class="dash_bar dash_bar_right dashbar_width">
+				Cancelled :<b><?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
+				join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
+				where batch_id=? and invoice_status = 0 ",$batch['batch_id'])->row()->t;?></b>
+		</div>
+		<div class="dash_bar dash_bar_right dashbar_width">
+				Packed : <b><?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
+				join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
+				where batch_id=? and invoice_status = 1 and invoice_no != 0 ",$batch['batch_id'])->row()->t;?> </b>
+		</div>
+		<div class="dash_bar dash_bar_right dashbar_width">
+				Pending :<b><?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
+				join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
+				where batch_id=? and invoice_status = 1 and invoice_no = 0 ",$batch['batch_id'])->row()->t;?></b>
+		</div>
+		
 	</div>
 	
-	<div class="dash_bar dash_bar_right dashbar_width">
-			Total : <?=$this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
-			join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
-			where batch_id=? ",$batch['batch_id'])->row()->t;?>
-	</div>
-
-	<div style="clear:both">
-		<span style="float:left;margin-top:7px;">
+	<?php if($is_pnh) { ?>
+		<span style="float:right;margin-top:7px;">
 		Filter by : <select id="territory" name="territory" style="width: 150px">
 						<option value="0">All Territories</option>
 						<?php
@@ -123,7 +116,7 @@
 					</select>
 	
 		</span>
-	<?php }?>
+	<?php }else{?>
 
 		<span style="float: right;padding:3px;">
 		
@@ -138,8 +131,10 @@
 			&nbsp;
 			&nbsp;
 		</span>
+	<?php } ?>	
+		
 	</div>
-
+ 
 
 	<table id="batch_orders" class="datagrid datagridsort" width="99%">
 		<thead>
@@ -212,9 +207,6 @@
 				
 				<td>
 					<a href="<?=site_url("admin/proforma_invoice/{$inv['p_invoice_no']}")?>" <?=!$inv['p_invoice_status']?'style="text-decoration:line-through;"':''?>><?=$inv['p_invoice_no']?></a>
-						<?php if($inv['invoice_no']==0 && $inv['p_invoice_status'] && $this->erpm->auth(true,true)){?>
-							<a target="_blank" style="color:#cd0000;font-size: 10px;" href="<?=site_url("admin/cancel_proforma_invoice/{$inv['p_invoice_no']}")?>">Cancel</a>
-						<?php } ?>
 					<?php echo ($is_fran_suspended?'<br><b style="color:#cd0000;font-size:10px;">Franchise Suspended</b>':'');?>
 				</td>
 				
@@ -409,7 +401,7 @@
 			<input type="hidden" class="f_tids" name="tids" >
 		</form>
 		
-		<div align="left" style="padding:10px;background: #fcfcfc">
+		<div align="left" style="padding:10px;background: #fcfcfc;line-height: 22px;">
 			
 			<form action="<?php echo site_url('admin/process_bulkorderinvoice') ?>" target="hndl_process_bulkinvoice" id="process_bulk_invoice_frm" method="post" style="display: none;">
 				<b>Bulk Invoice Orders</b> - <span id="sel_prodname"></span> <br>

@@ -100,10 +100,10 @@ $d=$deal;
 	</table>
 </fieldset>
 
-<?php if(!$d){?>
+
 <fieldset style="width:600px;">
 <legend><h4>Link Product Groups</h4></legend>
-<?php if(!$d){?>
+<?php if(!$d || ($d && $superadmin)){?>
 Search : <input type="text" class="inp" size=60 id="po_g_search">
 <div id="po_g_prod_list" class="closeonclick">
 </div>
@@ -111,16 +111,27 @@ Search : <input type="text" class="inp" size=60 id="po_g_search">
 <table id="pprods_g" width="500" class="datagrid smallheader" style="margin-top:10px;">
 <thead><tr><th>Group Name</th><th>Qty</th></tr></thead>
 <tbody>
-<?php if($d){$pids=array();foreach($this->db->query("select l.product_id,l.qty,p.product_name from m_product_deal_link l join m_product_info p on p.product_id=l.product_id where itemid=?",$d['id'])->result_array() as $p){?>
+<?php 
+	if($d)
+	{
+			$pids=array();
+			foreach($this->db->query("select a.group_id,group_name,qty 
+	from m_product_group_deal_link a 
+	join products_group b on a.group_id = b.group_id 
+	where itemid = ? ",$d['id'])->result_array() as $p)
+			{
+	?>
 <tR>
-<td><input type="hidden" name="g_pid[]" value="<?=$p['product_id']?>"><?=$p['product_name']?></td><td><?=$p['mrp']?></td>
-<td><input type="hidden" class="inp" size=3 name="g_qty[]" value="<?=$p['qty']?>"><?=$p['qty']?></td>
+<td><input type="hidden" name="pid_g[]" value="<?=$p['group_id']?>"><?=$p['group_name']?></td>
+<td><input type="hidden" class="inp al_pids" size=3 name="qty_g[]" value="<?=$p['qty']?>"><?=$p['qty']?></td>
 </tR>
-<?php $pids[]=$p['product_id']; } }?>
+<?php $pids[]=$p['group_id']; 
+			} 
+	}?>
 </tbody>
 </table>
 </fieldset>
-<?php }?>
+ 
 
 <div style="padding:10px 0px;">
 <input type="submit" value="Submit">

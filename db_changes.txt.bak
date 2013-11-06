@@ -981,8 +981,3 @@ ALTER TABLE `pnh_sms_log_sent` ADD COLUMN `ticket_id` BIGINT(50) DEFAULT 0 NULL 
 
 //returns changes
 alter table `pnh_invoice_returns` add column `order_from` tinyint (1) DEFAULT '0' NULL  COMMENT '0:pnh,1:sit,2:partners' after `status`;
-
-alter table `pnh_m_manifesto_sent_log` add column `ref_box_no` bigint (10) DEFAULT '0' NULL  after `no_ofboxes`;
-
-alter table `t_grn_product_link` add column `dp_price` decimal (15,4) DEFAULT '0' NULL  after `mrp`;
-alter table `t_po_product_link` add column `dp_price` decimal (15,4) DEFAULT '0' NULL  after `mrp`;

@@ -21,21 +21,41 @@
 <div class="clear"></div>
 <?php if(isset($products)){?>
 <h3><?=$pagetitle?></h3>
-<table class="datagrid">
-<thead><tr><Th>Sno</Th><th>Product Name</th><th>MRP</th><th>Stock Qty</th><th>MRP Value</th><th>Avg Purchase Price</th><th>Avg Total purchase</th></tr></thead>
+<table class="datagrid" width="80%">
+<thead><tr><Th>Sno</Th><th>Product ID</th><th>Product Name</th><th style="text-align: right">MRP</th><th>Stock Qty</th><th style="text-align: right">MRP Value</th><th align="center" style="text-align: right">Avg <br /> Purchase <br />Price</th><th style="text-align: right">Avg <br /> Total <br />purchase</th></tr></thead>
 <tbody>
-<?php $t_sv=$t_avg=0;$i=1; foreach($products as $p){?>
+<?php $t_sv=$t_avg=0;$i=1; $qty_t = 0; foreach($products as $p){?>
 <tr>
 <td><?=$i++?></td>
-<td><a class="link" href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_name']?></a></td>
-<td>Rs <?=$p['mrp']?></td>
-<td><?=$p['stock']?></td>
-<td>Rs <?=$p['stock_value']?></td>
-<td>Rs <?php $avg=round($this->db->query("select avg(purchase_price) as a from t_grn_product_link where product_id=?",$p['product_id'])->row()->a,2); echo $avg;?></td>
-<td>Rs <?=number_format($p['stock']*$avg,2)?></td>
+<td><a class="link" target="_blank" href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_id']?></a></td>
+<td><a class="link" target="_blank"  href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_name']?></a></td>
+<td align="right"><?=format_price($p['mrp'],0)?></td>
+<td>
+	<?=$p['stock']*1?>
+	<?php
+		$p_mrpstk_arr = $this->db->query("select mrp,sum(available_qty) as qty from t_stock_info where product_id = ? and available_qty > 0 group by mrp order by mrp asc ",$p['product_id'])->result_array();
+		if($p_mrpstk_arr)
+		{
+			echo '<div style="background:#ffffa0;font-size:10px;padding:2px 5px;min-width:60px;border-radius:3px;">';
+			foreach($p_mrpstk_arr as $p_mrpstk)
+				echo '<div class="clearboth"><b>Rs '.format_price($p_mrpstk['mrp'],0).'</b>  <b class="fl_right" style="float:right">'.($p_mrpstk['qty']).'</b></div>';
+			echo '</div>';
+		}
+		
+		$qty_t += $p['stock']*1;
+	?>
+</td>
+<td align="right"><?=format_price($p['stock_value'],0)?></td>
+<td align="right"><?php $avg=round($this->db->query("select avg(purchase_price) as a from t_grn_product_link where product_id=?",$p['product_id'])->row()->a,2); echo format_price($avg);?></td>
+<td align="right"><?=format_price($p['stock']*$avg,2)?></td>
 </tr>
 <?php $t_sv+=$p['stock_value']; $t_avg+=$p['stock']*$avg; }?>
-<tr><td colspan="4" align="right">Total :</td><td>Rs <?=number_format($t_sv)?></td><td></td><td><?=number_format($t_avg)?></td></tr>
+<tr>
+	<td colspan="4" align="right">Total </td>
+	<td><?=$qty_t;?> Qtys</td>
+	<td align="right"><b><?=format_price($t_sv)?></b></td>
+	<td></td>
+	<td align="right"><b><?=format_price($t_avg)?></b></td></tr>
 </tbody>
 
 </table>

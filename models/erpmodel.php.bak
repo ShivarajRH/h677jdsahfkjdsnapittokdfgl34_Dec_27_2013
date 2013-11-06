@@ -2,10 +2,11 @@
 
 class Erpmodel extends Model
 {
-    function __construct()
-    {
-            parent::__construct();
-    }
+	
+	function __construct()
+	{
+		parent::__construct();
+	}
     
     /**
      * Process the transactions to batch and generates  performa invoice for Batch enabled trans
@@ -980,8 +981,7 @@ class Erpmodel extends Model
 				
 			// check if product menu brand considered for MAP[minimum adverstise price] price config
 			
-			
-			$is_dealconsidered_for_map = $this->erpm->check_dealformap_price($o['menuid'],$o['brandid'],$o['catid']);
+			$is_dealconsidered_for_map = $this->erpm->check_dealformap_price($o['menuid'],$o['brandid'],$o['catid'],$o['itemid']);
 			if($is_dealconsidered_for_map)
 			{
 				$p_discount = $o['i_discount'];
@@ -989,7 +989,7 @@ class Erpmodel extends Model
 			}else
 			{
 				$p_discount = $o['i_discount']+$o['i_coup_discount'];
-				$credit_note_amt = 0;				
+				$credit_note_amt = 0;
 			}
 			
 			$offer_price = ($o['i_orgprice'])-$p_discount;
@@ -1022,16 +1022,36 @@ class Erpmodel extends Model
 		return $invoices;
 	}
 	
+	/**
+	 * function to get parent catid 
+	 */
+	function _get_parentcatid($catid)
+	{
+		$type = @$this->db->query("select type from king_categories where id = ? ",$catid)->row()->type;
+		
+		if($type)
+			return $this->_get_parentcatid($type);
+		else
+			 return $catid;
+		
+	}
+	
 	/*
 	 * function to check if product menu brand considered for MAP[minimum adverstise price] price config
 	 */
-	function check_dealformap_price($menuid,$brandid=0,$catid=0)
+	function check_dealformap_price($menuid,$brandid=0,$catid=0,$itemid=0)
 	{
 		$brandid = 0;
-		return $this->db->query("select count(*) as t from m_brand_config_map_price where (menuid = ? and brandid = ? and catid = ? ) and is_active = 1 ",array($menuid,$brandid,$catid))->row()->t; 
+		$is_serial_required = 0;
+		if($itemid)
+			$is_serial_required = $this->db->query("select ifnull(sum(is_serial_required),0) as t from m_product_info a join m_product_deal_link b on a.product_id = b.product_id where itemid = ? ",$itemid)->row()->t;
+		if($is_serial_required)
+		{
+			$catid = $this->_get_parentcatid($catid);
+			return $this->db->query("select count(*) as t from m_brand_config_map_price where (menuid = ? and brandid = ? and catid = ? ) and is_active = 1 ",array($menuid,$brandid,$catid))->row()->t;
+		}
+		return 0;
 	}
-	
-	 
 	
 	function getcouriers()
 	{
@@ -5407,15 +5427,23 @@ order by p.product_name asc
 				$po['oqty']=$_POST["oqty$p"][$i];
 				$po['rqty']=$_POST["rqty$p"][$i];
 				$po['mrp']=$_POST["mrp$p"][$i];
+				
+				$po['dp_price']=$_POST["dp_price$p"][$i];
+				
 				$po['price']=$_POST["price$p"][$i];
 				$po['tax']=$this->db->query("select vat from m_product_info where product_id=?",$po['product'])->row()->vat;
 				$po['rackbin']=$_POST['storage'.$p][$i];
+				
 				$po['location']=$this->db->query("select location_id from m_rack_bin_info where id=?",$po['rackbin'])->row()->location_id;
+				
 				$po['margin']=$poi['margin'];
 				$po['foc']=$poi['is_foc'];
 				$po['offer']=$poi['has_offer'];
 				$po['barcode']=isset($_POST["pbarcode".$p][$i])?$_POST["pbarcode".$p][$i]:'';
 				$po['upd_pmrp']=isset($_POST["upd_pmrp".$p][$po['product']])?$_POST["upd_pmrp".$p][$po['product']]:0;
+				
+				$po['upd_dp_price']=isset($_POST["upd_dp_price".$p][$po['product']])?$_POST["upd_dp_price".$p][$po['product']]:0;
+				
 				$pos[$p][]=$po;
 			}
 		}
@@ -5434,9 +5462,10 @@ order by p.product_name asc
 		{
 			foreach($po as $p)
 			{
-				$inp=array($grn,$poid,$p['product'],$p['oqty'],$p['rqty'],$p['mrp'],$p['price'],$p['tax'],$p['location'],$p['rackbin'],$p['margin'],$p['foc'],$p['offer']);
-				$this->db->query("insert into t_grn_product_link(grn_id,po_id,product_id,invoice_qty,received_qty,mrp,purchase_price,tax_percent,location_id,rack_bin_id,margin,is_foc,has_offer,created_on) 
-																				values(?,?,?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
+				$inp=array($grn,$poid,$p['product'],$p['oqty'],$p['rqty'],$p['mrp'],$p['dp_price'],$p['price'],$p['tax'],$p['location'],$p['rackbin'],$p['margin'],$p['foc'],$p['offer']);
+				$this->db->query("insert into t_grn_product_link(grn_id,po_id,product_id,invoice_qty,received_qty,mrp,dp_price,purchase_price,tax_percent,location_id,rack_bin_id,margin,is_foc,has_offer,created_on) 
+																				values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
+																				
 				$this->db->query("update t_po_product_link set received_qty=received_qty+? where po_id=? and product_id=?",array($p['rqty'],$poid,$p['product']));
 				if($p['rqty']!=0)
 				{
@@ -5541,6 +5570,10 @@ order by p.product_name asc
 						}
 					}
 					
+					if($p['upd_dp_price'] == 1 )
+					{
+						$this->_update_dp_byproductid($p['product_id'],$p['dp_price'],$grn);
+					}
 					
 					
 					/*
@@ -5726,24 +5759,46 @@ order by p.product_name asc
 	
 	function do_po_prodwise()
 	{
+		error_reporting(E_ALL);
+		 
 		foreach($_POST['vendor'] as $i=>$v)
 		{
 			$po=array();
 			if(!isset($pos[$v]))
 				$pos[$v]=array();
+			
+			if(!isset($_POST['product'][$i]))
+				continue;
+			
 			$po['product']=$_POST['product'][$i];
 			$po['qty']=$_POST['qty'][$i];
 			if(empty($po['qty']) || $po['qty']==0)
 				continue;
+			
 			$po['margin']=$_POST['margin'][$i];
 			$po['mrp']=$_POST['mrp'][$i];
-			$price=$po['mrp']-($po['mrp']*$po['margin']/100);
+			$po['dp_price']=$_POST['dp_price'][$i];
+			
+			if($po['dp_price'])
+			{
+				$price=$po['dp_price']-($po['dp_price']*$po['margin']/100);	
+			}else
+			{
+				$price=$po['mrp']-($po['mrp']*$po['margin']/100);
+			}
+			
+			
 			$po['discount']=$_POST['sch_type'][$i]?$price*$_POST['sch_discount'][$i]/100:$price-$_POST['sch_discount'][$i];
 			$po['type']=$_POST['sch_type'][$i];
 			$po['price']=$price-$po['discount'];
 			$po['foc']=$this->input->post("foc$i");
 			$po['offer']=$this->input->post("offer$i");
-			$po['note']=$_POST['note'][$i];
+			
+			if(isset($_POST['note'][$i]))
+				$po['note']=isset($_POST['note'][$i]);
+			else
+				$po['note']='';
+			
 			$pos[$v][]=$po;
 		}
 		foreach($pos as $v=>$po)
@@ -5753,15 +5808,64 @@ order by p.product_name asc
 			$poid=$this->db->insert_id();
 			foreach($po as $p)
 			{
-				$inp=array($poid,$p['product'],$p['qty'],$p['mrp'],$p['margin'],$p['discount'],$p['type'],$p['price'],$p['foc'],$p['offer'],$p['note']);
-				$this->db->query("insert into t_po_product_link(po_id,product_id,order_qty,mrp,margin,scheme_discount_value,scheme_discount_type,purchase_price,is_foc,has_offer,special_note,created_on)
-																								values(?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
+				$inp=array($poid,$p['product'],$p['qty'],$p['mrp'],$p['margin'],$p['dp_price'],$p['discount'],$p['type'],$p['price'],$p['foc'],$p['offer'],$p['note']);
+				$this->db->query("insert into t_po_product_link(po_id,product_id,order_qty,mrp,margin,dp_price,scheme_discount_value,scheme_discount_type,purchase_price,is_foc,has_offer,special_note,created_on)
+																								values(?,?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
 				$total+=$p['price']*$p['qty'];
+				
+				// check and update DP price changes 
+				$this->_update_dp_byproductid($p['product'],$p['dp_price']);
+				
 			}
 			$this->db->query("update t_po_info set total_value=? where po_id=? limit 1",array($total,$poid));
 		}
+		
+		
 		$this->session->set_flashdata("erp_pop_info","POs created");
 		redirect("admin/viewpo/$poid");
+	}
+
+	/**
+	 * funciton to update DP price
+	 *  Check if the product has serial no and 1:1 link to Deal. 
+	 */
+	function _update_dp_byproductid($pid,$val=0,$grn_id=0)
+	{
+		if(!$val)
+			return false;
+	
+		$user = $this->erpm->auth();
+				
+		// check if the product is serial product 
+		if($this->db->query("select is_serial_required from m_product_info where product_id = ? ",$pid)->row()->is_serial_required)
+		{
+			// check if dp has changed and update DP for item
+			$deal_det_res  = $this->db->query("select a.dealid,orgprice,c.itemid,price from king_deals a join king_dealitems b on a.dealid = b.dealid join m_product_deal_link c on c.itemid = b.id where product_id = ? and c.is_active = 1 order by c.id desc limit 1 ",$pid);
+			if($deal_det_res->num_rows())
+			{
+				$deal_det = $deal_det_res->row_array();
+				if($deal_det['price'] != $val)
+				{
+					// Update DP price to deals 
+					$this->db->query("update king_dealitems set price = ?,modified_on=now() where id = ? and price = ? ",array($val,$deal_det['itemid'],$deal_det['price']));
+					
+					// update to deal price change log
+					$price_upt_prm=array();
+					$price_upt_prm['itemid']=$deal_det['itemid'];
+					$price_upt_prm['old_mrp']=$deal_det['orgprice'];
+					$price_upt_prm['new_mrp']=$deal_det['orgprice'];
+					$price_upt_prm['new_price']=$val;
+					$price_upt_prm['old_price']=$deal_det['price'];
+					$price_upt_prm['created_by']=$user['userid'];
+					$price_upt_prm['created_on']=time();
+					$price_upt_prm['reference_grn']=$grn_id;
+					
+					$this->db->insert('deal_price_changelog',$price_upt_prm);
+					return true;
+				}	
+			}
+		}
+		return false;
 	}
 	
 	function getlinkeddealsforproduct($pid)
@@ -5814,6 +5918,16 @@ order by p.product_name asc
 				";
 		
 		$r=$this->db->query($sql,$id)->row_array();
+		
+		// Check if valid for DP margin 
+		if($r['is_serial_required'])
+		{
+			$r['dp_price'] = @$this->db->query("select price from king_deals a join king_dealitems b on a.dealid = b.dealid join m_product_deal_link c on c.itemid = b.id where product_id = ? and c.is_active = 1 order by c.id desc limit 1 ",$r['product_id'])->row()->price;
+		}else
+		{
+			$r['dp_price'] = '';
+		} 
+		
 		$r['orders']=$this->db->query("select ifnull(sum(o.quantity*l.qty),0) as s from m_product_deal_link l join king_orders o on o.itemid=l.itemid where l.product_id=? and o.time>".(time()-(24*60*60*90)),$id)->row()->s;
 		$r['last_pen_order'] = @$this->db->query("SELECT a.transid,DATE_FORMAT(FROM_UNIXTIME(time),'%d/%m/%Y') AS orderd_on
 									FROM king_transactions a 
@@ -5931,8 +6045,10 @@ order by p.product_name asc
 	{
 		$edod = $_POST['e_dod'].' '.$_POST['e_dod_h'].':00:00';
 		$this->db->query("insert into t_po_info(vendor_id,remarks,date_of_delivery,created_on,po_status) values(?,?,?,now(),0)",array($_POST['vendor'],$_POST['remarks'],$edod));
+		
 		$po=$this->db->insert_id();
 		$pt=$_POST;
+		
 		$total=0;
 		foreach($_POST['product'] as $i=>$p)
 		{
@@ -5941,11 +6057,16 @@ order by p.product_name asc
 			if(!isset($pt["offer$i"]))
 				$pt["offer$i"]=0;
 			$sv=$pt['sch_type'][$i]?$pt['mrp'][$i]*$pt['sch_discount'][$i]/100:$pt['sch_discount'][$i];
-			$inp=array($po,$p,$pt['qty'][$i],$pt['mrp'][$i],$pt['margin'][$i],$sv,$pt['sch_type'][$i],$pt['price'][$i],$pt["foc$i"],$pt["offer$i"],$pt['note'][$i]);
-			$this->db->query("insert into t_po_product_link(po_id,product_id,order_qty,mrp,margin,scheme_discount_value,scheme_discount_type,purchase_price,is_foc,has_offer,special_note,created_on)
-																					values(?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
+			$inp=array($po,$p,$pt['qty'][$i],$pt['mrp'][$i],$pt['dp_price'][$i],$pt['margin'][$i],$sv,$pt['sch_type'][$i],$pt['price'][$i],$pt["foc$i"],$pt["offer$i"],$pt['note'][$i]);
+			$this->db->query("insert into t_po_product_link(po_id,product_id,order_qty,mrp,dp_price,margin,scheme_discount_value,scheme_discount_type,purchase_price,is_foc,has_offer,special_note,created_on)
+																					values(?,?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
+			
+			// update dp price 
+			$this->_update_dp_byproductid($p,$pt['dp_price'][$i]);
+			
 			$total+=$pt['price'][$i]*$pt['qty'][$i];
 		}
+		
 		$this->db->query("update t_po_info set total_value=? where po_id=? limit 1",array($total,$po));
 		$this->session->set_flashdata("erp_pop_info","PO created");
 		redirect("admin/viewpo/$po");
@@ -9350,6 +9471,31 @@ order by action_date";
 			$red_prd_det['det']=$ret_prod_list_res->result_array();
 		return $red_prd_det;
 	}
+	
+	
+	function get_returns_reship_det($access)
+	{
+		$red_prd_det=array();
+		// return product list details
+		$ret_prod_list_res = $this->db->query("select a.is_packed,a.readytoship,d.franchise_id,e.franchise_name,a.is_refunded,a.is_shipped,a.is_stocked,
+				a.id as return_product_id,a.return_id,a.order_id,a.product_id,d.transid,od.bill_person,od.userid,
+				b.product_name,qty,a.barcode,a.imei_no,condition_type,a.status,i.name as handled_by_name,c.invoice_no,f.returned_on,f.order_from
+				from pnh_invoice_returns_product_link a
+				join pnh_invoice_returns f on f.return_id = a.return_id
+				join m_product_info b on a.product_id = b.product_id
+				join king_invoice c on c.invoice_no = f.invoice_no
+				join king_transactions d on d.transid = c.transid
+				left join pnh_m_franchise_info e on e.franchise_id = d.franchise_id
+				join king_admin i on f.handled_by = i.id
+				join king_orders od on od.transid=d.transid
+				where a.status=3 and a.readytoship=1 and f.order_from in (".implode(",",$access).") and f.order_from!=0
+				group by a.id
+				");
+		$red_prd_det['det']=$ret_prod_list_res->result_array();
+		
+		return $red_prd_det;
+	}
+	
 	/**
 	 * Process to create bulk PO request by File 
 	 *

@@ -104,7 +104,6 @@ function load_peninvfordelivery(pg)
 			param.en_date = $('input[name="inv_to"]').val();
 		}
 		
-		$('#pen_invfordelivery').html("<div align='center' style='padding:10px'><img src='"+base_url+'/images/loading.gif'+"'></div>");
 	$.post(site_url+'/admin/jx_peninvoicesfordelivery/'+pg,{param:param},function(resp){
 		$('#pen_invfordelivery').html(resp.pen_invfordelivery_list);
 

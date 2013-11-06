@@ -92,6 +92,10 @@ label {
     padding: 5px;
     margin: 5px;
     border-radius: 6px; }
+.info_links a {
+    color: #1B0510;
+/*   _links background-color: #36EC4C !important;*/
+}
 </style>
 <div class="container" id="account_grn_present">
     <h2>Transaction Reservation Status</h2>
@@ -100,7 +104,7 @@ label {
             
         <table width="100%">
             <tr>
-                <td width="55%">
+                <td width="65%">
 
                     <select id="sel_menu" name="sel_menu" colspan="2">
                         <option value="00">Select Menu</option>
@@ -132,7 +136,7 @@ label {
                         <option value="00">All Franchise</option>
                     </select>
                 </td>
-                <td width="45%" align="right">
+                <td width="35%" align="right">
                    <form id="trans_date_form" method="post">
                             <b>Show transactions</b> :
                             <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
@@ -184,12 +188,12 @@ label {
         var d_msg=(flag==1)?"enable":"disable";
         if(confirm("Are you sure you want to "+d_msg+" for batch?")) {
             $.post(site_url+"admin/jx_batch_enable_disable/"+transid+"/"+flag,{},function(rdata) {
-                //$(".batch_status_msg_"+transid).html(rdata);
+                alert(rdata);
 //                $(".pg").val(pg);
                 
                 loadTransactionList(pg);
                 
-            });
+            }).done(done).fail(fail);
         }
     }
     
@@ -271,8 +275,7 @@ label {
     $("#sel_town").live("change",function() { 
         var townid=$(this).find(":selected").val();//text();
         var terrid=$("#sel_territory").find(":selected").val();//text();
-        var url="<?php echo site_url("admin/jx_suggest_fran"); ?>"+"/"+terrid+"/"+townid;
-        $.post(url,function(resp) {
+        $.post("<?php echo site_url("admin/jx_suggest_fran"); ?>"+"/"+terrid+"/"+townid,function(resp) {
                 if(resp.status=='success') {
                      var obj = jQuery.parseJSON(resp.franchise);
                     $("#sel_franchise").html(objToOptions_franchise(obj));
@@ -294,8 +297,8 @@ label {
 //        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
         
        // $("table").data("sdata", {terrid:terrid});
-        var url="<?php echo site_url("admin/jx_suggest_townbyterrid"); ?>/"+terrid;//  alert(url);
-        $.post(url,function(resp) {
+        
+        $.post("<?php echo site_url("admin/jx_suggest_townbyterrid"); ?>/"+terrid,function(resp) {
             if(resp.status=='success') {
                  //print(resp.towns);
                  var obj = jQuery.parseJSON(resp.towns);

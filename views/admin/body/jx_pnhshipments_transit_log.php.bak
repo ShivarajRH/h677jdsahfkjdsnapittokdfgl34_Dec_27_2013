@@ -110,23 +110,7 @@ $inv_transit_status = array('','In-Transit','Handed-over','Delivered','Return','
 							<?php
 								$manifesto_id = $this->db->query("select id from pnh_m_manifesto_sent_log where find_in_set(?,sent_invoices) order by id desc limit 1 ",$inv)->row()->id; 
 							?>
-							<b>
-							<a href="<?php echo site_url('/admin/invoice/'.$inv)?>" target="_blank"><?php echo $inv;?></a> | <span style="font-size:10px;"><a href="<?php echo site_url('admin/trans/'.$trans_id); ?>" target="_blank"><?php echo $trans_id; ?></a></span> 
-								| <span style="font-size:10px;">Manifesto id :</span> <?php echo $manifesto_id; ?> <br>
-								<span style="font-size:11px;">Box :
-								<?php $bxno_det = @$this->db->query("select no_ofboxes,ref_box_no from pnh_m_manifesto_sent_log where id = $manifesto_id ")->row_array();
-									if($bxno_det)
-									{
-										echo $bxno_det['no_ofboxes'];
-										if($bxno_det['ref_box_no'])
-											echo ' - no:'.$bxno_det['ref_box_no'];
-									}
-									else
-										echo '1';
-								?>
-								</span> 
-							</b>	
-							<br/>
+							<b><a href="<?php echo site_url('/admin/invoice/'.$inv)?>" target="_blank"><?php echo $inv;?></a> | <span style="font-size:10px;"><a href="<?php echo site_url('admin/trans/'.$trans_id); ?>" target="_blank"><?php echo $trans_id; ?></a></span> | <span style="font-size:10px;">Manifesto id :</span> <?php echo $manifesto_id; ?></b><br/>
 							<div class="fr_det" style="clear: both;color: #454545">
 								<span style="float: right;font-size: 11px;text-align: right;">
 									<b>On :</b> <?php echo format_datetime($inv_transit_list[$inv]['inv_status']['logged_on']) ?> <br>
