@@ -31,6 +31,7 @@ if($terrid!=0) {
  if($franchiseid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
  }
+
  
 //echo "<br>".$s."++".$e."++".$batch_type."++".$cond;
 $sql="select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
@@ -96,34 +97,60 @@ else
         $slno = $pg;
         foreach($transactions as $i=>$trans_arr) 
         {
-            //
             
-            $trans_orders_status_list = $this->db->query("select a.status from king_orders a where a.transid = ? and a.status = 0
-                                                                desc",$trans_arr['transid']);
-            if($trans_orders_status_list->num_rows() ) {
-                //$trans_orders_status_list->result_array();
+           $batch_ids = array();
+           $invoice_infos=array();
+            $trans_action_msg = '';
             
-                $trans_pending=$trans_orders_status_list->num_rows();
-                if($trans_pending == 0) {
-                    $order_status_msg = 'Ready';
-                    $trans_action_msg .= '<div><a class="batch_msg_disabled clear" href="batch/'.$trans_orders[0]['batch_id'].'" target="_blank">Process for Shipping</a></div>';
+            $trans_orders_status_list = $this->db->query("select (a.status) from king_orders a where a.status = 0 and a.transid = ?",$trans_arr['transid']);
+            $trans_pending=$trans_orders_status_list->num_rows();
+            
+            
+            $rslt_for_trans = $this->db->query("select c.invoice_status,a.status,sd.batch_id,c.p_invoice_no as total from king_orders a join proforma_invoices c on c.order_id = a.id left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no  where a.status in (0,1) and a.transid = ?",$trans_arr['transid']);# c.invoice_status=1 and
+            $total_orders_for_trans = $rslt_for_trans->num_rows();
+            $rslt = $rslt_for_trans->result_array();
+            //echo '<pre>';print_r($rslt);                continue;
+//            echo '<br>'.$this->db->last_query().'<br>'.'Pending orders='.$trans_pending."<br>Total orders = ".$total_orders_for_trans; continue;
+            if($trans_pending == 0) {
+                $order_status_msg = 'Ready';
+                foreach ($rslt as $rslt_row) {
+                if($rslt_row["invoice_status"] == 1 ) {
+                        foreach($rslt_row as $batch_id) {
+                            if($batch_id['batch_id']!=null) {
+                                $batch_ids[]=$batch_id['batch_id'];
+                            }
+                        }
+                        $batch_ids = array_unique($batch_ids);
+                        foreach($batch_ids as $batch_id) {
+                            $trans_action_msg .= '<div><a class="batch_msg_disabled clear" href="batch/'.$batch_id.'" target="_blank">Process for Shipping</a></div>';
+                        }
 
-                    foreach ($invoice_infos as $invoice_info ) {
-                        if($invoice_info != '')
-                            $trans_action_msg .= '<a class="danger_link clear" onclick="cancel_proforma_invoice(\''.$invoice_info.'\','.$pg.')" class="">Cancel Proforma Invoice</a>';
+                        //foreach ($rslt_row as $p_invoice_no ) {
+                            if($p_invoice_no['p_invoice_no']!=null) {
+                                $invoice_infos[]=$p_invoice_no['p_invoice_no'];
+                            }
+                        //}
+                        $invoice_infos = array_unique($invoice_infos);
+                        foreach($invoice_infos as $p_invoice_no) {
+                                $trans_action_msg .= '<a class="danger_link clear" onclick="cancel_proforma_invoice(\''.$p_invoice_no.'\','.$pg.')" class="">Cancel Proforma Invoice</a>';
+                        }
                     }
                 }
-                elseif($trans_pending == count($trans_orders)) {
-                    $order_status_msg = 'Not Ready';
-                    $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_batch(\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
-                }
-                elseif($trans_pending < count($trans_orders)) {
-                    $order_status_msg = '<span style="color:#cd0000;font-weight:bold; padding:4px 6px; ">'.ucfirst('Partial Ready').'</span>';
-                    foreach($batch_ids as $batch_id) {
-                        $trans_action_msg .= '<div><a class="proceed_link clear" href="batch/'.$batch_id.'" target="_blank">Process for packing</a> </div>';
+            }
+            elseif($trans_pending == $total_orders_for_trans) {
+                $order_status_msg = 'Not Ready';
+                $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_batch(\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
+            }
+            elseif($trans_pending < $total_orders_for_trans) {
+                $order_status_msg = '<span style="color:#cd0000;font-weight:bold; padding:4px 6px; ">'.ucfirst('Partial Ready').'</span>';
+                foreach($rslt as $batch_id) {
+                    if($batch_id['batch_id']!=null) {
+                        $batch_ids[]=$batch_id['batch_id'];
                     }
-
-
+                }
+                $batch_ids = array_unique($batch_ids);
+                foreach($batch_ids as $batch_id) {
+                    $trans_action_msg .= '<div><a class="proceed_link clear" href="batch/'.$batch_id.'" target="_blank">Process for packing</a></div>';
                 }
             }
             
@@ -145,9 +172,6 @@ else
                     <span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['bill_person'].'</a><br></span></td>
                 <td style="padding:0px !important;">';
                     $is_cancelled = ($trans_arr['status']==3)?1:0;
-                   
-
-            
             
             $output .='<table class="subdatagrid" cellpadding="0" cellspacing="0">
                         <tr>
@@ -159,7 +183,6 @@ else
                             <th>Amount</th>
                             <th>Status</th>
                             <th>Shipped</th>
-                            
                         </tr>';
             
                         $trans_orders = $this->db->query("select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.batch_id,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount,c.p_invoice_no 
@@ -175,9 +198,10 @@ else
                         $trans_ttl_shipped = 0;
                         $trans_ttl_cancelled = 0;
                         $processed_oids = array();
-                        $batch_ids = array();
-                        $invoice_infos=array();
-                        $trans_pending=0; $k=0;
+                        
+                        #$invoice_infos=array();
+                        #$trans_pending=0; 
+                        $k=0;
                         foreach($trans_orders as $j=>$order_i) 
                         { 
                                 
@@ -191,9 +215,7 @@ else
                                                         
                                                         $k+=1;
                                                         
-                                                        if($order_i['status'] == 0) {
-                                                            $trans_pending += 1;
-                                                        }
+                                                        //if($order_i['status'] == 0) {$trans_pending += 1;}
                                                         
 //                                                        $ord_status_color = '';
                                                         $is_shipped = 0;
@@ -233,7 +255,7 @@ else
                                                         $is_shipped = ($is_shipped && $order_i['invoice_status']) ?'Yes':'No';
                                                         $amount=round($order_i['i_orgprice']-($order_i['i_coup_discount']+$order_i['i_discount']),2);
                                                        
-                                                        $invoice_infos[]=$order_i['p_invoice_no'];
+                                                       // $invoice_infos[]=$order_i['p_invoice_no'];
                                                         
                                                     
                                                     //==============
@@ -249,25 +271,24 @@ else
                                     <td width="40" align="center">'.$is_shipped.'</td>
                                     <td width="80" align="center">'.$invoice_block.'</td>
                                 </tr>';
-                                if($order_i['batch_id']!=null) {
-                                    $batch_ids[]=$order_i['batch_id'];
-                                }
+                                //if($order_i['batch_id']!=null) {
+                                //    $batch_ids[]=$order_i['batch_id'];
+                                //}
                                 
                                 
                                 
                                 
                         }
                         
-                        $batch_ids = array_unique($batch_ids);
-                        $invoice_infos = array_unique($invoice_infos);
+                        //$batch_ids = array_unique($batch_ids);
+                        //$invoice_infos = array_unique($invoice_infos);
                         
-                       // print_r($invoice_info);// die();
-                      /*  $trans_action_msg='';
+                      // print_r($invoice_info);// die();
+                      /* $trans_action_msg='';
                         if($trans_pending == 0) {
                             $order_status_msg = 'Ready';
                             $trans_action_msg .= '<div><a class="batch_msg_disabled clear" href="batch/'.$trans_orders[0]['batch_id'].'" target="_blank">Process for Shipping</a></div>';
-                            
-                            foreach ($invoice_infos as $invoice_info ) {
+                        foreach ($invoice_infos as $invoice_info ) {
                                 if($invoice_info != '')
                                     $trans_action_msg .= '<a class="danger_link clear" onclick="cancel_proforma_invoice(\''.$invoice_info.'\','.$pg.')" class="">Cancel Proforma Invoice</a>';
                             }
@@ -281,22 +302,9 @@ else
                             foreach($batch_ids as $batch_id) {
                                 $trans_action_msg .= '<div><a class="proceed_link clear" href="batch/'.$batch_id.'" target="_blank">Process for packing</a> </div>';
                             }
-                            
-                            
                         }*/
                         
-                        if( $batch_type == "ready") 
-                        {
-                            $cond .= ' and tr.batch_enabled=1 and o.status IN (1,2) ';
-                        }
-                        if( $batch_type == "partial_ready") 
-                        {
-                            $cond .= ' and tr.batch_enabled=1 and o.status = 0 ';
-                        }
-                        if( $batch_type == "not_ready") 
-                        {
-                            $cond .= ' and tr.batch_enabled=0 and o.status = 3 ';
-                        }
+                        
                         
                         //$trans_arr['total_ords'];
                         $output .= '</table>

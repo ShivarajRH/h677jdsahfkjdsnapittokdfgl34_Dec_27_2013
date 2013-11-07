@@ -98,7 +98,7 @@ label {
 }
 </style>
 <div class="container" id="account_grn_present">
-    <h2>Transaction Reservation Status</h2>
+    <h2>Manage Transaction Reservations</h2>
     <div class="trans_filters_block">
         
             
@@ -157,6 +157,8 @@ label {
                         <option value="partial_ready">Partial Batch Ready</option>
                         <option value="not_ready">Not Ready</option>
                     </select>
+                    <label style="float:left;font-weight: bold; padding: 4px !important;min-width: inherit;" class="dash_bar"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction(<?=$pg?>);">Re-Allot all transactions</a></label>
+                    <span class="working_status"></span>
                 </td>
                 <td align="right"> 
                     <span class="log_display"></span>
@@ -173,6 +175,24 @@ label {
     //By default load lists
     loadTransactionList(0);
     var pg=0;
+    
+    function reallot_stock_for_all_transaction(pg) {
+        if(!confirm("Are you sure you want to reserve available stock for all pending or partial transactions?")) {
+            return false;
+            //var batch_remarks=prompt("Enter remarks?");
+        }
+        /*
+        var batch_remarks='';'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'*/
+        var updated_by = "<?=$user['userid']?>";
+        $(".working_status").html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
+        $.post('reserve_avail_stock_all_transaction/'+updated_by,"",function(rdata) {
+            loadTransactionList(0);
+        });
+        $(".working_status").html("");
+        
+        
+        return false;
+    }
     
     function cancel_proforma_invoice(p_invoice_no,pg) {
         if(!confirm("Are you sure you want to cancel proforma invoice?")) {
@@ -206,7 +226,7 @@ label {
         var batch_remarks='';
         var updated_by = "<?=$user['userid']?>";
         
-        $.post('batching_process/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
+        $.post('reserver_batch_process/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
             loadTransactionList(pg);
         });
         

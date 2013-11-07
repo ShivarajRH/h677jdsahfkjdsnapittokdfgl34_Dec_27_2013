@@ -56,13 +56,38 @@ class Stream extends Analytics
 
     /******** Orders Reservation**************/
     /**
+     * Check and reserve available stock for all transactions
+     * @param string $batch_remarks
+     * @param type $updated_by
+     */
+    function reserve_avail_stock_all_transaction($updated_by,$batch_remarks='By transaction reservation system') {
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        
+        $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
+		from king_orders a
+                join king_transactions tr on tr.transid = a.transid
+                where a.status in (0,1) and tr.batch_enabled=1 #and a.transid=@tid
+		group by a.transid) as ddd
+                where ddd.orders_status=0")->result_array();
+        foreach($rslt_for_trans as $rslt) {
+            $transid = $rslt['transid'];
+            $ttl_num_orders = $rslt['num_order_ids'];
+            
+            //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
+            // Process to batch this transaction
+            $this->erpm->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        }
+        //echo 'Success.';
+    }
+    
+    /**
      * Make transaction enabled for batch and allot stock
      * @param type $trans
      * @param type $ttl_num_orders
      * @param string $batch_remarks
      * @param type $updated_by
      */
-    function batching_process($transid,$ttl_num_orders,$batch_remarks='',$updated_by) {
+    function reserver_batch_process($transid,$ttl_num_orders,$batch_remarks='',$updated_by) {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         $batch_remarks=$batch_remarks=='' ? 'Created by transaction reservation system' : $batch_remarks ;
         
@@ -83,12 +108,9 @@ class Stream extends Analytics
                                                     where mn.status=1 
                                                     group by mn.id
                                                     order by mn.name")->result_array();
-
         $data['pnh_brands'] = $this->db->query("select br.id,br.name from king_brands br
                                     join king_orders o on o.brandid=br.id
-                                    group by br.id
-                                    order by br.name")->result_array();*/
-
+                                    group by br.id order by br.name")->result_array();*/
         $data['user']=$user;
         //$data['s']=date("d/m/y",$from);
         //$data['e']=date("g:ia d/m/y",$to);
