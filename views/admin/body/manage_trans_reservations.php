@@ -5,8 +5,8 @@ table.datagridsort tbody td { padding: 4px; }
 .datagrid th { background: #443266;color: #C3C3E5; }
 .subdatagrid {    width: 100%; }
 .subdatagrid th {
-    padding: 2px 0 2px 4px !important;
-    font-size: 9px !important;
+    padding: 4px 0 2px 4px !important;
+    font-size: 11px !important;
     color: #130C09;
     background-color: rgba(112, 100, 151, 0.51);
 }
@@ -24,6 +24,14 @@ table.datagridsort tbody td { padding: 4px; }
     font-size: 20px;
     margin: 10px 40px 6px 0;
 }
+.trans_pagination a {
+    color: #606EBD;
+    background: #C3C3E5;
+    padding: 1px 5px;
+}
+.trans_pagination a:hover {
+    background: #EFEFF5;
+}
 .pagi_top {
     padding-top: 0px;
     margin: 0 40px 6px 0;
@@ -32,14 +40,14 @@ table.datagridsort tbody td { padding: 4px; }
     clear: both;
 }
 select {
-    margin: 10px 0 15px 5px;
+    margin: 10px 0 5px 5px;
     float: left;
 }
 label {
     margin:10px 0 15px 5px;
     
 }
-.log_display {font-weight:bold;margin-right: 90px;}
+.log_display {font-weight:bold;margin-right: 10px; margin-bottom: 15px;}
 /*Start*/
 /*.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }*/
 .datagrid tr.processed_ord a { color: #290715 !important; }
@@ -56,7 +64,7 @@ label {
 .subdatagrid tr.pending_ord td {/*background-color: rgba(247, 190, 190, 0.51) !important*/}
 .subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
 
-.datagrid tr.cancelled_ord td{color: #cd0000 !important;}
+.datagrid tr.cancelled_ord td{color: #cd0000 !important;} 
 .datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
 .subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
 .subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
@@ -73,29 +81,40 @@ label {
     cursor: pointer;
     color:#f4f4f4;
     background-color: #3B3BB9 !important;
-    padding: 5px;
+    padding: 5px 10px;
     margin: 5px;
-    border-radius: 6px;
+    border-radius: 3px;
 }
 .batch_msg_enabled { margin-top:20px; cursor: pointer;color: #EC0009 !important; }
 .batch_msg_disabled { margin-top: 20px;
     cursor: pointer;
     color: #f4f4f4;
     background-color: #ff7777 !important;
-    padding: 5px;
+    padding: 5px 10px;
     margin: 5px;
-    border-radius: 6px; }
+    border-radius: 3px; }
 .proceed_link { margin-top: 20px;
     cursor: pointer;
     color: #f4f4f4;
-    background-color: #36EC4C !important;
-    padding: 5px;
+    background-color: #447049 !important;
+    padding: 5px 10px;
     margin: 5px;
-    border-radius: 6px; }
+    border-radius: 3px; }
 .info_links a {
-    color: #1B0510;
-/*   _links background-color: #36EC4C !important;*/
+    color: #4318B3;
+    /*background-color: #36EC4C !important;*/
 }
+.small_link { font-size: 80%; color: #455566;}
+.danger_link {
+    margin: 7px;
+}
+.high_link {
+    float:left;font-weight: bold; padding: 4px 10px !important;min-width: inherit;background: #116428;
+}
+.high_link a  { color: #F1EFEE; }
+.high_link:hover,.high_link a:hover { background-color: #28B14E; }
+
+.ttl_trans_listed {float: right;margin: 0 65px 10px 0;}
 </style>
 <div class="container" id="account_grn_present">
     <h2>Manage Transaction Reservations</h2>
@@ -138,7 +157,7 @@ label {
                 </td>
                 <td width="35%" align="right">
                    <form id="trans_date_form" method="post">
-                            <b>Show transactions</b> :
+                            <b>Show transactions : </b>
                             <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
                                     name="date_from" value="<?php echo date('Y-m-1',time()-60*60*24*7*4)?>" />
                             <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
@@ -148,21 +167,19 @@ label {
                 </td>
             </tr>
             <tr>
-                
                 <td>
-                    <label for="batch_type" style="float:left;">Batch Type:</label>
-                    <select id="batch_type">
-                        <option value="00">All</option>
-                        <option value="ready">Batch Ready</option>
-                        <option value="partial_ready">Partial Batch Ready</option>
-                        <option value="not_ready">Not Ready</option>
-                    </select>
-                    <label style="float:left;font-weight: bold; padding: 4px !important;min-width: inherit;" class="dash_bar"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction(<?=$pg?>);">Re-Allot all transactions</a></label>
-                    <span class="working_status"></span>
+                        <!--<label for="batch_type" style="float:left;">Batch Type:</label>
+                                <select id="batch_type">
+                                    <option value="00">All</option>
+                                    <option value="ready">Batch Ready</option>
+                                    <option value="partial_ready">Partial Batch Ready</option>
+                                    <option value="not_ready">Not Ready</option>
+                                </select>
+                                <span class="working_status"></span>-->
                 </td>
                 <td align="right"> 
-                    <span class="log_display"></span>
-                    <span class="ttl_trans_listed dash_bar"></span>
+                    <div class="log_display"></div>
+<!--                    <span class="ttl_trans_listed dash_bar"></span>-->
                 </td>
             </tr>
         </table>
@@ -184,13 +201,11 @@ label {
         /*
         var batch_remarks='';'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'*/
         var updated_by = "<?=$user['userid']?>";
-        $(".working_status").html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
+//        $(".working_status").html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
         $.post('reserve_avail_stock_all_transaction/'+updated_by,"",function(rdata) {
-            loadTransactionList(0);
+            loadTransactionList(pg);
         });
-        $(".working_status").html("");
-        
-        
+//        $(".working_status").html("");
         return false;
     }
     
@@ -262,11 +277,16 @@ label {
                         $("#sel_brands").html(objToOptions_brands(obj));
                     }
                     else {
-                        $("#sel_brands").val($("#sel_brands option:nth-child(0)").val());
+                        
                         //$(".sel_status").html(resp.message);
                     }
                 },'json').done(done).fail(fail);
-
+                
+                $("#sel_territory").val($("#sel_territory option:nth-child(0)").val());
+                $("#sel_town").val($("#sel_town option:nth-child(0)").val());
+                $("#sel_franchise").val($("#sel_franchise option:nth-child(0)").val());
+                $("#sel_brands").val($("#sel_brands option:nth-child(0)").val());
+                
         loadTransactionList(0);
         return false;
     });
@@ -286,7 +306,6 @@ label {
                         $(".sel_status").html(resp);
                     }
                 }).done(done).fail(fail);*/
-                
         loadTransactionList(0);
         return false;
     });
@@ -352,7 +371,7 @@ label {
         //var pg= ($(".pg_num").val()== 'undefined')?$(".pg_num").val():pg;
         
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
-        $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
+        //$('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
         $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+pg,"",function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             

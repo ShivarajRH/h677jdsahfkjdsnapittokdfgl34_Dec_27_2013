@@ -11,6 +11,9 @@
 		<div class="fl_right" >
 			<a href="<?php echo site_url('admin/pnh_return_service_log') ?>">Product Service Log</a>&nbsp;&nbsp;
 			<a href="<?php echo site_url('admin/pnh_update_returns_to_stock/'.$type) ?>">Update returns to stock</a>&nbsp;&nbsp;
+			<?php if($type!='sk'){?>
+			<a href="<?php echo site_url('admin/returns_reshipment_list/'.$type) ?>">Reshipments list</a>&nbsp;&nbsp;
+			<?php }?>
 			<a href="<?php echo site_url('admin/add_pnh_invoice_return/'.$type) ?>">Add Return</a>
 		</div>
 	</div>

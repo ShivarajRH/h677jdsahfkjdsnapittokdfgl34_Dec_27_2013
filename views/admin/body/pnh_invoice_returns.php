@@ -54,8 +54,8 @@
 					?>
 				</select>
 				<?php 
-				$returns_from=$this->erpm->get_assigned_mng_rtn_access();
-				if(count($returns_from) > 1){?>
+					$returns_from=$this->erpm->get_assigned_mng_rtn_access();
+				?>
 				Returns from:
 				<select name="returns_from">
 					<option value="all">All</option>
@@ -65,7 +65,6 @@
 						<?php 
 					}?>
 				</select>
-				<?php }?>
 				<input type="submit" value="submit">
 			</form>
 		</div>

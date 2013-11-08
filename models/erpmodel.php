@@ -3,10 +3,29 @@
 class Erpmodel extends Model
 {
 	
-	function __construct()
-	{
-		parent::__construct();
-	}
+    function __construct()
+    {
+            parent::__construct();
+    }
+
+    /**
+     * function to check if transaction is fully invoiced or not 
+     * @param type $transid
+     * @return boolean 
+     */
+    function is_transaction_invoiced($transid) 
+    {
+        $rslt = $this->db->query("select a.id,b.invoice_no 
+                            from king_orders a 
+                            left join king_invoice b on a.id = b.order_id and invoice_status = 1 
+                            where a.transid = ? and b.id is null 
+                            group by a.id ",$transid);
+        
+        // if resultset has atleast one record then pending orders for invoice is available 
+        // else all orders in transactions are invoiced 
+        return (($rslt->num_rows()>0)?false:true);
+    }
+    
     
     /**
      * Process the transactions to batch and generates  performa invoice for Batch enabled trans
@@ -8077,7 +8096,6 @@ order by p.product_name asc
 		$this->db->insert("pnh_cash_bill",$inp);
 		
         $this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
-		//redirect("admin/trans_reservation_status",'refresh');
 
 
 		redirect("admin/pnh_offline_order",'refresh');

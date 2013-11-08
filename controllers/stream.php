@@ -98,7 +98,7 @@ class Stream extends Analytics
     /**
      * Dispaly and process transaction batch status as 
      */
-    function trans_reservation_status() {
+    function manage_trans_reservations() {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         /*$data['pnh_menu'] = $this->db->query("select * from pnh_menu order by name")->result_array();
         $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
@@ -115,7 +115,7 @@ class Stream extends Analytics
         //$data['s']=date("d/m/y",$from);
         //$data['e']=date("g:ia d/m/y",$to);
 
-        $data['page']='trans_reservation_status';
+        $data['page']='manage_trans_reservations';
         $this->load->view("admin",$data);
     }
     /********End Orders Reservation**************/
@@ -173,18 +173,21 @@ class Stream extends Analytics
         $this->load->view("admin",$data);
     }
     
-	/**
+    /**
      * Manage Streams
      */
-	function streams_manager() {
-		$user=$this->auth(ADMINISTRATOR_ROLE);
-		$data['streams']=$this->db->query("Select s.*,ka.username,ka.email,ka.mobile from m_streams s
-												join king_admin ka on ka.id=s.created_by
-												order by s.created_time desc")->result_array();
-												//where s.created_by=?,$user['userid']
-		$data['page']="streams_manager";
-		$this->load->view("admin",$data);
-	}
+    function streams_manager() 
+    {
+        $user=$this->auth(ADMINISTRATOR_ROLE);
+        $data['streams']=$this->db->query("Select s.*,ka.username,ka.email,ka.mobile from m_streams s
+                                join king_admin ka on ka.id=s.created_by
+                                order by s.created_time desc")->result_array();
+                                //where s.created_by=?,$user['userid']
+
+        $data['page']="streams_manager";
+        $this->load->view("admin",$data);
+    }
+	
     /**
      * Function to display streams
      */

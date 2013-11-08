@@ -24266,7 +24266,7 @@ die; */
 	
 			echo json_encode($output);
 	}
-	
+
 	/**
 	 * function to update lr nos 
 	 */
@@ -24562,5 +24562,5 @@ die; */
 		echo json_encode($output);
 		
 	}	
-	
+
 }

@@ -4,14 +4,14 @@ class Erp extends Stream
 {
 	public $user_access=array();
 	
-	//function __construct()
-	//{
-		//parent::__construct();	
-		//$this->task_status = $this->config->item('task_status');
-		//$this->db->query("set session group_concat_max_len=5000000;");
-		//$this->task_for=$this->config->item('task_for');
-		//$this->load->library('pagination');
-	//}
+	/*function __construct()
+	{
+		parent::__construct();	
+		$this->task_status = $this->config->item('task_status');
+		$this->db->query("set session group_concat_max_len=5000000;");
+		$this->task_for=$this->config->item('task_for');
+		$this->load->library('pagination');
+	}*/
 	
 	function exotel_handler($type='upd_agent_status')
 	{
@@ -3939,7 +3939,8 @@ class Erp extends Stream
 		$data['page']="batch";
 		$this->load->view("admin",$data);
 	}
-		
+	
+	
 	
 	/*
 	 *	function to get franchise names 
@@ -4012,6 +4013,7 @@ class Erp extends Stream
 		{
 			$res = $this->db->query("select f.franchise_id,f.franchise_name from king_transactions ta join pnh_m_franchise_info f on f.franchise_id=ta.franchise_id join pnh_towns tw on tw.id=f.town_id  where  ta.transid in (".(implode(',',$trans_ids)).")");
 		}
+
 		
 		if($res)
 		{
@@ -14852,7 +14854,7 @@ order by action_date";
 	 */
 	function pnh_invoice_returns($type='all',$date_from="0000-00-00",$date_to="0000-00-00",$srch=0,$franchise='0',$stat=0,$return_frm='all',$pg=0)
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		//filters codndiotions
 		$cond='';
 		$param=array();
@@ -14946,7 +14948,7 @@ order by action_date";
 	 */
 	function add_pnh_invoice_return($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		$data['page'] = 'add_pnh_invoice_return';
 		$data['type']=$type;
 		$this->load->view('admin',$data);
@@ -14958,7 +14960,7 @@ order by action_date";
 	 */
 	function jx_getinvoiceorditems($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		$output = array();
 		$invno = $this->input->post('scaninp');
 		$output['franchise_name']='';
@@ -14969,8 +14971,11 @@ order by action_date";
 		$order_id=0;
 		$error=0;
 		
+		if(!$invno)
+			exit;
+		
 		//check invoice from
-		$order_frm=$this->erpm->get_order_from($invno);
+		$order_frm=$this->erpm->get_order_from($invno);// newly added code
 		
 		if($order_frm=='')
 			$output['status']='error';
@@ -15027,7 +15032,7 @@ order by action_date";
 	 */
 	function jx_chkvalidprodbc($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		
 		//get product and barcode from post 
 		$prod_id = $this->input->post('pid');
@@ -15063,9 +15068,9 @@ order by action_date";
 	function process_add_pnh_invoice_return()
 	{
 		//$this->erpm->auth(PNH_INVOICE_RETURNS|PNH_ADD_INVOICE_RETURN);
-		$inv_for=$this->input->post('inv_for');
-		$order_from=$this->erpm->get_order_from_by_id($inv_for);
-		$this->erpm->get_return_access($order_from);
+		$inv_for=$this->input->post('inv_for');//newly added code
+		$order_from=$this->erpm->get_order_from_by_id($inv_for);//newly added code
+		$this->erpm->get_return_access($order_from);//newly added code
 				
 		$prod_rcvd_pid = $this->input->post('prod_rcvd_pid');
 		$prod_rcvd_qty = $this->input->post('prod_rcvd_qty');
@@ -15126,7 +15131,7 @@ order by action_date";
 	function view_pnh_invoice_return($return_id,$type='all')
 	{
 		//$this->erpm->auth(PNH_INVOICE_RETURNS|PNH_ADD_INVOICE_RETURN);
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added
 		$data['return_det'] = $this->erpm->get_pnh_invreturn($return_id);
 		
 		if(!$data['return_det'])
@@ -15141,7 +15146,7 @@ order by action_date";
 	{
 		error_reporting(E_ALL);
 		//$user = $this->erpm->auth(PNH_INVOICE_RETURNS);
-		$this->erpm->get_return_access($this->input->post('login_type'));
+		$this->erpm->get_return_access($this->input->post('login_type'));//newly added
 		$user=$this->erpm->auth();
 		$return_prod_status = $this->input->post('return_prod_status');
 		$return_prod_id = $this->input->post('return_prod_id');
@@ -15726,7 +15731,7 @@ order by action_date";
 	
 	function jx_update_pending_return_stock()
 	{
-		$this->erpm->auth(true,true);
+		$this->erpm->auth(true);
 		
 		$return_prod_status = $this->input->post('return_prod_status');
 		$return_prod_id = $this->input->post('return_prod_id');
@@ -24268,7 +24273,75 @@ die; */
 	}
 
 	/**
-	 * function to update lr nos 
+/**
+	 * Franchise Payment Mode Module START
+	 */
+	
+	//Interface to menu Margin -start	
+	function list_allmenumargin()
+	{
+		$user=$this->auth(PRODUCT_MANAGER_ROLE);
+		$menu_list_res=$this->db->query("select * from pnh_menu where status=1 group by id order by name asc");
+		$data['menu_list_res']=$menu_list_res;
+		$data['page']='menumargin_list';
+		$this->load->view("admin",$data);
+	}
+
+
+	function jx_load_menumargindet($menuid='')
+	{
+		$menuid=$this->input->post('menu_id');
+		$menu_det=$this->db->query("select * from pnh_menu where id=?",$menuid)->row_array();
+		$output=array();
+		if(!empty($menu_det))
+		{
+			$output['status']='success';
+			$output['menu_det']=$menu_det;
+		}
+		else
+			$output['status']='error';
+
+		echo json_encode($output);
+	}
+
+	function to_update_menumargin()
+	{
+		$user=$this->auth(true,true);
+		$menuid=$this->input->post('menu_id');
+		$menu_margin=$this->input->post('margin');
+		$bal_dicount=$this->input->post('bal_disc');
+		$bal_amt=$this->input->post('min_bal_val');
+		$loyalty_pntvalue=$this->input->post('loyalty_pntvalue');
+		if($menuid)
+			$this->db->query("update pnh_menu set default_margin=?,min_balance_value=?,bal_discount=?,loyality_pntvalue=? where id=? and status=1",array($menu_margin,$bal_amt,$bal_dicount,$loyalty_pntvalue,$menuid));
+		$this->db->query("insert into pnh_menu_margin_track(menu_id,default_margin,balance_discount,balance_amount,loyality_pntvalue,created_by,created_on)values(?,?,?,?,?,?,?)",array($menuid,$menu_margin,$bal_dicount,$bal_amt,$loyalty_pntvalue,$user['userid'],time()));
+		if($this->db->affected_rows()>=1)
+			$this->erpm->flash_msg("Menu Margin Updated Successfully");
+		redirect($_SERVER['HTTP_REFERER']);
+	}
+	
+	function load_menumarginupdate_log($menuid='')
+	{
+		$user=$this->auth(true,true);
+		$menuid=$this->input->post('menuid');
+		$menu_margin_logres=$this->db->query("select a.*,m.name,ad.name as user,date_format(from_unixtime(a.created_on),'%d/%m/%Y %r') as updated_on from pnh_menu_margin_track a join pnh_menu m on m.id=a.menu_id join king_admin ad on ad.id=a.created_by where a.menu_id=?  order by a.created_on desc",$menuid);
+		
+		$output=array();
+		if($menu_margin_logres->num_rows())
+		{
+			$output['status']='success';
+			$output['menumarginupdate_det']=$menu_margin_logres->result_array();
+		}
+		else
+		{
+			$output['status']='error';
+			$output['msg']='No Update Found';
+		}
+		echo json_encode($output);
+	}
+	//Interface to menu Margin ---End
+	
+	/** function to update lr nos 
 	 */
 	function update_bulk_lrdetails()
 	{

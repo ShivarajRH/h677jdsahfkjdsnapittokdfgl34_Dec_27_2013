@@ -182,7 +182,7 @@ elseif($type == 'removed') {
                     $resonse.='<script>$(".ttl_orders_status_listed,.c2,.all_pop, .shipped_pop, .unshipped_pop, .cancelled_pop, .removed_pop, .show_totalamount").html("").css({"display":"block"});</script>';
                     
                     
-                        $k = 0;$slno=1; $total_amount=0;
+                        $k = 0;$slno=$pg; $total_amount=0;
                         foreach($res->result_array() as $o) {
                                 $fil_menulist[$o['menuid']] = $o['menu_name'];
                                 $fil_brandlist[$o['brandid']] = $o['brand_name'];
@@ -211,9 +211,9 @@ elseif($type == 'removed') {
                             
 							$trans_created_by = @$this->db->query("select username from king_admin a join king_transactions b on a.id = b.trans_created_by where transid = ? ",$o['transid'])->row()->username;
 								if($trans_created_by) 
-									$trans_created_by .= '<br><br> by <b>'.($trans_created_by).'</b>';
+									$trans_created_by = '<br><br> by <b>'.($trans_created_by).'</b>';
 		
-		
+                            $slno+=1;
 //                           echo '<pre>';print_r($order); die();
                             $resonse.='<tr>
                             <td>'.$slno.'</td>

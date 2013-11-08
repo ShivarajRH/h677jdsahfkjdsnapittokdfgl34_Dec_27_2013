@@ -8077,7 +8077,6 @@ order by p.product_name asc
 		$this->db->insert("pnh_cash_bill",$inp);
 		
         $this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
-		//redirect("admin/trans_reservation_status",'refresh');
 
 
 		redirect("admin/pnh_offline_order",'refresh');
@@ -10767,8 +10766,8 @@ order by action_date";
 							from king_invoice a
 							join king_transactions b on a.transid = b.transid 
 							join pnh_m_franchise_info c on c.franchise_id = b.franchise_id 
-							join m_town_territory_link d on d.territory_id = c.territory_id and d.town_id = 0
-							join m_employee_info e on e.employee_id = d.employee_id and job_title = 4 
+							join m_town_territory_link d on d.territory_id = c.territory_id and d.town_id = 0 and d.is_active = 1 
+							join m_employee_info e on e.employee_id = d.employee_id and job_title = 4 and e.is_suspended = 0  
 							where invoice_no in ($invoices) 
 						group by employee_id,franchise_id ";
 		 
