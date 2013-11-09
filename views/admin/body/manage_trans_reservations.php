@@ -161,24 +161,25 @@ label {
                             <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
                                     name="date_from" value="<?php echo date('Y-m-1',time()-60*60*24*7*4)?>" />
                             <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
-                                    name="date_to" value="<?php echo date('Y-m-d',time()-60*60*24*7*2)?>" /> 
+                                    name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
                             <input type="submit" value="Submit">
                     </form>
                 </td>
             </tr>
             <tr>
                 <td>
-                        <!--<label for="batch_type" style="float:left;">Batch Type:</label>
+                        <label for="batch_type" style="float:left;">Batch Type:</label>
                                 <select id="batch_type">
                                     <option value="00">All</option>
                                     <option value="ready">Batch Ready</option>
                                     <option value="partial_ready">Partial Batch Ready</option>
                                     <option value="not_ready">Not Ready</option>
                                 </select>
-                                <span class="working_status"></span>-->
+                                <span class="working_status"></span>
                 </td>
                 <td align="right"> 
                     <div class="log_display"></div>
+                    <div class="loading_log"></div>
 <!--                    <span class="ttl_trans_listed dash_bar"></span>-->
                 </td>
             </tr>
@@ -371,7 +372,7 @@ label {
         //var pg= ($(".pg_num").val()== 'undefined')?$(".pg_num").val():pg;
         
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
-        //$('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
+        $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); //trans_list_replace_block
         $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+pg,"",function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
