@@ -9,7 +9,7 @@ if( $batch_type == "ready")
                   left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no ';
     //$cond .= ' and i.id is null ';
     $cond_fields = ',i.invoice_status,sd.shipped';
-    $cond='  ';//and i.invoice_status=0 and sd.shipped=0
+    $cond='  and i.invoice_status=1 and sd.shipped=0 ';//and i.invoice_status=0 and sd.shipped=0
 }
 if( $batch_type == "partial_ready") 
 {
@@ -41,7 +41,7 @@ if($terrid!=0) {
 $sql="select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
 		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
 		,o.*
-		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
 		,ter.territory_name
 		,twn.town_name
 		,dl.menuid,m.name as menu_name,bs.name as brand_name
@@ -89,7 +89,7 @@ else
 
     $output .= '<div class="trans_pagination pagi_top">'.$trans_pagination.' </div>
             <span class="ttl_trans_listed dash_bar">Showing <strong>'.($pg+1).' to '.$endlimit.'</strong> of <strong>'.$total_trans_rows.'</strong> transactions</span>
-            <label class="high_link dash_bar"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$pg.');">Re-Allot all pending transactions</a></label>
+            <label class="high_link dash_bar"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a></label>
         <table class="datagrid" width="100%">
         <thead>
             <tr>
@@ -121,14 +121,18 @@ else
             $slno+=1;
             $ord_stat_txt = '';$action_str = '';
             
+            $arr_fran = $this->reservation_model->fran_experience_info($f['f_created_on']);
+            
             $output .= '<tr class="'.$ord_stat_txt.'_ord">
-                <td style="width:15px">'.$slno.''.$is_shipped.'</td>
+                <td style="width:15px">'.$slno.'</td>
                 <td style="width:180px">'.$trans_arr['str_time'].'</td>
                 <td style="width:160px">
                     <span class="info_links"><a href="trans/'.$trans_arr['transid'].'" target="_blank">'.$trans_arr['transid'].'</span><br></a>
                     <span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['bill_person'].'</a><br></span>
                     <span class="info_links">'.$trans_arr['territory_name'].'<br></span>
-                    <span class="info_links">'.$trans_arr['town_name'].'<br></span></td>
+                    <span class="info_links">'.$trans_arr['town_name'].'<br></span>
+                    <span class="fran_experience" style="background-color: none;color: '.$arr_fran['f_color'].';">'.$arr_fran['f_level'].'</span>
+                </td>
                 <td style="padding:0px !important;">';
             $output .='<table class="subdatagrid" cellpadding="0" cellspacing="0">
                         <tr>
@@ -232,7 +236,7 @@ else
                         }
                         elseif($trans_pending == count($trans_orders)) {
                             $order_status_msg = 'Not Ready';
-                            $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_batch(\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
+                            $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
                         }
                         elseif($trans_pending < count($trans_orders)) {
                             $order_status_msg = '<span style="color:#cd0000;font-weight:bold; padding:4px 6px; ">Partial Ready</span>'.$trans_pending."-".count($trans_orders);
@@ -258,7 +262,7 @@ else
                         $output .= '</table>
                     </td>
                     <td style="width:100px">'.($order_status_msg).'</td>
-                    <td width="200">'.$trans_action_msg.'</td>
+                    <td width="200"><input type="checkbox" value="" name="" class="chk_'.$trans_arr['transid'].'" />'.$trans_action_msg.'</td>
                 </tr>';
 
                 $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];

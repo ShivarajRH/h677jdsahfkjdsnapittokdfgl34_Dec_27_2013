@@ -7,25 +7,6 @@ class Erpmodel extends Model
     {
             parent::__construct();
     }
-
-    /**
-     * function to check if transaction is fully invoiced or not 
-     * @param type $transid
-     * @return boolean 
-     */
-    function is_transaction_invoiced($transid) 
-    {
-        $rslt = $this->db->query("select a.id,b.invoice_no 
-                            from king_orders a 
-                            left join king_invoice b on a.id = b.order_id and invoice_status = 1 
-                            where a.transid = ? and b.id is null 
-                            group by a.id ",$transid);
-        
-        // if resultset has atleast one record then pending orders for invoice is available 
-        // else all orders in transactions are invoiced 
-        return (($rslt->num_rows()>0)?false:true);
-    }
-    
     
     /**
      * Process the transactions to batch and generates  performa invoice for Batch enabled trans
@@ -34,7 +15,7 @@ class Erpmodel extends Model
      * @param type $batch_remarks
      * @param type $updated_by
      */
-    function do_batching_process($transid,$ttl_num,$batch_remarks,$updated_by)
+    function do_batching_process($transid,$ttl_num,$batch_remarks="PNH Offline Order Placed.",$updated_by)
     {
             ini_set('memory_limit','512M');
             $i_transid=false;
@@ -395,7 +376,7 @@ class Erpmodel extends Model
                                     {
                                             $stk_movtype=0;
                                             //$prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg=''
-                                            if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,"PNH Offline Order Placed.")) {
+                                            if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,$batch_remarks)) {
                                                 echo "Stock log updated.";
                                             }
                                             else {

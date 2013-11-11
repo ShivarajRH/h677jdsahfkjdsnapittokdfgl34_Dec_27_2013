@@ -158,3 +158,28 @@ select * from t_reserved_batch_stock;
 
 alter table king_invoice add column ref_dispatch_id bigint(11) default 0;
 
+#### Nov_09_2013 ####
+
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,o.*
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                ,i.invoice_status,sd.shipped
+		from king_transactions tr
+		join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+        left join king_invoice i on o.id = i.order_id and i.invoice_status = 1 
+                  left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+            WHERE tr.actiontime between 1380565800 and 1384021799 and o.status in (0,1) and tr.batch_enabled=1   and i.invoice_status=1 and sd.shipped=1
+            group by tr.transid order by tr.actiontime desc
+
+

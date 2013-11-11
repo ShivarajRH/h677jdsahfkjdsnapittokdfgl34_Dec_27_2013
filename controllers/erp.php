@@ -18387,7 +18387,8 @@ order by action_date";
 				$output['status'] = 'error';
 			}
 			
-			echo json_encode($output);
+			//echo json_encode($output);
+                        $this->output->set_output($output);
 		}
 		
 		/**

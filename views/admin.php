@@ -10,7 +10,7 @@ if(!defined("APL_VER"))
 <head>
 <title>Snap It Today - Admin</title>
 
-
+<meta http-equiv="expires" content="<?php echo date("r", time()+60*60*24); ?>" />
 
 <script type="text/javascript">
 	var base_url = '<?php echo base_url()?>';
