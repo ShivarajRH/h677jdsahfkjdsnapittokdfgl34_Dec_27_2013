@@ -2,7 +2,7 @@
 /**
  * Description of reservation_model
  *
- * @author SDEV
+ * @author Shivaraj@storeking.in
  * @access public
  */
 class reservation_model extends Model
@@ -424,9 +424,9 @@ class reservation_model extends Model
                                             //$prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg=''
                                             if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,$batch_remarks)) {
                                                 //Stock log updated.
-                                                $stk_movtype_msg = ($stk_movtype)?' added to ': " taken from ";
+                                                $stk_movtype_msg = ($stk_movtype)?' De-Alloted. ': " Alloted. ";
                                                 
-                                                $output .= "\nProduct (".$stk_prod['product_id'].') with  '.$stk_prod['qty'].' qty '.$stk_movtype_msg."stock.";
+                                                $output .= "\nProduct (".$stk_prod['product_id'].') with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
                                             }
                                             else {
                                                 $output .= "\nStock log not updated.";

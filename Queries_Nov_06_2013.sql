@@ -193,8 +193,60 @@ select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr
           <dt>Local filename:</dt> <dd>/home/rpausch/raycd.m4v</dd>
           <dt>Remote filename:</dt> <dd>/var/www/lectures/raycd.m4v</dd>
           <dt>Duration:</dt> <dd>01:16:27</dd>
-          <dt>Color profile:</dt> <dd>SD (6-1-6)</dd>
-          <dt>Dimensions:</dt> <dd>320×240</dd>
-         </dl>
+	</dl>
         </details>
        </section>
+### .HTACCESS FILE:
+#############################################################
+#	GZIP Compression
+#<ifModule mod_gzip.c>
+#mod_gzip_on Yes
+#mod_gzip_dechunk Yes
+#mod_gzip_item_include file .(html?|txt|css|js|php|pl)$
+#mod_gzip_item_include handler ^cgi-script$
+#mod_gzip_item_include mime ^text/.*
+#mod_gzip_item_include mime ^application/x-javascript.*
+#mod_gzip_item_exclude mime ^image/.*
+#mod_gzip_item_exclude rspheader ^Content-Encoding:.*gzip.*
+#</ifModule>
+#   End GZIP Compression code
+
+#############################################################
+### EXPIRES CACHING ##
+#<IfModule mod_expires.c>
+#ExpiresActive On
+#ExpiresByType image/jpg "access plus 1 year"
+#ExpiresByType image/jpeg "access plus 1 year"
+#ExpiresByType image/gif "access plus 1 year"
+#ExpiresByType image/png "access plus 1 year"
+#ExpiresByType text/css "access plus 1 month"
+#ExpiresByType application/pdf "access plus 1 month"
+#ExpiresByType text/x-javascript "access plus 1 month"
+#ExpiresByType application/x-shockwave-flash "access plus 1 month"
+#ExpiresByType image/x-icon "access plus 1 year"
+#ExpiresDefault "access plus 2 days"
+#</IfModule>
+## EXPIRES CACHING ##
+=============================================================================
+### Nov_12_2013
+
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,o.*
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                
+		from king_transactions tr
+		join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+        
+            WHERE tr.actiontime between 1380565800 and 1384280999 and o.status in (0,1) and tr.batch_enabled=1 
+            group by tr.transid order by tr.actiontime desc

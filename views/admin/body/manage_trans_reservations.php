@@ -1,8 +1,11 @@
-<link type="tect/css" rel="stylesheet" href="<?php echo base_url();?>css/manage_reservations_style.css" />
+<link type="text/css" rel="stylesheet" href="<?php echo base_url();?>css/manage_reservations_style.css" />
 
 <div class="container">
-    <h2>Manage Transaction Reservations</h2>
-    <div class="high_link"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction(<?=$user['userid'];?>);">Re-Allot all pending transactions</a></div>
+    <div>
+        <h2>Manage Transaction Reservations</h2>
+        <div class="high_link"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction(<?=$user['userid'];?>);">Re-Allot all pending transactions</a></div>
+    </div>
+    <div class="clear"></div>
     <div id="list_wrapper">
         <table width="100%" >
                 <tr>
