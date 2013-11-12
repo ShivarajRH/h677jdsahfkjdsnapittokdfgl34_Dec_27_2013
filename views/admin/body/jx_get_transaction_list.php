@@ -4,12 +4,13 @@ $from=strtotime($s);
 $to=strtotime("23:59:59 $e");
 if( $batch_type == "ready") 
 {
-    //$cond_join = 'left join king_invoice i on o.id = i.order_id and i.invoice_status = 1 ';
+    /*//$cond_join = 'left join king_invoice i on o.id = i.order_id and i.invoice_status = 1 ';
     $cond_join = 'left join king_invoice i on o.id = i.order_id and i.invoice_status = 1 
                   left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no ';
     //$cond .= ' and i.id is null ';
     $cond_fields = ',i.invoice_status,sd.shipped';
     $cond='  and i.invoice_status=1 and sd.shipped=0 ';//and i.invoice_status=0 and sd.shipped=0
+     */
 }
 if( $batch_type == "partial_ready") 
 {
@@ -74,11 +75,13 @@ else
 
 //   PAGINATION
             $this->load->library('pagination');
-            $config['base_url'] = site_url("admin/jx_get_transaction_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid); 
+            $config['base_url'] = site_url("admin/jx_get_transaction_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$limit); 
             $config['total_rows'] = $total_trans_rows;
             $config['per_page'] = $limit;
-            $config['uri_segment'] = 11; 
+            $config['uri_segment'] = 12; 
             $config['num_links'] = 5;
+            $config['cur_tag_open'] = '<span class="curr_pg_link">';
+            $config['cur_tag_close'] = '</span>';
             $this->config->set_item('enable_query_strings',false); 
             $this->pagination->initialize($config); 
             $trans_pagination = $this->pagination->create_links();
@@ -87,10 +90,7 @@ else
     $endlimit=($pg+1*$limit);
     $endlimit=($endlimit>$total_trans_rows)?$total_trans_rows : $endlimit;
 
-    $output .= '<div class="trans_pagination pagi_top">'.$trans_pagination.' </div>
-            <span class="ttl_trans_listed dash_bar">Showing <strong>'.($pg+1).' to '.$endlimit.'</strong> of <strong>'.$total_trans_rows.'</strong> transactions</span>
-            <label class="high_link dash_bar"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a></label>
-        <table class="datagrid" width="100%">
+    $output .= '<table class="datagrid" width="100%">
         <thead>
             <tr>
                 <th>Slno</th>
@@ -131,7 +131,7 @@ else
                     <span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['bill_person'].'</a><br></span>
                     <span class="info_links">'.$trans_arr['territory_name'].'<br></span>
                     <span class="info_links">'.$trans_arr['town_name'].'<br></span>
-                    <span class="fran_experience" style="background-color: none;color: '.$arr_fran['f_color'].';">'.$arr_fran['f_level'].'</span>
+                    <span class="fran_experience" style="background-color:'.$arr_fran['f_color'].';color: #ffffff;">'.$arr_fran['f_level'].'</span>
                 </td>
                 <td style="padding:0px !important;">';
             $output .='<table class="subdatagrid" cellpadding="0" cellspacing="0">
@@ -273,7 +273,9 @@ else
             }
             $output .= '</tbody></table><div class="trans_pagination">'.$trans_pagination.' </div>
                 <script>$(".log_display").html("Orders from '.$s.' to '.$e.'");</script>';
-            //$output.='<script>$(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' to '.$endlimit.'</strong> of <strong>'.$total_trans_rows.'</strong> transactions");</script>';
+            
+            $output.='<script>$(".pagination_top").html(\''.($trans_pagination).'\');</script>';
+            $output.='<script>$(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' to '.$endlimit.'</strong> of <strong>'.$total_trans_rows.'</strong> transactions");</script>';
             
 }
 echo $output;

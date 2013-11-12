@@ -1,5 +1,5 @@
-
-    function reallot_stock_for_all_transaction(userid,pg) {
+//var GM_TIMING_END_CHUNK1=(new Date).getTime();
+    function reallot_stock_for_all_transaction(userid) {
         if(!confirm("Are you sure you want to reserve available stock for all pending or partial transactions?")) {
             return false;
             //var batch_remarks=prompt("Enter remarks?");
@@ -7,9 +7,13 @@
         /*
         var batch_remarks='';'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'*/
         var updated_by = userid;
-//        $(".working_status").html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
+        $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
         $.post('reserve_avail_stock_all_transaction/'+updated_by,"",function(rdata) {
-            loadTransactionList(pg);
+            loadTransactionList();
+            
+            if(rdata!='') {
+                alert(rdata);
+            }
         });
 //        $(".working_status").html("");
         return false;
@@ -36,10 +40,25 @@
         
         $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
             loadTransactionList(pg);
+            if(rdata!='') {
+                alert(rdata);
+            }
         });
         
         return false;
     }
+    //Onchange limit
+    $("#limit_filter").live("change",function() {
+        loadTransactionList(0);
+        return false;
+    });
+    // Onclick tab button
+    $(".tab_list a").bind("click",function(e){
+        $(".tab_list a.selected").removeClass('selected');
+        $(this).addClass('selected');
+        loadTransactionList(0);
+    });
+    
     //Show between date ranges
     $("#trans_date_form").submit(function() {
         loadTransactionList(0);
@@ -55,10 +74,10 @@
     //Paginations
     $(".trans_pagination a").live("click",function(e) {
         e.preventDefault();
+        $(".page_num").val=pg;
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
         $.post($(this).attr("href"),{},function(rdata) {
             $("#trans_list_replace_block").html(rdata);
-            
         });
         return false;
     });
@@ -85,6 +104,7 @@
         loadTransactionList(0);
         return false;
     });
+    
     $("#sel_brands").live("change",function() {
         loadTransactionList(0);
         return false;

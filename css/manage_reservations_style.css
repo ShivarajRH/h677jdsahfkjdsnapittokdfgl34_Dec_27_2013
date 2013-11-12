@@ -1,0 +1,192 @@
+/* 
+    Document   : manage_reservations_style
+    Created on : Nov 11, 2013, 2:27:30 PM
+    Author     : Shivaraj@storeking.in
+    Description:To style the manage_trans_reservations page
+*/
+h2 {  width: 788px; float: left;   }
+ h3 { margin-bottom: 0px; margin-top: 0;width: 788px;}
+.leftcont { display: none;}
+table.datagridsort tbody td { padding: 4px; }
+.datagrid td { padding: 1px; }
+.datagrid th { background: #443266;color: #C3C3E5; }
+.subdatagrid {    width: 100%; }
+.subdatagrid th {
+    padding: 4px 0 2px 4px !important;
+    font-size: 11px !important;
+    color: #130C09;
+    background-color: rgba(112, 100, 151, 0.51);
+}
+.subdatagrid td {
+        /*font-size: 11px !important;*/
+        padding: 4px !important;
+}
+.loading {
+    text-align: center;
+    margin: 5% 0 0 40%;
+    visibility: visible; font-size: 16px; 
+}
+.trans_pagination {
+    float: right;
+    font-size: 20px;
+    margin: 10px 40px 6px 0;
+}
+.trans_pagination a {
+    color: #606EBD;
+    background: #C3C3E5;
+    padding: 1px 5px;
+}
+.trans_pagination a:hover {
+    background: #EFEFF5;
+}
+.pagination_top {
+    padding-top: 0px;
+    margin: 0 4px 6px 0;
+}
+.curr_pg_link {
+    background: #443266;
+    color: #f1f1f1;
+    padding: 1px 5px;
+    margin-left: 5px;
+}
+.clear {
+    clear: both;
+}
+select {
+    margin: 10px 0 5px 5px;
+}
+label {
+    margin:10px 0 15px 5px;
+    
+}
+.log_display {font-weight:bold;margin-right: 0;
+margin-top: 10px;
+margin-left: 300px;}
+
+.limit_display_block {
+    float: right;
+    margin-right: 20px;
+    margin-top: 0px;
+}
+.limit_display_block select {
+    margin-top: 0;
+}
+/*Start*/
+/*.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }*/
+.datagrid tr.processed_ord a { color: #290715 !important; }
+/*.datagrid tr.processed_ord { background-color: #80C280  !important; }*/
+/*.subdatagrid tr.processed_ord { background-color: #80C280  !important; text-decoration: line-through;}*/
+
+.datagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
+.datagrid tr.shipped_ord td a{ color: #BDB5AB !important;}
+.subdatagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
+.subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}
+
+/*.datagrid tr.pending_ord td { background-color: rgba(247, 190, 190, 0.51) !important; }*/
+.datagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
+.subdatagrid tr.pending_ord td {/*background-color: rgba(247, 190, 190, 0.51) !important*/}
+.subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
+
+.datagrid tr.cancelled_ord td{color: #cd0000 !important;} 
+.datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
+.subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
+.subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
+
+.datagrid tr.disabled_ord td{color: #D8D3D2 !important;}
+.datagrid tr.disabled_ord td a{color: #D8D3D2 !important;}
+.subdatagrid tr.disabled_ord td{text-decoration: none;color: #D8D3D2 !important;}
+.subdatagrid tr.disabled_ord td a{text-decoration: none;color: #D8D3D2 !important;}
+
+
+/*   End*/
+.retry_link {
+    margin-top: 20px;
+    cursor: pointer;
+    color:#f4f4f4;
+    background-color: #3B3BB9 !important;
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 3px;
+}
+.batch_msg_enabled { margin-top:20px; cursor: pointer;color: #EC0009 !important; }
+.batch_msg_disabled { margin-top: 20px;
+    cursor: pointer;
+    color: #f4f4f4;
+    background-color: #ff7777 !important;
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 3px; }
+.proceed_link { margin-top: 20px;
+    cursor: pointer;
+    color: #f4f4f4;
+    background-color: #447049 !important;
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 3px; }
+.info_links a {
+    color: #4318B3;
+    /*background-color: #36EC4C !important;*/
+}
+.small_link { font-size: 80%; color: #455566;}
+.danger_link {
+    margin: 7px;
+}
+.high_link a  { color: #F1EFEE; }
+.high_link {    float:right;font-weight: bold; padding: 4px 10px !important;min-width: inherit;background:#FF7777; border-radius: 3px; margin-top: 20px; }
+.high_link:hover,.high_link a:hover {  background-color: #FA1527 }
+
+.ttl_trans_listed {float: left;margin: 0 65px 10px 0;}
+.level1_filters { float:left;margin-top: 7px;margin-right: 5px; width: 100%; }
+.fran_experience {
+    font-weight:bold;font-size:10px;padding: 2px 3px;border-radius: 3px; margin-top:5px;
+}
+ #list_wrapper .tab_list{
+        clear:both;
+        display: block;
+        border-bottom: 1px solid #363692;
+}
+#list_wrapper .tab_list ol{
+        padding-left:0px;
+        margin-bottom: 0;
+}
+#list_wrapper .tab_list li{
+        display: inline-block;
+}
+#list_wrapper .tab_list li a{
+        display: block;
+        background: #F1F0FF;
+        padding:5px 20px;
+        font-size: 13px;
+        color: #454545;
+        cursor:pointer;
+        font-weight: bold;
+        text-decoration: none;
+}
+#list_wrapper .tab_list li a.selected{
+    background: #443266;
+    color: #C3C3E5;
+}
+.filters_block {
+float: left;
+padding-bottom: 27px;
+width: 100%;
+display: block;
+display: none;
+}
+.filters_block .group_filter {
+    float: left;
+}
+.filters_block .date_filter {
+    float: right;
+    margin-top: 10px;
+}
+.close_filters {
+float: right;
+margin-top: 5px;
+cursor:pointer;
+color:#D50C0C;
+font-weight: bold;
+}
+.level2_filters {
+    margin: 20px 0px;
+}
