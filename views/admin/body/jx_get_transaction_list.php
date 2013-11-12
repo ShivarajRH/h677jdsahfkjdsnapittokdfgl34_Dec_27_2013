@@ -60,7 +60,7 @@ $sql="select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, co
             WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 $cond
             group by tr.transid order by tr.actiontime desc";
 
-echo "<p><pre>".$sql.'</pre></p>';die();
+echo "<p><pre>".$sql.'</pre></p>';die(); 
 $transactions_src=$this->db->query($sql);
 
 if(!$transactions_src->num_rows()) 
