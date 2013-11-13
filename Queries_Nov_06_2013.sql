@@ -250,3 +250,88 @@ select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr
         
             WHERE tr.actiontime between 1380565800 and 1384280999 and o.status in (0,1) and tr.batch_enabled=1 
             group by tr.transid order by tr.actiontime desc
+	#=> 192/1544 ms
+##########
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,o.*
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                
+		from king_transactions tr
+		join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+
+		left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                  left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+
+            WHERE tr.actiontime between 1380565800 and 1384280999 and o.status in (0,1) and tr.batch_enabled=1  and i.invoice_status=1 and sd.shipped=1
+            group by tr.transid order by tr.actiontime desc
+#=>15 / 1576 ms =>DONE / CANCEL RECORDS
+
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_ords
+		,tr.transid,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,o.*
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                
+		from king_transactions tr
+		join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+
+		left join king_invoice i on o.id = i.order_id and i.invoice_status=0
+                  left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+
+            WHERE tr.actiontime between 1380565800 and 1384280999 and o.status in (0,1) and tr.batch_enabled=1 and i.id is not null
+            group by tr.transid order by tr.actiontime desc
+####
+select * from (
+select distinct from_unixtime(tr.init,'%D %M %h:%i:%s %Y') as str_time, count(tr.transid) as total_trans,tr.transid
+		,sum(o.status) as is_pending,o.status,o.id,o.itemid,o.brandid,o.quantity,o.time,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+		,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                
+		from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+        
+		left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                  left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+        
+            WHERE tr.actiontime between 1380565800 and 1384280999 and o.status in (0,1) and tr.batch_enabled=1 and i.id is null  
+            group by o.transid order by tr.actiontime desc
+) as g where is_pending = 0 group by transid;
+
+# is_pending=0 and
+# group by tr.transid 
+# transid='PNHRTR62345'
+is_pending=0 => ready
+is_pending=total_trans =>pending
+is_pending < total_trans => partial_pending
+####
+select status from king_orders where transid='PNHYVV59449';

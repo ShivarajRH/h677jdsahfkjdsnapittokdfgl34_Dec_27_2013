@@ -21,13 +21,23 @@
                 </tr>
         </table>
     </div>
+    <!--<p class="page_trans_description"></p>-->
     <div class="level1_filters">
         <fieldset>
-            <span title="Toggle Filter Block" class="close_filters">Show</span>
+            <span title="Toggle Filter Block" class="close_filters"><span class="close_btn">Show</span>
             <h3>Filters:</h3>
-           
-            
+            </span>
                 <div class="filters_block">
+                        <div class="date_filter">
+                            <form id="trans_date_form" method="post">
+                                    <b>Show transactions : </b>
+                                    <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
+                                            name="date_from" value="<?php echo date('m-01-Y',time()-60*60*24*7*4)?>" />
+                                    <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
+                                            name="date_to" value="<?php echo date('m-d-Y',time())?>" /> 
+                                    <input type="submit" value="Submit">
+                            </form>
+                        </div>
                         <div class="group_filter">
                             <select id="sel_menu" name="sel_menu" colspan="2">
                                 <option value="00">Select Menu</option>
@@ -59,16 +69,19 @@
                                 <option value="00">All Franchise</option>
                             </select>
                         </div>
-                        <div class="date_filter">
-                            <form id="trans_date_form" method="post">
-                                    <b>Show transactions : </b>
-                                    <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
-                                            name="date_from" value="<?php echo date('Y-m-1',time()-60*60*24*7*4)?>" />
-                                    <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
-                                            name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
-                                    <input type="submit" value="Submit">
-                            </form>
+                        <div class="clear"></div>
+                        <div>
+                            <span class="limit_display_block">
+                                Show
+                                    <select name="limit_filter" id="limit_filter">
+                                        <option value="20">20</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                items per page.
+                            </span>
                         </div>
+                        
                 </div>
                 <input type="hidden" name="pg_num" class="page_num" value="0" size="3"/>
         </fieldset>
@@ -76,27 +89,14 @@
     <div class="clear"></div>
     <div class="level2_filters">
             <div class="trans_pagination pagination_top"></div>
-            <span class="limit_display_block">
-                    <select name="limit_filter" id="limit_filter">
-                        <option value="20">20</option>
-                        <option value="50" selected>50</option>
-                        <option value="100">100</option>
-                    </select>
-            </span>
+            
             <span class="ttl_trans_listed dash_bar"></span>
-            <span class="log_display"></span>
-            <!--<label class="high_link"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a></label>-->
+<!--            <span class="log_display"></span>-->
     </div>        
     <div id="ready">
         <div style="padding:1px 0px;" id="trans_list_replace_block"></div>
     </div>
-    <div id="partial">
-        
-<!--        <div style="padding:1px 0px;" id="trans_list_replace_block"></div>-->
-    </div>
-    <div id="pending">
-<!--        <div style="padding:1px 0px;" id="trans_list_replace_block"></div>-->
-    </div>
+
 </div>
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>
 <script>
@@ -107,6 +107,11 @@
     
     function loadTransactionList(pg) 
     {
+        $(".pagination_top").html("");
+        $(".ttl_trans_listed").html("");
+        $(".log_display").html("").dis;
+        
+
         var batch_type = $('.tab_list .selected').attr('id');
 //        var batch_type= ($("#batch_type").val() == "00")?0: $("#batch_type").val();
         var terrid= ($("#sel_territory").val()=='00')?0:$("#sel_territory").val();
@@ -137,7 +142,7 @@ $(document).ready(function() {
         //FIRST RUN
         $( "#date_from").datepicker({
              changeMonth: true,
-             dateFormat:'yy-mm-dd',
+             dateFormat:'mm-dd-yy',//'yy-mm-dd',
              numberOfMonths: 1,
              maxDate:0,
 //             minDate: new Date(reg_date),
@@ -147,7 +152,7 @@ $(document).ready(function() {
            });
         $( "#date_to" ).datepicker({
             changeMonth: true,
-             dateFormat:'yy-mm-dd',
+             dateFormat:'mm-dd-yy',//'yy-mm-dd',
 //             numberOfMonths: 1,
              maxDate:0,
              onClose: function( selectedDate ) {
@@ -163,18 +168,6 @@ $(document).ready(function() {
     function success(resp) {
             $('#trans_list_replace_block').html(resp);
     }
-//    $(".close_filters").click(function(e) {
-//        $(".filters_block").toggle();
-//        return false;
-//    });
-    $(".close_filters").toggle(function() {
-        $(this).html("Hide");
-        $(".filters_block").slideDown();
-    },function() {
-        $(".filters_block").slideUp();
-        $(this).html("Show");
-      });
-    
 // ]]>
     
 </script>

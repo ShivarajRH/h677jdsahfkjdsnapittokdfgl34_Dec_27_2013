@@ -5,7 +5,18 @@
     Description:To style the manage_trans_reservations page
 */
 h2 {  width: 788px; float: left;   }
- h3 { margin-bottom: 0px; margin-top: 0;width: 788px;}
+h3 { margin-bottom: 0px; margin-top: 0;width: 788px;}
+fieldset {
+    padding: 0 0px 0 12px !important;
+    background-color: #F1F0F5;
+    border-color: #E6E6E6;
+}
+select {
+    margin: 10px 0 5px 5px;
+}
+label {
+    margin:10px 0 15px 5px;
+}
 .leftcont { display: none;}
 table.datagridsort tbody td { padding: 4px; }
 .datagrid td { padding: 1px; }
@@ -52,42 +63,36 @@ table.datagridsort tbody td { padding: 4px; }
 .clear {
     clear: both;
 }
-select {
-    margin: 10px 0 5px 5px;
+.log_display {
+    font-weight:bold;margin-right: 0;
+    margin-top: 10px;
+    margin-left: 300px;
 }
-label {
-    margin:10px 0 15px 5px;
-    
-}
-.log_display {font-weight:bold;margin-right: 0;
-margin-top: 10px;
-margin-left: 300px;}
-
 .limit_display_block {
-    float: right;
-    margin-right: 20px;
-    margin-top: 0px;
+    float: left;
+    margin-right: 00px;
+    margin-top: 15px;
 }
 .limit_display_block select {
     margin-top: 0;
 }
 /*Start*/
 /*.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }*/
-.datagrid tr.processed_ord a { color: #290715 !important; }
+/*.datagrid tr.processed_ord a { color: #290715 !important; }*/
 /*.datagrid tr.processed_ord { background-color: #80C280  !important; }*/
 /*.subdatagrid tr.processed_ord { background-color: #80C280  !important; text-decoration: line-through;}*/
-
+/*
 .datagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
 .datagrid tr.shipped_ord td a{ color: #BDB5AB !important;}
 .subdatagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
-.subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}
+.subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}*/
 
 /*.datagrid tr.pending_ord td { background-color: rgba(247, 190, 190, 0.51) !important; }*/
-.datagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
-.subdatagrid tr.pending_ord td {/*background-color: rgba(247, 190, 190, 0.51) !important*/}
-.subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
+/*.datagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
+.subdatagrid tr.pending_ord td {background-color: rgba(247, 190, 190, 0.51) !important}
+.subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}*/
 
-.datagrid tr.cancelled_ord td{color: #cd0000 !important;} 
+/*.datagrid tr.cancelled_ord td{color: #cd0000 !important;} 
 .datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
 .subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
 .subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
@@ -95,7 +100,7 @@ margin-left: 300px;}
 .datagrid tr.disabled_ord td{color: #D8D3D2 !important;}
 .datagrid tr.disabled_ord td a{color: #D8D3D2 !important;}
 .subdatagrid tr.disabled_ord td{text-decoration: none;color: #D8D3D2 !important;}
-.subdatagrid tr.disabled_ord td a{text-decoration: none;color: #D8D3D2 !important;}
+.subdatagrid tr.disabled_ord td a{text-decoration: none;color: #D8D3D2 !important;}*/
 
 
 /*   End*/
@@ -135,8 +140,13 @@ margin-left: 300px;}
 .high_link {    float:right;font-weight: bold; padding: 4px 10px !important;min-width: inherit;background:#FF7777; border-radius: 3px; margin-top: 20px; }
 .high_link:hover,.high_link a:hover {  background-color: #FA1527 }
 
-.ttl_trans_listed {float: left;margin: 0 65px 10px 0;}
-.level1_filters { float:left;margin-top: 7px;margin-right: 5px; width: 100%; }
+.ttl_trans_listed {float: left; 
+max-width: inherit;
+min-width: inherit;
+margin: 0 0 7px;}
+.level1_filters { float:left;margin-top: 5px; width: 100%;
+                 /*margin-right: 5px; */ 
+}
 .fran_experience {
     font-weight:bold;font-size:10px;padding: 2px 3px;border-radius: 3px; margin-top:5px;
 }
@@ -167,11 +177,11 @@ margin-left: 300px;}
     color: #C3C3E5;
 }
 .filters_block {
-float: left;
-padding-bottom: 27px;
-width: 100%;
-display: block;
-display: none;
+    float: left;
+    padding-bottom: 27px;
+    width: 99%;
+    display: block;
+    display: none;
 }
 .filters_block .group_filter {
     float: left;
@@ -181,12 +191,21 @@ display: none;
     margin-top: 10px;
 }
 .close_filters {
-float: right;
-margin-top: 5px;
-cursor:pointer;
-color:#D50C0C;
-font-weight: bold;
+    display: table;
+    width: 100%;
+    float: right;
+    cursor:pointer;
+    background-color: #DFE0F0;
+    padding: 2px 7px 2px 6px;
+}
+.close_btn {
+    float: right;
+    margin-right: 8px;
+    cursor:pointer;
+    color:#D50C0C;
+    font-weight: bold;
 }
 .level2_filters {
     margin: 20px 0px;
 }
+.partial_ready { color:#cd0000;font-weight:bold; padding:4px 6px; }
