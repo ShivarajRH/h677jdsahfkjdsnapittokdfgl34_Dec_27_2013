@@ -464,7 +464,7 @@ class Erp extends Stream
 		
 			$user=$this->auth(PURCHASE_ORDER_ROLE);
 			if($_POST)
-			$expected_podeliverydate=$this->input->post('po_deliverydate');
+			$expected_podeliverydate=strtotime($this->input->post('po_deliverydate'));
 			$this->db->query("update t_po_info set date_of_delivery=? where po_id=?",array($expected_podeliverydate,$poid));
 			redirect("admin/viewpo/$poid");
 	}
@@ -9470,10 +9470,138 @@ group by product_id,location",$bid)->result_array();
 		$data['prods']=$this->db->query("select p.product_id,p.product_name,l.qty from m_product_deal_link l join m_product_info p on p.product_id=l.product_id where l.itemid=?",$data['deal']['id'])->result_array();
 		$pnh_Deal_upd_log=$this->erpm->get_pnh_deal_update_log($id);
 		
+		$data['ttl_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
+										from king_orders a
+										join king_transactions b on a.transid = b.transid
+										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
+										where is_pnh = 1 and itemid =? and a.status != 3 
+										group by b.franchise_id
+										order by franchise_name asc ",$id)->result_array(); 
+		$data['most_sold_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid
+										from king_orders a
+										join king_transactions b on a.transid = b.transid
+										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
+										where is_pnh = 1 and itemid =? and a.status != 3 
+										group by b.franchise_id
+										order by sold_qty desc limit 10 ",$id)->result_array();
+		$data['latest_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
+										from king_orders a
+										join king_transactions b on a.transid = b.transid
+										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
+										where is_pnh = 1 and itemid =? and a.status != 3 
+										group by b.franchise_id
+										order by init desc limit 10",$id)->result_array();  								
+		
 		$data['pnh_Deal_upd_log']=$pnh_Deal_upd_log;
 		$data['page']="pnh_deal";
 		$this->load->view("admin",$data);
 	}
+	
+	/*
+	 * Ajax function to load yearly deal sales 
+	 * 
+	 */
+	function jx_deal_getsales($yr="",$itemid="")
+	{
+	   if(!$yr)
+		$yr = date('yr');
+		
+	  $sql = "select month(date(from_unixtime(b.init))) as mn,count(*) as t
+			from king_orders a
+			join king_transactions b on a.transid = b.transid
+			where is_pnh = 1 and itemid = '".$itemid."' and year(date(from_unixtime(b.init))) = '".$yr."' and a.status != 3 
+			group by mn  
+			order by mn asc";
+	 $res = $this->db->query($sql);
+	 $deal_on = array();
+	 $deal_summary = array();
+	 for($i=1;$i<=12;$i++)
+	{
+		
+		$deal_on[$i-1] = date('M Y',strtotime($yr.'-'.(($i<10)?'0'.$i:$i).'-01')); 
+		$deal_summary[$deal_on[$i-1]]=array('ttl'=>0);
+	}
+	
+	
+	if($res->num_rows())
+	{
+		foreach($res->result_array() as $row)
+		{
+			$mn = $row['mn'];
+			$deal_summary[$deal_on[$mn-1]]['ttl'] += $row['t']; 
+		}
+	}
+	
+	$deals = array();
+	$deals['ttl'] = array();
+	foreach($deal_summary as $dsale)
+	{
+		array_push($deals['ttl'],$dsale['ttl']);
+	}
+	$output = array();
+	$output['month'] = $deal_on;
+	$output['summary'] = $deals;
+	echo json_encode($output);
+	
+	}
+
+	/*
+	 * Ajax function to load territory,quantity details based on deal
+	 * 
+	 */
+	function jx_deal_getsales_by_territory($itemid="")
+	{
+		
+	  $sql = "select c.territory_id,d.territory_name,sum(a.quantity) as ttl_sold 
+			from king_orders a
+			join king_transactions b on a.transid = b.transid 
+			join pnh_m_franchise_info c on c.franchise_id = b.franchise_id 
+			join pnh_m_territory_info d on c.territory_id = d.id 
+			where itemid = '".$itemid."' and a.status != 3 
+			group by territory_id 
+			order by territory_name";
+	 $res = $this->db->query($sql); 
+	 $deals=array();	
+	
+	if($res->num_rows())
+	{
+		foreach($res->result_array() as $row)
+		{
+			array_push($deals,array($row['territory_name'],$row['ttl_sold']*1,$row['territory_id'])); 
+		}
+	}
+	
+	$output = array();
+	$output['result'] = $deals;
+	echo json_encode($output);	
+	}
+	
+	/*
+	 * Ajax function to load franchises based on territory and deal
+	 * 
+	 */
+	function jx_deal_getfranchise_by_territory($terr_id="",$itemid="")
+	{
+		$fran =$this->db->query("select b.franchise_name,c.territory_name,c.id,ki.itemid
+		from king_transactions a
+		join king_orders ki on ki.transid = a.transid
+		join pnh_m_franchise_info b on b.franchise_id = a.franchise_id
+		join pnh_m_territory_info c on c.id = b.territory_id
+		where c.id='".$terr_id."' and ki.itemid ='".$itemid."' group by b.franchise_name ");
+		
+		if($fran->num_rows())
+		{
+			$output['fran_list']=$fran->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+	
+		}
+		echo json_encode($output);	
+	}
+	
 	
 	function pnh_update_description()
 	{
@@ -15716,7 +15844,8 @@ order by action_date";
 	 */
 	function pnh_update_returns_to_stock($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		//$this->erpm->get_return_access($type);
+		$this->erpm->auth(true);
 		
 		$return_prd_det = $this->erpm->get_pnh_invreturn_mvstock_det();
 		
@@ -18387,8 +18516,7 @@ order by action_date";
 				$output['status'] = 'error';
 			}
 			
-			//echo json_encode($output);
-                        $this->output->set_output($output);
+			echo json_encode($output);
 		}
 		
 		/**
@@ -23738,13 +23866,13 @@ die; */
 	{
 		$output=array();
 		
-			$sql="SELECT l.product_id,a.transid,is_pnh,partner_id,c.name AS partner_name,DATE_FORMAT(FROM_UNIXTIME(`time`),'%d/%m/%Y') AS orderd_on,(b.quantity*l.qty) as quantity
+			$sql="SELECT l.product_id,a.transid,is_pnh,partner_id,c.name AS partner_name,DATE_FORMAT(FROM_UNIXTIME(`time`),'%d/%m/%Y') AS orderd_on,(b.quantity*l.qty) as quantity,b.bill_person,(SELECT SUM(b.quantity))  AS ord_qty 
 					FROM king_transactions a 
 					JOIN king_orders b ON a.transid = b.transid 
 					LEFT JOIN partner_info c ON c.id = a.partner_id 
 					JOIN m_product_deal_link l ON l.itemid=b.itemid 
-					WHERE l.product_id=?  AND b.status = 0 AND partner_id=?";
-		
+					WHERE l.product_id=?  AND b.status = 0 AND partner_id=? GROUP BY a.transid";
+			
 			$partner_transids_res=$this->db->query($sql,array($prodid,$partnerid));
 			if($partner_transids_res->num_rows())
 			{
@@ -23793,7 +23921,7 @@ die; */
 														JOIN t_po_product_link p ON p.po_id=l.po_id
 														JOIN `t_grn_invoice_link`i ON i.grn_id=l.grn_id
 														JOIN `m_vendor_info` v ON v.vendor_id=t.vendor_id
-														WHERE l.product_id=?  AND  (i.created_on>".mktime(0,0,0,0,-30)." or i.created_on is null) 
+														WHERE l.product_id=?  AND  DATE(i.created_on) >= DATE_SUB(CURDATE(),INTERVAL 30 DAY) 
 														GROUP BY t.vendor_id",$pid);
 		
 		$last_60dayspurchaseorderdet=$this->db->query("SELECT v.vendor_name,l.product_id,SUM(invoice_qty) AS ttl_qty ,l.margin,i.created_on
@@ -23802,7 +23930,7 @@ die; */
 														JOIN t_po_product_link p ON p.po_id=l.po_id
 														JOIN `t_grn_invoice_link`i ON i.grn_id=l.grn_id
 														JOIN `m_vendor_info` v ON v.vendor_id=t.vendor_id
-														WHERE l.product_id=?  AND  (i.created_on>".mktime(0,0,0,0,-60)." or i.created_on is null) 
+														WHERE l.product_id=?  AND DATE(i.created_on) >= DATE_SUB(CURDATE(),INTERVAL 60 DAY) 
 														GROUP BY t.vendor_id",$pid);
 		
 		$last_90dayspurchaseorderdet=$this->db->query("SELECT v.vendor_name,l.product_id,SUM(invoice_qty) AS ttl_qty ,l.margin,i.created_on
@@ -23811,7 +23939,7 @@ die; */
 														JOIN t_po_product_link p ON p.po_id=l.po_id
 														JOIN `t_grn_invoice_link`i ON i.grn_id=l.grn_id
 														JOIN `m_vendor_info` v ON v.vendor_id=t.vendor_id
-														WHERE l.product_id=?  AND  (i.created_on>".mktime(0,0,0,0,-90)." or i.created_on is null) 
+														WHERE l.product_id=?  AND  DATE(i.created_on) >= DATE_SUB(CURDATE(),INTERVAL 90 DAY) 
 														GROUP BY t.vendor_id",$pid);
 		
 		if($last_30dayspurchaseorderdet->num_rows())
@@ -23994,10 +24122,10 @@ die; */
 				 						WHERE 1 $cond
 										GROUP BY f.franchise_id
 										ORDER BY franchise_name ASC ")->result_array();
-		$fortwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 4 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 4 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$thirdwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 3 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 3 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$secwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 2 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$frstwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 1 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
+		$fortwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 4 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 4 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$thirdwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 3 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 3 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$secwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 2 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 2 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$frstwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 1 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 1 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
 		$last_monthdesc=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH),'%b %Y') AS lastmnth")->row()->lastmnth;
 		$last_secmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 MONTH),'%b %Y') AS lastsecmnth")->row()->lastsecmnth;
 		$last_thrdcmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 3 MONTH),'%b %Y') AS lastthrdmnth")->row()->lastthrdmnth;
@@ -24024,15 +24152,7 @@ die; */
 	function pnh_export_franchise_analytics_report()
 	{
 		$fran_bio_res=$this->db->query("SELECT f.franchise_name,f.franchise_id,f.town_id,f.territory_id,f.is_suspended,t.territory_name,tw.town_name,f.created_on,f.credit_limit FROM pnh_m_franchise_info f JOIN pnh_m_territory_info t ON t.id=f.territory_id JOIN pnh_towns tw ON tw.id=f.town_id GROUP BY f.franchise_id order by franchise_name asc");
-		$fortwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 4 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 4 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$thirdwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 3 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 3 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$secwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 2 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$frstwkdaterange=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 1 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
-		$last_monthdesc=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH),'%b %Y') AS lastmnth")->row()->lastmnth;
-		$last_secmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 MONTH),'%b %Y') AS lastsecmnth")->row()->lastsecmnth;
-		$last_thrdcmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 3 MONTH),'%b %Y') AS lastthrdmnth")->row()->lastthrdmnth;
-		$last_forthcmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 4 MONTH),'%b %Y') AS lastforthdmnth")->row()->lastforthdmnth;
-
+	
 		$thrd_wkdt=$thirdwkdaterange['startdate'].'-'.$thirdwkdaterange['endate'];
 		
 		$fran_status_arr=array();
@@ -24041,10 +24161,29 @@ die; */
 		$fran_status_arr[2]="Payment Suspension";
 		$fran_status_arr[3]="Temporary Suspension";
 		
+		//$fortwkdaterange_arr=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 4 WEEK),'%d %b') AS endate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(CURDATE(), INTERVAL 4 WEEK)), INTERVAL -6 DAY),'%d %b') AS startdate")->row_array();
+		$fortwkdaterange_arr=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 4 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 4 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$fortwkdaterange=$fortwkdaterange_arr['startdate'].' - '.$fortwkdaterange_arr['endate'];
+		
+		$thirdwkdaterange_arr=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 3 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 3 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$thirdwkdaterange=$thirdwkdaterange_arr['startdate'].' - '.$thirdwkdaterange_arr['endate'];
+		
+		$secwkdaterange_arr=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 2 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 2 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$secwkdaterange=$secwkdaterange_arr['startdate'].' - '.$secwkdaterange_arr['endate'];
+		
+		$frstwkdaterange_arr=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 1 WEEK),'%d %b') AS startdate,DATE_FORMAT(DATE_ADD(DATE(DATE_SUB(DATE_ADD(CURDATE(),INTERVAL WEEKDAY(CURDATE())*-1 DAY), INTERVAL 1 WEEK)), INTERVAL +6 DAY),'%d %b') AS endate")->row_array();
+		$frstwkdaterange=$frstwkdaterange_arr['startdate'].' - '.$frstwkdaterange_arr['endate'];
+		
+		$last_monthdesc=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 MONTH),'%b %Y') AS lastmnth")->row()->lastmnth;
+		$last_secmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 MONTH),'%b %Y') AS lastsecmnth")->row()->lastsecmnth;
+		$last_thrdcmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 3 MONTH),'%b %Y') AS lastthrdmnth")->row()->lastthrdmnth;
+		$last_forthcmonth=$this->db->query("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 4 MONTH),'%b %Y') AS lastforthdmnth")->row()->lastforthdmnth;
+		
+		
 		$fr_sales_list = array();
 		$fr_sales_heading="Franchise Hygenie Analyitics report";
 		
-		$fr_sales_list[] = '"Territory","Town","Franchise Name","Created on","Last Ordered on","Current Week Sales","Week 4","Week 3","Week 2","Week 1","Month 4(Sep)","Month 3(Aug)","Month 2(July)","Month 1(June)","Sales Till Date","Current Month Top Selling Category","Top most Selling Category last month(Sep)","2nd Most Selling Category last month(Sep)","Total Members","Current Pending Amount","Uncleared Cheque	","Credit Limit","Last Shipment Value","Last week No of Transactions","Last week No of Orders","Last week Total Order Qty","Last Month No of Transactions","Last Month No of Orders","Last Month Total Order Qty","Suspension Status"';
+		$fr_sales_list[] = '"Territory","Town","Franchise Name","Created on","Last Ordered on","Current Week Sales","'.$fortwkdaterange.'","'.$thirdwkdaterange.'","'.$secwkdaterange.'","'.$frstwkdaterange.'","'.$last_monthdesc.'","'.$last_secmonth.'","'.$last_thrdcmonth.'","'.$last_forthcmonth.'","Sales Till Date","Current Month Top Selling Category","Top most Selling Category last month(Sep)","2nd Most Selling Category last month(Sep)","Total Members","Current Pending Amount","Uncleared Cheque	","Credit Limit","Last Shipment Value","Last week No of Transactions","Last week No of Orders","Last week Total Order Qty","Last Month No of Transactions","Last Month No of Orders","Last Month Total Order Qty","Suspension Status"';
 	
 	
 		 if($fran_bio_res->num_rows())
@@ -24061,21 +24200,21 @@ die; */
 						$fr_sales_det[] = format_date_ts($last_ordate['init']);
 					$curwk_sales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(CURDATE()) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $curwk_sales['ttl_sales'];
-					$forth_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 4 WEEK)) AND a. franchise_id=?",$row_f['franchise_id'])->row_array();
+					$forth_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 4 WEEK)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 4 WEEK)) AND a. franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $forth_wksales['ttl_sales'];
-					$thrd_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 3 WEEK)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$thrd_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 3 WEEK)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 3 WEEK)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $thrd_wksales['ttl_sales'];
-					$secnd_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 2 WEEK)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$secnd_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 2 WEEK)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 2 WEEK)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $secnd_wksales['ttl_sales'];
-					$one_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 1 WEEK)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$one_wksales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   WEEK(DATE(FROM_UNIXTIME(a.init)))=WEEK(DATE_SUB(CURDATE(), INTERVAL 1 WEEK)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 1 WEEK)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $one_wksales['ttl_sales'];
-					$last_monthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$last_monthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $last_monthsales['ttl_sales'];
-					$last_secmonthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 2 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$last_secmonthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 2 MONTH)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 2 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $last_secmonthsales['ttl_sales'];
-					$last_thrdmonthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 3 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$last_thrdmonthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 3 MONTH)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 3 MONTH))  AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $last_thrdmonthsales['ttl_sales'];
-					$last_forthdmonthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 4 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
+					$last_forthdmonthsales=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE   MONTH(DATE(FROM_UNIXTIME(a.init)))=MONTH(DATE_SUB(CURDATE(), INTERVAL 4 MONTH)) and year(DATE(FROM_UNIXTIME(a.init))) = year(DATE_SUB(CURDATE(), INTERVAL 4 MONTH)) AND a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = $last_forthdmonthsales['ttl_sales'];
 					$ttlsales_tildate=$this->db->query("SELECT ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*b.quantity),2) AS ttl_sales  FROM king_transactions a  JOIN king_orders b ON a.transid = b.transid JOIN pnh_m_franchise_info c ON c.franchise_id = a.franchise_id WHERE a.franchise_id=?",$row_f['franchise_id'])->row_array();
 						$fr_sales_det[] = formatInIndianStyle($ttlsales_tildate['ttl_sales']);
@@ -24272,7 +24411,7 @@ die; */
 	
 			echo json_encode($output);
 	}
-
+	
 	/**
 /**
 	 * Franchise Payment Mode Module START
@@ -24341,8 +24480,8 @@ die; */
 		echo json_encode($output);
 	}
 	//Interface to menu Margin ---End
-	
-	/** function to update lr nos 
+	/**
+	 * function to update lr nos 
 	 */
 	function update_bulk_lrdetails()
 	{

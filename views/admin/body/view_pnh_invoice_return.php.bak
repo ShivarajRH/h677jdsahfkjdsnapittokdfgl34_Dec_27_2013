@@ -178,9 +178,6 @@
 											{ 
 												if($prod_det['status'] > $ic)
 													continue;
-												
-												if($type!='sk' && $ic==1)
-													continue;
 								?>
 													<option value="<?php echo $ic; ?>"><?php echo $cond; ?></option>
 								<?php 		}

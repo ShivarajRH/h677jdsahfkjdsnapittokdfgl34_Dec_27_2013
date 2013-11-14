@@ -6,6 +6,7 @@
 <tr><td>Remarks :</td><td><?=$po['remarks']?></td></tr>
 
 <tr><td>Created on :</td><td><?=date("d/m/Y g:ia",strtotime($po['created_on']))?></td></tr>
+<tr><td>Created By :</td><td><?=$this->db->query("select username from king_admin where id = ? ",$po['created_by'])->row()->username;?></td></tr>
 <tr>
 <td>Date of Delivery :</td>
 <?php if(!$po['date_of_delivery']!=null){?>
@@ -16,7 +17,7 @@
 </td>
 </form>
 <?php }else{?>
-<td><?php echo format_date($po['date_of_delivery']);?></td>
+<td><?php echo format_datetime_ts($po['date_of_delivery']);?></td>
 <?php }?>
 </tr>
 <!--  <td style="font-weight:bold;<?php echo (strtotime($po['date_of_delivery']) < time())?'color:#cd0000;':'' ?> "><?=date("d/m/Y g:ia",strtotime($po['date_of_delivery']))?></td>-->
@@ -36,23 +37,25 @@ switch($po['po_status']){
 <tr>
 <?php 
 
-
 function dateDiff($start, $end) {
 
 $start_ts = strtotime($start);
-
 $end_ts = strtotime($end);
 
-$diff = $end_ts - $start_ts;
 
-return round($diff / 86400);
+$diff = $end_ts - $start_ts; //time returns current time in seconds
+ $days=floor($diff/(60*60*24)); //seconds/minute*minutes/hour*hours/day) */ 
+//$days=round($diff / 86400);
+$hours=round(($diff-$days*60*60*24)/(60*60));
+
+return "$days days $hours hours $diff sec remaining";
 
 }
 
 ?>
 <td>Delivery TAT</td>
 <!--  <td><?php echo ($po['po_status'] <= 1)?timespan(strtotime($po['date_of_delivery'])):timespan(strtotime($po['date_of_delivery']),strtotime($po['modified_on']))?></td>-->
-<td><?php echo $po['date_of_delivery']?dateDiff($po['created_on'],$po['date_of_delivery']).' days':'NA'?></td>
+<td><?php echo $po['date_of_delivery']?dateDiff($po['created_on'],date('Y-m-d H:i:s',$po['date_of_delivery'])):'NA'?></td>
 </tr>	
 
 <tr>
@@ -154,14 +157,10 @@ return round($diff / 86400);
 </div>
 
 <script>
-/*var button = $('<input type="button" value="save" id="po_deliverydate_button">');
-$('#po_deliverydate_button').after(button);
-if("#po_deliverydate_button").click(function(){
-	var value = $(this).prev().val();
-	 save(value);
-});*/
 
-$("#po_deliverydate").datepicker({});
+$("#po_deliverydate").datetimepicker({
+	timeFormat: "hh:mm tt"
+});
 function closepo()
 {
 	if(confirm("Are you sure?"))

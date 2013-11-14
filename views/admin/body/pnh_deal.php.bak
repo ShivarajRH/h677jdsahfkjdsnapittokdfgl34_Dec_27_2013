@@ -125,7 +125,7 @@
 	<td>Rs <?=$pc['new_price']?></td>
 	<td>
 	<?php if($pc['reference_grn']==0) echo "MANUAL";else{?>
-	<a href="<?=site_url("admin/view_grn/{$pc['reference_grn']}")?>"><?=$pc['reference_grn']?></a>
+	<a href="<?=site_url("admin/viewgrn/{$pc['reference_grn']}")?>"><?=$pc['reference_grn']?></a>
 	<?php }?>
 	</td>
 	<td><?=$pc['logged_by']?></td>

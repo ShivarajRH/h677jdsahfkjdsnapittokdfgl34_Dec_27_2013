@@ -5,7 +5,7 @@
     Description:To style the manage_trans_reservations page
 */
 h2 {  width: 788px; float: left;   }
-h3 { margin-bottom: 0px; margin-top: 0;width: 788px;}
+
 fieldset {
     padding: 0 0px 0 12px !important;
     background-color: #F1F0F5;
@@ -13,6 +13,7 @@ fieldset {
 }
 select {
     margin: 10px 0 5px 5px;
+    width: 204px;
 }
 label {
     margin:10px 0 15px 5px;
@@ -34,8 +35,9 @@ table.datagridsort tbody td { padding: 4px; }
 }
 .loading {
     text-align: center;
-    margin: 5% 0 0 40%;
-    visibility: visible; font-size: 16px; 
+    margin: 2% 0 0 48%;
+    /*visibility: visible;*/ 
+    font-size: 15px; 
 }
 .trans_pagination {
     float: right;
@@ -76,34 +78,6 @@ table.datagridsort tbody td { padding: 4px; }
 .limit_display_block select {
     margin-top: 0;
 }
-/*Start*/
-/*.subdatagrid tr.processed_ord a { color: #290715  !important; text-decoration: line-through; }*/
-/*.datagrid tr.processed_ord a { color: #290715 !important; }*/
-/*.datagrid tr.processed_ord { background-color: #80C280  !important; }*/
-/*.subdatagrid tr.processed_ord { background-color: #80C280  !important; text-decoration: line-through;}*/
-/*
-.datagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
-.datagrid tr.shipped_ord td a{ color: #BDB5AB !important;}
-.subdatagrid tr.shipped_ord td{ color: #BDB5AB  !important;}
-.subdatagrid tr.shipped_ord td a{color: #BDB5AB !important;}*/
-
-/*.datagrid tr.pending_ord td { background-color: rgba(247, 190, 190, 0.51) !important; }*/
-/*.datagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}
-.subdatagrid tr.pending_ord td {background-color: rgba(247, 190, 190, 0.51) !important}
-.subdatagrid tr.pending_ord td a{color: rgba(20, 2, 2, 0.75) !important}*/
-
-/*.datagrid tr.cancelled_ord td{color: #cd0000 !important;} 
-.datagrid tr.cancelled_ord td a{color: #cd0000 !important;}
-.subdatagrid tr.cancelled_ord td{text-decoration: line-through;color: #cd0000 !important;}
-.subdatagrid tr.cancelled_ord td a{text-decoration: line-through;color: #cd0000 !important;}
-
-.datagrid tr.disabled_ord td{color: #D8D3D2 !important;}
-.datagrid tr.disabled_ord td a{color: #D8D3D2 !important;}
-.subdatagrid tr.disabled_ord td{text-decoration: none;color: #D8D3D2 !important;}
-.subdatagrid tr.disabled_ord td a{text-decoration: none;color: #D8D3D2 !important;}*/
-
-
-/*   End*/
 .retry_link {
     margin-top: 20px;
     cursor: pointer;
@@ -176,6 +150,8 @@ margin: 0 0 7px;}
     background: #443266;
     color: #C3C3E5;
 }
+/*  Start - filters code      */
+h3.filter_heading { margin-bottom: 0px; margin-top: 0;width: 788px;}
 .filters_block {
     float: left;
     padding-bottom: 27px;
@@ -204,8 +180,14 @@ margin: 0 0 7px;}
     cursor:pointer;
     color:#D50C0C;
     font-weight: bold;
+    font-size: 11px;
 }
 .level2_filters {
     margin: 20px 0px;
 }
+/*  Start - filters code      */
 .partial_ready { color:#cd0000;font-weight:bold; padding:4px 6px; }
+.heading_no_results { margin:2px;text-align:center }
+#date_from,#date_to {width: 90px;}
+#trans_list_replace_block {padding:1px 0px; clear: both;}
+.str_time { padding: 5px 0 5px; }

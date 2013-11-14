@@ -3,11 +3,10 @@
 class Erpmodel extends Model
 {
 	
-    function __construct()
-    {
-            parent::__construct();
-    }
-    
+	function __construct()
+	{
+		parent::__construct();
+	}
     /**
      * Function to save assigned user
      */
@@ -5376,7 +5375,8 @@ order by p.product_name asc
 	function do_po_prodwise()
 	{
 		error_reporting(E_ALL);
-		 
+		$user = $this->erpm->auth(); 
+		$remarks=$this->input->post("po_remarks");
 		foreach($_POST['vendor'] as $i=>$v)
 		{
 			$po=array();
@@ -5420,13 +5420,13 @@ order by p.product_name asc
 		foreach($pos as $v=>$po)
 		{
 			$total=0;
-			$this->db->query("insert into t_po_info(vendor_id,remarks,po_status,created_on) values(?,?,0,now())",array($v,"productwise-".date("d/m/y")));
+			$this->db->query("insert into t_po_info(vendor_id,remarks,po_status,created_on,created_by) values(?,?,0,now(),?)",array($v,$remarks."productwise-".date("d/m/y"),$user['userid']));
 			$poid=$this->db->insert_id();
 			foreach($po as $p)
 			{
-				$inp=array($poid,$p['product'],$p['qty'],$p['mrp'],$p['margin'],$p['dp_price'],$p['discount'],$p['type'],$p['price'],$p['foc'],$p['offer'],$p['note']);
-				$this->db->query("insert into t_po_product_link(po_id,product_id,order_qty,mrp,margin,dp_price,scheme_discount_value,scheme_discount_type,purchase_price,is_foc,has_offer,special_note,created_on)
-																								values(?,?,?,?,?,?,?,?,?,?,?,?,now())",$inp);
+				$inp=array($poid,$p['product'],$p['qty'],$p['mrp'],$p['margin'],$p['dp_price'],$p['discount'],$p['type'],$p['price'],$p['foc'],$p['offer'],$p['note'],$user['userid']);
+				$this->db->query("insert into t_po_product_link(po_id,product_id,order_qty,mrp,margin,dp_price,scheme_discount_value,scheme_discount_type,purchase_price,is_foc,has_offer,special_note,created_on,created_by)
+																								values(?,?,?,?,?,?,?,?,?,?,?,?,now(),?)",$inp);
 				$total+=$p['price']*$p['qty'];
 				
 				// check and update DP price changes 
@@ -5515,55 +5515,86 @@ order by p.product_name asc
 	{
 		
 		error_reporting(E_ALL);
-		
-	$sql="SELECT a.*,b.id as brand_id,b.name AS brand_name,d.menuid,ifnull(m.name,m1.name) AS menu,v.vendor_id,r.vendor_name,date_format(from_unixtime(o.time),'%d/%m/%Y') as last_orderdon,o.transid,t.partner_id,p.name AS partner_name,t.is_pnh
+
+		$sql="SELECT a.*,b.id as brand_id,b.name AS brand_name,d.menuid,ifnull(m.name,m1.name) AS menu,v.vendor_id,r.vendor_name,date_format(from_unixtime(o.time),'%d/%m/%Y') as last_orderdon,o.transid,t.partner_id,p.name AS partner_name,t.is_pnh,po.po_id as is_po_raised
 				FROM m_product_info a
-				left join m_product_deal_link l on l.product_id=a.product_id 
-				left JOIN king_dealitems di ON di.id= l.itemid 
+				left join m_product_deal_link l on l.product_id=a.product_id
+				left JOIN king_dealitems di ON di.id= l.itemid
 				left JOIN king_deals d ON d.dealid=di.dealid
 				left JOIN king_brands b ON a.brand_id = b.id
 				left JOIN pnh_menu m ON m.id=d.menuid and di.is_pnh = 1
-				left JOIN king_menu m1 ON m1.id=d.menuid and di.is_pnh = 0   
-				left join m_vendor_brand_link v on a.brand_id=v.brand_id 
+				left JOIN king_menu m1 ON m1.id=d.menuid and di.is_pnh = 0
+				left join m_vendor_brand_link v on a.brand_id=v.brand_id
 				left join m_vendor_info r on r.vendor_id=v.vendor_id
-				left join king_orders o on o.itemid=l.itemid  
-				left JOIN king_transactions t ON t.transid=o.transid and o.status = 0  
-				LEFT JOIN partner_info p ON p.id = t.partner_id 
-				WHERE a.product_id=? 
+				left join king_orders o on o.itemid=l.itemid
+				left JOIN king_transactions t ON t.transid=o.transid and o.status = 0
+				LEFT JOIN partner_info p ON p.id = t.partner_id
+				LEFT JOIN t_po_product_link po ON po.product_id=a.product_id
+				WHERE a.product_id=?
 				group by a.product_id
 				";
-		
 		$r=$this->db->query($sql,$id)->row_array();
-		
-		// Check if valid for DP margin 
+
+
+		// Check if valid for DP margin
 		if($r['is_serial_required'])
 		{
 			$r['dp_price'] = @$this->db->query("select price from king_deals a join king_dealitems b on a.dealid = b.dealid join m_product_deal_link c on c.itemid = b.id where product_id = ? and c.is_active = 1 order by c.id desc limit 1 ",$r['product_id'])->row()->price;
 		}else
 		{
 			$r['dp_price'] = '';
-		} 
-		
+		}
+
 		$r['orders']=$this->db->query("select ifnull(sum(o.quantity*l.qty),0) as s from m_product_deal_link l join king_orders o on o.itemid=l.itemid where l.product_id=? and o.time>".(time()-(24*60*60*90)),$id)->row()->s;
 		$r['last_pen_order'] = @$this->db->query("SELECT a.transid,DATE_FORMAT(FROM_UNIXTIME(time),'%d/%m/%Y') AS orderd_on
-									FROM king_transactions a 
-									JOIN king_orders b ON a.transid = b.transid 
-									LEFT JOIN partner_info c ON c.id = a.partner_id 
-									JOIN m_product_deal_link l ON l.itemid=b.itemid 
-									WHERE l.product_id=?  AND b.status = 0 
-									GROUP BY is_pnh,partner_id  
-									order by a.init asc  
-										",$id)->row_array();
-										
+													FROM king_transactions a
+													JOIN king_orders b ON a.transid = b.transid
+													LEFT JOIN partner_info c ON c.id = a.partner_id
+													JOIN m_product_deal_link l ON l.itemid=b.itemid
+													WHERE l.product_id=?  AND b.status = 0
+													GROUP BY is_pnh,partner_id
+													order by a.init asc ",$id)->row_array();
+
 		if(isset($r['last_pen_order']['transid']))
 		{
 			$r['transid'] = $r['last_pen_order']['transid'];
 			$r['last_orderdon'] = $r['last_pen_order']['orderd_on'];
-		}								
-		
+		}
+
 		$r['pen_ord_qty']=$this->db->query("select ifnull(sum(o.quantity*l.qty),0) as s from m_product_deal_link l join king_orders o on o.itemid=l.itemid where l.product_id=? and o.status = 0 ",$id)->row()->s;
 		$r['cur_stk']=$this->db->query("select ifnull(sum(available_qty),0) as cur_stk from t_stock_info where product_id = ?",$id)->row()->cur_stk;
-		$r['vendors']=$vs=$this->db->query("select v.vendor_id,v.vendor_name,CONCAT(v.vendor_name,' (',b.brand_margin,'%)') as vendor,b.brand_margin as ven_margin from m_product_info p join m_vendor_brand_link b on p.brand_id=b.brand_id join m_vendor_info v on v.vendor_id=b.vendor_id where p.product_id=? order by b.brand_margin desc",$id)->result_array();
+
+		$r['is_po_raised']=$this->db->query("SELECT i.po_id,i.po_status,p.product_id,p.order_qty,p.received_qty,p.order_qty-p.received_qty AS po_order_qty FROM t_po_info i JOIN t_po_product_link p ON p.po_id=i.po_id WHERE p.product_id =? AND po_status<2 GROUP BY po_id",$id)->result_array();
+		$is_po_raised_details=$r['is_po_raised'];
+		$qty_raised=0;
+		if($is_po_raised_details)
+		{
+			foreach ($r['is_po_raised'] as $raised_po_det)
+			{
+				$qty_raised+=$raised_po_det['order_qty'];
+			}
+		}
+
+		$r['require_qty']= ($r['pen_ord_qty'] > $r['cur_stk']) ?($r['pen_ord_qty']-$r['cur_stk']-$qty_raised):0;
+
+
+
+		/* $r['vendors']=$vs=$this->db->query("select v.vendor_id,v.vendor_name,CONCAT(v.vendor_name,' (',b.brand_margin,'%)') as vendor,b.brand_margin as ven_margin from m_product_info p join m_vendor_brand_link b on p.brand_id=b.brand_id join m_vendor_info v on v.vendor_id=b.vendor_id where p.product_id=? order by b.brand_margin desc",$id)->result_array(); */
+
+		$r['vendors']=$vs=$this->db->query("SELECT * FROM (
+				SELECT v.vendor_id,v.vendor_name,CONCAT(v.vendor_name,' (',b.brand_margin,'%)') AS vendor,b.brand_margin AS ven_margin,g.created_on
+				FROM m_product_info p
+				JOIN m_vendor_brand_link b ON p.brand_id=b.brand_id
+				JOIN m_vendor_info v ON v.vendor_id=b.vendor_id
+				LEFT JOIN t_po_info po ON po.vendor_id=v.vendor_id
+				LEFT JOIN `t_po_product_link` pl ON pl.po_id=po.po_id
+				LEFT JOIN t_grn_product_link  g ON g.product_id=pl.product_id AND pl.po_id = g.po_id
+				WHERE p.product_id=?
+				ORDER BY g.created_on DESC ) AS g
+				GROUP BY vendor_id
+				ORDER BY g.created_on DESC",$id)->result_array();
+
+
 		$r['partners']=$this->db->query("SELECT is_pnh,partner_id,c.name AS partner_name,IFNULL(SUM(b.quantity*l.qty),0)  AS total,a.is_pnh
 														FROM king_transactions a 
 														JOIN king_orders b ON a.transid = b.transid 
@@ -7262,7 +7293,7 @@ order by p.product_name asc
 		foreach(array("fid","pid","qty","mid","redeem","redeem_points","mid_entrytype") as $i)
 			$$i=$this->input->post($i);
 		
-                $updated_by=$admin["userid"];
+        $updated_by=$admin["userid"];
 
 		if($redeem)
 			$redeem_points = 150;
@@ -7461,8 +7492,7 @@ order by p.product_name asc
 			foreach($transids[1] as $tr_items)
 				$split_transid_list[] = array($tr_items);	
 		
-                $batch_enabled=1;
-                
+            $batch_enabled=1;
 		$trans_grp_ref_no = ($this->db->query("select if(max(trans_grp_ref_no),max(trans_grp_ref_no)+1,400001) as n from king_transactions where trans_grp_ref_no >= 0")->row()->n);
 		
 		foreach($split_transid_list as $items)
@@ -7473,10 +7503,6 @@ order by p.product_name asc
                         //do packing process
                         $ttl_num_orders=count($items);
                         $batch_remarks='Created by pnh offline order system';
-                        
-                        //echo $transid.",".$ttl_num_orders.",".$batch_remarks;
-                        // Process to batch this transaction
-                        //$this->do_batching_process($transid,$ttl_num_orders,$batch_remarks);
                         //echo ("===TESTING====");
                         //continue;
                         
@@ -7490,8 +7516,6 @@ order by p.product_name asc
 				$this->erpm->do_trans_changelog($transid,"$redeem_points Loyalty points redeemed");
 			}
 			
-                        
-                
 			$this->db->query("insert into king_transactions(transid,amount,paid,mode,init,actiontime,is_pnh,franchise_id,trans_created_by,batch_enabled,trans_grp_ref_no) values(?,?,?,?,?,?,?,?,?,?,?)",array($transid,$d_total,$d_total,3,time(),time(),1,$fran['franchise_id'],$admin['userid'],$batch_enabled,$trans_grp_ref_no));
 					
 			foreach($items as $item)
@@ -7652,15 +7676,14 @@ order by p.product_name asc
 			$trans_amt = $this->db->query("select sum((i_orgprice-(i_discount+i_coup_discount))*quantity) as amt from king_orders where transid = ? and status = 0 ",$transid)->row()->amt; 
 			
 			$this->db->query("update king_transactions set amount = ?,paid=? where transid=?",array($trans_amt,$trans_amt,$transid));
-			
-                        // Process to batch this transaction
-                        //echo "$transid,$ttl_num_orders,$batch_remarks,$updated_by";
-                        $this->load->model("reservation_model");
-                        $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
-                        $this->session->set_flashdata("erp_pop_info","$transid is processed for batch");
+				
+            // Process to batch this transaction
+            $this->load->model("reservation_model");
+            $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+            //$this->session->set_flashdata("erp_pop_info","$transid is processed for batch");
                         
 		}
-                //die("TESTING");
+     	//die("TESTING");
 		
 		$bal_discount_amt_msg = '';
 			if($bal_discount_amt)
@@ -7692,9 +7715,10 @@ order by p.product_name asc
 		$inp=array("bill_no"=>$billno,"franchise_id"=>$franid,"transid"=>$transid,"user_id"=>$userid,"status"=>1);
 		$this->db->insert("pnh_cash_bill",$inp);
 		
-        $this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
-
-
+		$this->session->set_flashdata("erp_pop_info"," PNH Order Placed");
+		
+	 
+		
 		redirect("admin/pnh_offline_order",'refresh');
 	}
 	

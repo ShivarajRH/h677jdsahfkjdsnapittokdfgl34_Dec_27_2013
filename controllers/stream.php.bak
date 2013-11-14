@@ -1,125 +1,7 @@
 <?php
-include APPPATH.'/controllers/analytics.php';
-class Stream extends Analytics 
+include APPPATH.'/controllers/reservation.php';
+class Stream extends Reservation 
 {
-    /**
-     * @access public
-     * @param type $transid
-     */
-    function jx_batch_enable_disable($transid,$flag=1)
-    {
-            $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-            //if($this->db->query("select batch_enabled from king_transactions where transid=?",$transid)->row()->batch_enabled==1)
-            //        $flag=0;
-            
-            $this->db->query("update king_transactions set batch_enabled=? where transid=? limit 1",array($flag,$transid));
-            $this->erpm->do_trans_changelog($transid,"Transaction ".($flag==1?"ENABLED":"DISABLED")." for batch process");
-            
-            echo "Transaction ".$transid." ".($flag==1?"enabled":"disabled")." for batch process";
-    }
-    
-    /**
-     * Get transaction list by batch type, Like, Ready for processing or pending or not ready transaction
-     * @param type $batch_type
-     * @param type $from
-     * @param type $to
-     * @param type $pg
-     * @param type $limit
-     */
-    function jx_get_transaction_list($batch_type,$from,$to,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$pg=0,$limit=50) {
-        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        
-        if($from != '') {
-                $s=date("Y-m-d", strtotime($from));
-                $e=date("Y-m-d",strtotime($to));
-                                
-        }
-        else {
-                $s=date("Y-m-d",strtotime("last month")); 
-                $e=date("Y-m-d",strtotime("today"));
-        }
-        
-        $data['user']=$user;
-        $data['batch_type']=$batch_type;
-        $data['pg']=$pg;
-        $data['limit']=$limit;
-        $data['s']=$s;
-        $data['e']=$e;
-        $data['terrid']=$terrid;
-        $data['townid']=$townid;
-        $data['franchiseid']=$franchiseid;
-        $data['menuid']=$menuid;
-        $data['brandid']=$brandid;
-
-        $this->load->view("admin/body/jx_get_transaction_list",$data);
-    }
-
-    /******** Orders Reservation**************/
-    /**
-     * Check and reserve available stock for all transactions
-     * @param string $batch_remarks
-     * @param type $updated_by
-     */
-    function reserve_avail_stock_all_transaction($updated_by,$batch_remarks='By transaction reservation system') {
-        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        
-        $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
-		from king_orders a
-                join king_transactions tr on tr.transid = a.transid
-                where a.status in (0,1) and tr.batch_enabled=1 #and a.transid=@tid
-		group by a.transid) as ddd
-                where ddd.orders_status=0")->result_array();
-        foreach($rslt_for_trans as $rslt) {
-            $transid = $rslt['transid'];
-            $ttl_num_orders = $rslt['num_order_ids'];
-            
-            //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
-            // Process to batch this transaction
-            $this->erpm->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
-        }
-        //echo 'Success.';
-    }
-    
-    /**
-     * Make transaction enabled for batch and allot stock
-     * @param type $trans
-     * @param type $ttl_num_orders
-     * @param string $batch_remarks
-     * @param type $updated_by
-     */
-    function reserver_batch_process($transid,$ttl_num_orders,$batch_remarks='',$updated_by) {
-        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        $batch_remarks=$batch_remarks=='' ? 'Created by transaction reservation system' : $batch_remarks ;
-        
-        // Process to batch this transaction
-        $this->erpm->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
-    }
-    
-    /**
-     * Dispaly and process transaction batch status as 
-     */
-    function manage_trans_reservations() {
-        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        /*$data['pnh_menu'] = $this->db->query("select * from pnh_menu order by name")->result_array();
-        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
-        $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
-        $data['pnh_menu'] = $this->db->query("select mn.id,mn.name from pnh_menu mn
-                                                    join king_deals deal on deal.menuid=mn.id
-                                                    where mn.status=1 
-                                                    group by mn.id
-                                                    order by mn.name")->result_array();
-        $data['pnh_brands'] = $this->db->query("select br.id,br.name from king_brands br
-                                    join king_orders o on o.brandid=br.id
-                                    group by br.id order by br.name")->result_array();*/
-        $data['user']=$user;
-        //$data['s']=date("d/m/y",$from);
-        //$data['e']=date("g:ia d/m/y",$to);
-
-        $data['page']='manage_trans_reservations';
-        $this->load->view("admin",$data);
-    }
-    /********End Orders Reservation**************/
-    
     /**
      * Function to get count of unreplied comments
      * @param type $stream_id
@@ -184,9 +66,10 @@ class Stream extends Analytics
                                 order by s.created_time desc")->result_array();
                                 //where s.created_by=?,$user['userid']
 
-		$data['page']="streams_manager";
-		$this->load->view("admin",$data);
-	}
+        $data['page']="streams_manager";
+        $this->load->view("admin",$data);
+    }
+	
     /**
      * Function to display streams
      */
@@ -234,7 +117,7 @@ class Stream extends Analytics
 	    $rslt=  $this->db->query("select * from m_stream_post_assigned_users spau
 	                                where spau.viewed=0 and spau.assigned_userid=?",$userid);
 	    if($rslt->num_rows()) {
-	        echo $rslt->num_rows();
+	        $output= $rslt->num_rows();
 	    }
 	    else echo '';
 	}

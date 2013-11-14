@@ -4,14 +4,14 @@ class Erp extends Stream
 {
 	public $user_access=array();
 	
-	//function __construct()
-	//{
-		//parent::__construct();	
-		//$this->task_status = $this->config->item('task_status');
-		//$this->db->query("set session group_concat_max_len=5000000;");
-		//$this->task_for=$this->config->item('task_for');
-		//$this->load->library('pagination');
-	//}
+	/*function __construct()
+	{
+		parent::__construct();	
+		$this->task_status = $this->config->item('task_status');
+		$this->db->query("set session group_concat_max_len=5000000;");
+		$this->task_for=$this->config->item('task_for');
+		$this->load->library('pagination');
+	}*/
 	
 	function exotel_handler($type='upd_agent_status')
 	{
@@ -464,7 +464,7 @@ class Erp extends Stream
 		
 			$user=$this->auth(PURCHASE_ORDER_ROLE);
 			if($_POST)
-			$expected_podeliverydate=$this->input->post('po_deliverydate');
+			$expected_podeliverydate=strtotime($this->input->post('po_deliverydate'));
 			$this->db->query("update t_po_info set date_of_delivery=? where po_id=?",array($expected_podeliverydate,$poid));
 			redirect("admin/viewpo/$poid");
 	}
@@ -3939,7 +3939,8 @@ class Erp extends Stream
 		$data['page']="batch";
 		$this->load->view("admin",$data);
 	}
-		
+	
+	
 	
 	/*
 	 *	function to get franchise names 
@@ -4012,6 +4013,7 @@ class Erp extends Stream
 		{
 			$res = $this->db->query("select f.franchise_id,f.franchise_name from king_transactions ta join pnh_m_franchise_info f on f.franchise_id=ta.franchise_id join pnh_towns tw on tw.id=f.town_id  where  ta.transid in (".(implode(',',$trans_ids)).")");
 		}
+
 		
 		if($res)
 		{
@@ -9468,10 +9470,138 @@ group by product_id,location",$bid)->result_array();
 		$data['prods']=$this->db->query("select p.product_id,p.product_name,l.qty from m_product_deal_link l join m_product_info p on p.product_id=l.product_id where l.itemid=?",$data['deal']['id'])->result_array();
 		$pnh_Deal_upd_log=$this->erpm->get_pnh_deal_update_log($id);
 		
+		$data['ttl_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
+										from king_orders a
+										join king_transactions b on a.transid = b.transid
+										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
+										where is_pnh = 1 and itemid =? and a.status != 3 
+										group by b.franchise_id
+										order by franchise_name asc ",$id)->result_array(); 
+		$data['most_sold_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid
+										from king_orders a
+										join king_transactions b on a.transid = b.transid
+										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
+										where is_pnh = 1 and itemid =? and a.status != 3 
+										group by b.franchise_id
+										order by sold_qty desc limit 10 ",$id)->result_array();
+		$data['latest_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
+										from king_orders a
+										join king_transactions b on a.transid = b.transid
+										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
+										where is_pnh = 1 and itemid =? and a.status != 3 
+										group by b.franchise_id
+										order by init desc limit 10",$id)->result_array();  								
+		
 		$data['pnh_Deal_upd_log']=$pnh_Deal_upd_log;
 		$data['page']="pnh_deal";
 		$this->load->view("admin",$data);
 	}
+	
+	/*
+	 * Ajax function to load yearly deal sales 
+	 * 
+	 */
+	function jx_deal_getsales($yr="",$itemid="")
+	{
+	   if(!$yr)
+		$yr = date('yr');
+		
+	  $sql = "select month(date(from_unixtime(b.init))) as mn,count(*) as t
+			from king_orders a
+			join king_transactions b on a.transid = b.transid
+			where is_pnh = 1 and itemid = '".$itemid."' and year(date(from_unixtime(b.init))) = '".$yr."' and a.status != 3 
+			group by mn  
+			order by mn asc";
+	 $res = $this->db->query($sql);
+	 $deal_on = array();
+	 $deal_summary = array();
+	 for($i=1;$i<=12;$i++)
+	{
+		
+		$deal_on[$i-1] = date('M Y',strtotime($yr.'-'.(($i<10)?'0'.$i:$i).'-01')); 
+		$deal_summary[$deal_on[$i-1]]=array('ttl'=>0);
+	}
+	
+	
+	if($res->num_rows())
+	{
+		foreach($res->result_array() as $row)
+		{
+			$mn = $row['mn'];
+			$deal_summary[$deal_on[$mn-1]]['ttl'] += $row['t']; 
+		}
+	}
+	
+	$deals = array();
+	$deals['ttl'] = array();
+	foreach($deal_summary as $dsale)
+	{
+		array_push($deals['ttl'],$dsale['ttl']);
+	}
+	$output = array();
+	$output['month'] = $deal_on;
+	$output['summary'] = $deals;
+	echo json_encode($output);
+	
+	}
+
+	/*
+	 * Ajax function to load territory,quantity details based on deal
+	 * 
+	 */
+	function jx_deal_getsales_by_territory($itemid="")
+	{
+		
+	  $sql = "select c.territory_id,d.territory_name,sum(a.quantity) as ttl_sold 
+			from king_orders a
+			join king_transactions b on a.transid = b.transid 
+			join pnh_m_franchise_info c on c.franchise_id = b.franchise_id 
+			join pnh_m_territory_info d on c.territory_id = d.id 
+			where itemid = '".$itemid."' and a.status != 3 
+			group by territory_id 
+			order by territory_name";
+	 $res = $this->db->query($sql); 
+	 $deals=array();	
+	
+	if($res->num_rows())
+	{
+		foreach($res->result_array() as $row)
+		{
+			array_push($deals,array($row['territory_name'],$row['ttl_sold']*1,$row['territory_id'])); 
+		}
+	}
+	
+	$output = array();
+	$output['result'] = $deals;
+	echo json_encode($output);	
+	}
+	
+	/*
+	 * Ajax function to load franchises based on territory and deal
+	 * 
+	 */
+	function jx_deal_getfranchise_by_territory($terr_id="",$itemid="")
+	{
+		$fran =$this->db->query("select b.franchise_name,c.territory_name,c.id,ki.itemid
+		from king_transactions a
+		join king_orders ki on ki.transid = a.transid
+		join pnh_m_franchise_info b on b.franchise_id = a.franchise_id
+		join pnh_m_territory_info c on c.id = b.territory_id
+		where c.id='".$terr_id."' and ki.itemid ='".$itemid."' group by b.franchise_name ");
+		
+		if($fran->num_rows())
+		{
+			$output['fran_list']=$fran->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+	
+		}
+		echo json_encode($output);	
+	}
+	
 	
 	function pnh_update_description()
 	{
@@ -14852,7 +14982,7 @@ order by action_date";
 	 */
 	function pnh_invoice_returns($type='all',$date_from="0000-00-00",$date_to="0000-00-00",$srch=0,$franchise='0',$stat=0,$return_frm='all',$pg=0)
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		//filters codndiotions
 		$cond='';
 		$param=array();
@@ -14946,7 +15076,7 @@ order by action_date";
 	 */
 	function add_pnh_invoice_return($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		$data['page'] = 'add_pnh_invoice_return';
 		$data['type']=$type;
 		$this->load->view('admin',$data);
@@ -14958,7 +15088,7 @@ order by action_date";
 	 */
 	function jx_getinvoiceorditems($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		$output = array();
 		$invno = $this->input->post('scaninp');
 		$output['franchise_name']='';
@@ -14969,8 +15099,11 @@ order by action_date";
 		$order_id=0;
 		$error=0;
 		
+		if(!$invno)
+			exit;
+		
 		//check invoice from
-		$order_frm=$this->erpm->get_order_from($invno);
+		$order_frm=$this->erpm->get_order_from($invno);// newly added code
 		
 		if($order_frm=='')
 			$output['status']='error';
@@ -15027,7 +15160,7 @@ order by action_date";
 	 */
 	function jx_chkvalidprodbc($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added code
 		
 		//get product and barcode from post 
 		$prod_id = $this->input->post('pid');
@@ -15063,9 +15196,9 @@ order by action_date";
 	function process_add_pnh_invoice_return()
 	{
 		//$this->erpm->auth(PNH_INVOICE_RETURNS|PNH_ADD_INVOICE_RETURN);
-		$inv_for=$this->input->post('inv_for');
-		$order_from=$this->erpm->get_order_from_by_id($inv_for);
-		$this->erpm->get_return_access($order_from);
+		$inv_for=$this->input->post('inv_for');//newly added code
+		$order_from=$this->erpm->get_order_from_by_id($inv_for);//newly added code
+		$this->erpm->get_return_access($order_from);//newly added code
 				
 		$prod_rcvd_pid = $this->input->post('prod_rcvd_pid');
 		$prod_rcvd_qty = $this->input->post('prod_rcvd_qty');
@@ -15126,7 +15259,7 @@ order by action_date";
 	function view_pnh_invoice_return($return_id,$type='all')
 	{
 		//$this->erpm->auth(PNH_INVOICE_RETURNS|PNH_ADD_INVOICE_RETURN);
-		$this->erpm->get_return_access($type);
+		$this->erpm->get_return_access($type);//newly added
 		$data['return_det'] = $this->erpm->get_pnh_invreturn($return_id);
 		
 		if(!$data['return_det'])
@@ -15141,7 +15274,7 @@ order by action_date";
 	{
 		error_reporting(E_ALL);
 		//$user = $this->erpm->auth(PNH_INVOICE_RETURNS);
-		$this->erpm->get_return_access($this->input->post('login_type'));
+		$this->erpm->get_return_access($this->input->post('login_type'));//newly added
 		$user=$this->erpm->auth();
 		$return_prod_status = $this->input->post('return_prod_status');
 		$return_prod_id = $this->input->post('return_prod_id');
@@ -15711,7 +15844,8 @@ order by action_date";
 	 */
 	function pnh_update_returns_to_stock($type='all')
 	{
-		$this->erpm->get_return_access($type);
+		//$this->erpm->get_return_access($type);
+		$this->erpm->auth(true);
 		
 		$return_prd_det = $this->erpm->get_pnh_invreturn_mvstock_det();
 		
@@ -15726,7 +15860,7 @@ order by action_date";
 	
 	function jx_update_pending_return_stock()
 	{
-		$this->erpm->auth(true,true);
+		$this->erpm->auth(true);
 		
 		$return_prod_status = $this->input->post('return_prod_status');
 		$return_prod_id = $this->input->post('return_prod_id');
@@ -23732,13 +23866,13 @@ die; */
 	{
 		$output=array();
 		
-			$sql="SELECT l.product_id,a.transid,is_pnh,partner_id,c.name AS partner_name,DATE_FORMAT(FROM_UNIXTIME(`time`),'%d/%m/%Y') AS orderd_on,(b.quantity*l.qty) as quantity
+			$sql="SELECT l.product_id,a.transid,is_pnh,partner_id,c.name AS partner_name,DATE_FORMAT(FROM_UNIXTIME(`time`),'%d/%m/%Y') AS orderd_on,(b.quantity*l.qty) as quantity,b.bill_person,(SELECT SUM(b.quantity))  AS ord_qty 
 					FROM king_transactions a 
 					JOIN king_orders b ON a.transid = b.transid 
 					LEFT JOIN partner_info c ON c.id = a.partner_id 
 					JOIN m_product_deal_link l ON l.itemid=b.itemid 
-					WHERE l.product_id=?  AND b.status = 0 AND partner_id=?";
-		
+					WHERE l.product_id=?  AND b.status = 0 AND partner_id=? GROUP BY a.transid";
+			
 			$partner_transids_res=$this->db->query($sql,array($prodid,$partnerid));
 			if($partner_transids_res->num_rows())
 			{
@@ -23787,7 +23921,7 @@ die; */
 														JOIN t_po_product_link p ON p.po_id=l.po_id
 														JOIN `t_grn_invoice_link`i ON i.grn_id=l.grn_id
 														JOIN `m_vendor_info` v ON v.vendor_id=t.vendor_id
-														WHERE l.product_id=?  AND  (i.created_on>".mktime(0,0,0,0,-30)." or i.created_on is null) 
+														WHERE l.product_id=?  AND  DATE(i.created_on) >= DATE_SUB(CURDATE(),INTERVAL 30 DAY) 
 														GROUP BY t.vendor_id",$pid);
 		
 		$last_60dayspurchaseorderdet=$this->db->query("SELECT v.vendor_name,l.product_id,SUM(invoice_qty) AS ttl_qty ,l.margin,i.created_on
@@ -23796,7 +23930,7 @@ die; */
 														JOIN t_po_product_link p ON p.po_id=l.po_id
 														JOIN `t_grn_invoice_link`i ON i.grn_id=l.grn_id
 														JOIN `m_vendor_info` v ON v.vendor_id=t.vendor_id
-														WHERE l.product_id=?  AND  (i.created_on>".mktime(0,0,0,0,-60)." or i.created_on is null) 
+														WHERE l.product_id=?  AND DATE(i.created_on) >= DATE_SUB(CURDATE(),INTERVAL 60 DAY) 
 														GROUP BY t.vendor_id",$pid);
 		
 		$last_90dayspurchaseorderdet=$this->db->query("SELECT v.vendor_name,l.product_id,SUM(invoice_qty) AS ttl_qty ,l.margin,i.created_on
@@ -23805,7 +23939,7 @@ die; */
 														JOIN t_po_product_link p ON p.po_id=l.po_id
 														JOIN `t_grn_invoice_link`i ON i.grn_id=l.grn_id
 														JOIN `m_vendor_info` v ON v.vendor_id=t.vendor_id
-														WHERE l.product_id=?  AND  (i.created_on>".mktime(0,0,0,0,-90)." or i.created_on is null) 
+														WHERE l.product_id=?  AND  DATE(i.created_on) >= DATE_SUB(CURDATE(),INTERVAL 90 DAY) 
 														GROUP BY t.vendor_id",$pid);
 		
 		if($last_30dayspurchaseorderdet->num_rows())
@@ -24268,7 +24402,75 @@ die; */
 	}
 
 	/**
-	 * function to update lr nos 
+/**
+	 * Franchise Payment Mode Module START
+	 */
+	
+	//Interface to menu Margin -start	
+	function list_allmenumargin()
+	{
+		$user=$this->auth(PRODUCT_MANAGER_ROLE);
+		$menu_list_res=$this->db->query("select * from pnh_menu where status=1 group by id order by name asc");
+		$data['menu_list_res']=$menu_list_res;
+		$data['page']='menumargin_list';
+		$this->load->view("admin",$data);
+	}
+
+
+	function jx_load_menumargindet($menuid='')
+	{
+		$menuid=$this->input->post('menu_id');
+		$menu_det=$this->db->query("select * from pnh_menu where id=?",$menuid)->row_array();
+		$output=array();
+		if(!empty($menu_det))
+		{
+			$output['status']='success';
+			$output['menu_det']=$menu_det;
+		}
+		else
+			$output['status']='error';
+
+		echo json_encode($output);
+	}
+
+	function to_update_menumargin()
+	{
+		$user=$this->auth(true,true);
+		$menuid=$this->input->post('menu_id');
+		$menu_margin=$this->input->post('margin');
+		$bal_dicount=$this->input->post('bal_disc');
+		$bal_amt=$this->input->post('min_bal_val');
+		$loyalty_pntvalue=$this->input->post('loyalty_pntvalue');
+		if($menuid)
+			$this->db->query("update pnh_menu set default_margin=?,min_balance_value=?,bal_discount=?,loyality_pntvalue=? where id=? and status=1",array($menu_margin,$bal_amt,$bal_dicount,$loyalty_pntvalue,$menuid));
+		$this->db->query("insert into pnh_menu_margin_track(menu_id,default_margin,balance_discount,balance_amount,loyality_pntvalue,created_by,created_on)values(?,?,?,?,?,?,?)",array($menuid,$menu_margin,$bal_dicount,$bal_amt,$loyalty_pntvalue,$user['userid'],time()));
+		if($this->db->affected_rows()>=1)
+			$this->erpm->flash_msg("Menu Margin Updated Successfully");
+		redirect($_SERVER['HTTP_REFERER']);
+	}
+	
+	function load_menumarginupdate_log($menuid='')
+	{
+		$user=$this->auth(true,true);
+		$menuid=$this->input->post('menuid');
+		$menu_margin_logres=$this->db->query("select a.*,m.name,ad.name as user,date_format(from_unixtime(a.created_on),'%d/%m/%Y %r') as updated_on from pnh_menu_margin_track a join pnh_menu m on m.id=a.menu_id join king_admin ad on ad.id=a.created_by where a.menu_id=?  order by a.created_on desc",$menuid);
+		
+		$output=array();
+		if($menu_margin_logres->num_rows())
+		{
+			$output['status']='success';
+			$output['menumarginupdate_det']=$menu_margin_logres->result_array();
+		}
+		else
+		{
+			$output['status']='error';
+			$output['msg']='No Update Found';
+		}
+		echo json_encode($output);
+	}
+	//Interface to menu Margin ---End
+	
+	/** function to update lr nos 
 	 */
 	function update_bulk_lrdetails()
 	{

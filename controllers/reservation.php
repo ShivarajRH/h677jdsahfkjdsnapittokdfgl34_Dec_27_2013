@@ -7,6 +7,28 @@
 include APPPATH.'/controllers/analytics.php';
 class Reservation extends Analytics {
     /**
+     * Set towns courier priority
+     */
+    function towns_courier_priority() {
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        
+        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+        $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+        
+        $data['courier_providers'] = $this->db->query("select * from m_courier_info where is_active =1")->result_array();
+        
+        $data['town_courier_priority_link'] = $this->db->query("select * from `pnh_town_courier_priority_link` tcp
+                                                            join pnh_towns tw on tw.id = tcp.town_id
+                                                            where tcp.is_active=1")->result_array();
+        if($_POST) {
+            $this->load->model("reservation_model");
+            $this->reservation_model->put_town_courier_prio();
+        }
+        $data['user']=$user;
+        $data['page']='towns_courier_priority';
+        $this->load->view("admin",$data);
+    }
+    /**
      * @access public
      * @param type $transid
      */
@@ -77,15 +99,15 @@ class Reservation extends Analytics {
         //$limit = $_POST["limit"]; //
         
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        $this->load->model("reservation_model");
+        $this->load->model("reservation_model"); //die($from.'<br>'.$to);
         if($from != '') {
                 $s=date("Y-m-d", strtotime($from));
-                $e=date("Y-m-d",strtotime($to));
-                                
+                $e=date("Y-m-d", strtotime($to));
+                            //die($s.'<br>'.$e);
         }
         else {
-                $s=date("Y-m-d",strtotime("last month")); 
-                $e=date("Y-m-d",strtotime("today"));
+                $s=date("m-d-Y",strtotime("last month")); 
+                $e=date("m-d-Y",strtotime("today"));
         }
         
         $data['user']=$user;

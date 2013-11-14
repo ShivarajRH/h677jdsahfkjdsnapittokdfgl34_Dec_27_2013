@@ -12,7 +12,18 @@ class reservation_model extends Model
     {
             parent::__construct();
     }
-    
+    function put_town_courier_prio() {
+        foreach(array("town_id","courier_priority_1","courier_priority_2","courier_priority_3","delivery_hours_1","delivery_hours_2","delivery_hours_3") as $i)
+                $$i= $this->input->post($i);
+        $is_active = 1;
+        $this->db->query("insert into `pnh_town_courier_priority_link`(`town_id`,`courier_priority_1`,`courier_priority_2`,`courier_priority_3`,`delivery_hours_1`,`delivery_hours_2`,`delivery_hours_3`,`is_active`,`created_on`,`created_by`,`modified_on`,`modified_by`) 
+            values (?,?,?,?,?,?,?,?,?,?,?,?)",array($town_id,$courier_priority_1,$courier_priority_2,$courier_priority_3,$delivery_hours_1,$delivery_hours_2,$delivery_hours_3,$is_active));
+    }
+    /**
+     * Get franchise experience information based on created_time
+     * @param type $f_created_on
+     * @return type array
+     */
     function fran_experience_info($f_created_on) {
         //$f_created_on =$f_created_on; //$f['f_created_on'];
         $fr_reg_diff = ceil((time()-$f_created_on)/(24*60*60));

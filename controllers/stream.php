@@ -117,9 +117,9 @@ class Stream extends Reservation
 	    $rslt=  $this->db->query("select * from m_stream_post_assigned_users spau
 	                                where spau.viewed=0 and spau.assigned_userid=?",$userid);
 	    if($rslt->num_rows()) {
-	        $output= $rslt->num_rows();
+	        echo $rslt->num_rows();
 	    }
-	    $this->output->set_output($output);
+	    else echo '';
 	}
 	
 	/**

@@ -335,3 +335,60 @@ is_pending=total_trans =>pending
 is_pending < total_trans => partial_pending
 ####
 select status from king_orders where transid='PNHYVV59449';
+
+###################
+# Nov_13_2013
+
+
+select * from (
+select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
+		,sum(o.status) as is_pending,o.status,o.id,o.itemid,o.brandid,o.quantity,o.time,o.i_orgprice,o.bill_person,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+		,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+        from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+        WHERE tr.actiontime between 1380565800 and 1384367399 and o.status in (0,1) and tr.batch_enabled=1 and i.id is null 
+        group by o.transid order by tr.actiontime desc) as g where  g.is_pending = g.total_trans  group by transid
+
+select from_days(6767)
+
+SELECT STR_TO_DATE('10.31.2013',GET_FORMAT(DATE,'INR'));
+        -> '2003-10-31'
+
+#New work
+CREATE TABLE `pnh_town_courier_priority_link` (  
+	  `id` bigint(11) NOT NULL AUTO_INCREMENT,       
+	  `town_id` int(11) DEFAULT '0',                 
+	  `courier_priority_1` int(5) DEFAULT '0',       
+	  `courier_priority_2` int(5) DEFAULT '0',       
+	  `courier_priority_3` int(5) DEFAULT '0',       
+	  `delivery_hours_1` int(3) DEFAULT '0',         
+	  `delivery_hours_2` int(3) DEFAULT '0',         
+	  `delivery_hours_3` int(3) DEFAULT '0',         
+	  `is_active` tinyint(1) DEFAULT '0',            
+	  `created_on` datetime DEFAULT NULL,            
+	  `created_by` int(11) DEFAULT '0',              
+	  `modified_on` datetime DEFAULT NULL,           
+	  `modified_by` int(11) DEFAULT '0',             
+	  PRIMARY KEY (`id`)
+	);
+
+select * from m_courier_info where is_active =1;
+
+select * from `pnh_town_courier_priority_link` tcp
+join pnh_towns tw on tw.id = tcp.town_id
+where tcp.is_active=1;
+
+#

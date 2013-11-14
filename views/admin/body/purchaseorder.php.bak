@@ -37,6 +37,7 @@ Select Vendor : <select id="vendorsel">
 <th>Qty</th>
 <th>Last 90 days order</th>
 <th>MRP</th>
+<th>DP Price</th>
 <th style="display: none;">margin</th>
 <th>Scheme discount</th>
 <th>Discount Type</th>
@@ -120,6 +121,9 @@ Search &amp; Add : <input type="text" class="inp" id="po_search" style="width:40
 <td><input type="text" class="qty inp" size="2" name="qty[]" value="%qty%"></td>
 <td>%orders%</td>
 <td><input type="text" class="mrp inp" size="8" name="mrp[]" value="mrpvalue"></td>
+<td>
+	<div style="visibility: %dp_price_inp% "><input type="text" class="dp_price inp" size="8" name="dp_price[]" value="%dp_price%"></div>
+</td>
 <td style="display:none"><input type="text" class="margin inp readonly" size="6" readonly="readonly" name="margin[]" value="%margin%"></td>
 <td><input type="text" class="sdiscount inp" size="6" name="sch_discount[]" value="0"></td>
 <td><select class="stype" name="sch_type[]">
@@ -331,9 +335,14 @@ function addproduct(id,name,mrp,margin,orders,qty)
 		template=template.replace(/%sno%/g,i+1);
 		template=template.replace(/%margin%/g,margin);
 		template=template.replace(/%foc%/g,"foc"+i);
+		template=template.replace(/%dp_price%/g,o.dp_price);
 		
+		if(o.is_serial_required*1)
+			template=template.replace(/%dp_price_inp%/g,'visible');
+		else
+			template=template.replace(/%dp_price_inp%/g,'hidden');
+			
 		template=template.replace(/%qty%/g,qty);
-		
 		template=template.replace(/%orders%/g,o.orders);
 		template=template.replace(/%offer%/g,"offer"+i);
 		template=template.replace(/--barcode--/g,o.barcode);
@@ -353,6 +362,7 @@ function calc_total_pov()
 		$p=$(o).parents("tr").get(0);
 		qty=parseInt($(".qty",$p).val());
 		mrp=parseInt($(".mrp",$p).val());
+		dp_price=parseInt($(".dp_price",$p).val());
 		stype=parseInt($(".stype",$p).val());
 		sdiscount=parseFloat($(".sdiscount",$p).val());
 		if(isNaN(sdiscount))
@@ -361,11 +371,22 @@ function calc_total_pov()
 			$(".sdiscount",$p).val("0");
 		}
 		margin=parseInt($(".margin",$p).val());
-		price=mrp-(mrp*margin/100);
-		if(stype==1)
-			price=price-(mrp*sdiscount/100);
-		else
-			price=price-sdiscount;
+		
+		if(dp_price*1 > 0)
+		{
+			price=dp_price-(dp_price*margin/100);
+			if(stype==1)
+				price=price-(dp_price*sdiscount/100);
+			else
+				price=price-sdiscount;
+		}else
+		{
+			price=mrp-(mrp*margin/100);
+			if(stype==1)
+				price=price-(mrp*sdiscount/100);
+			else
+				price=price-sdiscount;
+		}
 		total+=(price*qty);
 	});
 	$("#total_po_value").html(Math.round(total,2));
@@ -387,10 +408,11 @@ $(function(){
 		}
 	});
 
-	$("#pprods .sdiscount, #pprods .stype, #pprods .qty").live("change",function(){
+	$("#pprods .sdiscount,#pprods .mrp, #pprods .stype, #pprods .qty,#pprods .dp_price").live("change",function(){
 		$p=$(this).parents("tr").get(0);
 		qty=parseInt($(".qty",$p).val());
 		mrp=parseInt($(".mrp",$p).val());
+		dp_price=parseInt($(".dp_price",$p).val());
 		stype=parseInt($(".stype",$p).val());
 		sdiscount=parseFloat($(".sdiscount",$p).val());
 		if(isNaN(sdiscount))
@@ -399,11 +421,23 @@ $(function(){
 			$(".sdiscount",$p).val("0");
 		}
 		margin=parseInt($(".margin",$p).val());
-		price=mrp-(mrp*margin/100);
-		if(stype==1)
-			price=price-(mrp*sdiscount/100);
-		else
-			price=price-sdiscount;
+		
+		if(dp_price*1 > 0)
+		{
+			price=dp_price-(dp_price*margin/100);
+			if(stype==1)
+				price=price-(dp_price*sdiscount/100);
+			else
+				price=price-sdiscount;	
+		}else
+		{
+			price=mrp-(mrp*margin/100);
+			if(stype==1)
+				price=price-(mrp*sdiscount/100);
+			else
+				price=price-sdiscount;
+		}
+		
 		$(".pprice",$p).val(price);
 		$(".tpprice",$p).val(price*qty);
 		calc_total_pov();

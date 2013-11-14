@@ -393,7 +393,7 @@
 
 
 <!-- add alternative number -->
-<div id="add_alternative_number" title="Add alternative number">
+<div id="add_alternative_number">
 	<form action="<?php echo site_url('admin/pnh_add_manifesto_alternative_number') ?>" method="post" id="add_alternative_number_form">
 		<table cellpadding="5" cellspacing="0" class="datagrid" width="100%">
 			<tbody>
@@ -407,9 +407,7 @@
 		</div>
 	</form>
 </div>
-
 <!-- add alternative number end -->
-
 <script>
 prepare_daterange('from_date','to_date');
 

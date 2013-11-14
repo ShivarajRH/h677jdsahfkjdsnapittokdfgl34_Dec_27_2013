@@ -986,3 +986,20 @@ alter table `pnh_m_manifesto_sent_log` add column `ref_box_no` bigint (10) DEFAU
 
 alter table `t_grn_product_link` add column `dp_price` decimal (15,4) DEFAULT '0' NULL  after `mrp`;
 alter table `t_po_product_link` add column `dp_price` decimal (15,4) DEFAULT '0' NULL  after `mrp`;
+
+CREATE TABLE `pnh_town_courier_priority_link` (  
+	  `id` bigint(11) NOT NULL AUTO_INCREMENT,       
+	  `town_id` int(11) DEFAULT '0',                 
+	  `courier_priority_1` int(5) DEFAULT '0',       
+	  `courier_priority_2` int(5) DEFAULT '0',       
+	  `courier_priority_3` int(5) DEFAULT '0',       
+	  `delivery_hours_1` int(3) DEFAULT '0',         
+	  `delivery_hours_2` int(3) DEFAULT '0',         
+	  `delivery_hours_3` int(3) DEFAULT '0',         
+	  `is_active` tinyint(1) DEFAULT '0',            
+	  `created_on` datetime DEFAULT NULL,            
+	  `created_by` int(11) DEFAULT '0',              
+	  `modified_on` datetime DEFAULT NULL,           
+	  `modified_by` int(11) DEFAULT '0',             
+	  PRIMARY KEY (`id`)
+	);

@@ -31,8 +31,9 @@
 <th>Product</th>
 <th></th>
 <th>Oldest Order Details</th>
-<th >Qty</th>
+<th>Qty</th>
 <th>MRP</th>
+<th>DP Price</th>
 <th>margin</th>
 <th>Scheme discount</th>
 <th>Discount Type</th>
@@ -58,6 +59,7 @@
 <div style="padding:127px 4px ;">
 	<input type="submit" value="Place Purchase Orders">
 </div>
+</form>
 
 <div id="sl_products" title="Choose and add to current order">
 	<span style="float: right">
@@ -82,7 +84,7 @@
 </div>
 
 
-</form>
+
 
 <form id="src_form" action="<?=site_url("admin/mark_src_products")?>" method="post">
 <input type="hidden" name="pids" class="pids">
@@ -106,7 +108,7 @@
 <input type="hidden" class="menu" name="menuid[]" value="%menuid%">
 <input type="hidden" class="menu" name="menuname[]" value="%menu%">
 <input type="hidden" class="menu" name="brandname[]" value="%brand_name%"> 
-<input type="hidden" class="vendor" name="vendor[]" value="%vendor_id%">
+<input type="hidden" class="vendor" name="sel_vendor[]" value="%vendor_id%">
 <input type="hidden" class="partner" name="partner[]" value="%partner_id% %is_pnh%">
 
 
@@ -124,6 +126,7 @@
 </td>
 <td><input type="text" class="inp calc_pp qty" id="prod_qty_%product_id%"  size=2 name="qty[]" value="%require_qty%"></td>
 <td><input type="text" class="inp calc_pp mrp" size=4 name="mrp[]" value="%mrpvalue%"></td>
+<td><input type="text" title="Change/Update DP Price on change" class="inp calc_pp has_dp_price dp_price" size=4 name="dp_price[]" value="%dp_price%"></td>
 <td><input type="text" class="inp calc_pp margin" size=3 name="margin[]" value="%margin%"></td>
 <td><input type="text" class="inp calc_pp discount" size=3 name="sch_discount[]" value="0"></td>
 <td><select class="calc_pp type" name="sch_type[]">
@@ -296,12 +299,18 @@ function addproduct(id,name,mrp,require)
 		template=template.replace(/%product_brand%/g,o.brand_name);
 		template=template.replace(/--barcode--/g,o.barcode);
 		template=template.replace(/%mrpvalue%/g,o.mrp);
+		template=template.replace(/%dp_price%/g,o.dp_price);
 		template=template.replace(/%margin%/g,o.margin);
 		template=template.replace(/%foc%/g,"foc"+i);
 		template=template.replace(/%offer%/g,"offer"+i);
 		
 		mrp=parseInt(o.mrp);
-		pprice=mrp-(mrp*parseInt(o.margin)/100);
+		
+		if(!o.dp_price.length)
+			pprice=mrp-(mrp*parseInt(o.margin)/100);
+		else
+			pprice=o.dp_price-(o.dp_price*parseInt(o.margin)/100);
+			
 		template=template.replace(/%pprice%/g,pprice);
 
 	
@@ -348,6 +357,15 @@ function addproduct(id,name,mrp,require)
 
 		template=template.replace(/%partnerlist%/g,partners);
 		$("#pprods tbody").append(template);
+		
+		if(!o.dp_price.length)
+		{
+			$('#pprods tbody .has_dp_price:last').css('visibility','hidden');	
+		}else
+		{
+			$('#pprods tbody .has_dp_price:last').css('visibility','visible');
+		}
+		
 		added_po.push(id);
 
 		if(!$('select[name="fil_brand"] option#brand_'+o.brand_id).length){
@@ -592,18 +610,37 @@ $(function(){
 
 	});
 	
-	
-	
 	$("#pprods .calc_pp").live("change",function(){
 		$r=$(this).parents("tr").get(0);
+		
+		dp_price=parseInt($(".dp_price",$r).val());
+		
+		dp_price = isNaN(dp_price)?'-1':dp_price;
+		
 		mrp=parseInt($(".mrp",$r).val());
 		margin=parseInt($(".margin",$r).val());
 		discount=parseInt($(".discount",$r).val());
-		mmrp=mrp-(mrp*margin/100);
-		if($(".type",$r).val()==1)
-			mmrp=mmrp-(mrp*discount/100);
+		if(dp_price == -1)
+		{
+			mmrp=mrp-(mrp*margin/100);
+			if($(".type",$r).val()==1)
+				mmrp=mmrp-(mrp*discount/100);
+			else
+				mmrp=mmrp-discount;
+		}
 		else
-			mmrp=mmrp-discount;
+		{
+			mmrp=dp_price-(dp_price*margin/100);
+			if($(".type",$r).val()==1)
+				mmrp=mmrp-(dp_price*discount/100);
+			else
+				mmrp=mmrp-discount;
+				
+			if(dp_price > mrp)
+				alert("Error:: Please note DP Price cannot be greater than MRP");
+					
+		}
+			
 		if(isNaN(mmrp))
 			mmrp="-";
 		$(".pprice",$r).val(mmrp);

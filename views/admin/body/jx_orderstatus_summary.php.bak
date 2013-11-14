@@ -39,7 +39,7 @@ $sql_all = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.men
     group by c.transid  
     order by c.init desc  ";
 
-##=
+
 $sql_shipped = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
                     from shipment_batch_process_invoice_link sd
                     join proforma_invoices b on sd.p_invoice_no = b.p_invoice_no

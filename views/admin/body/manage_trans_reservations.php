@@ -25,16 +25,16 @@
     <div class="level1_filters">
         <fieldset>
             <span title="Toggle Filter Block" class="close_filters"><span class="close_btn">Show</span>
-            <h3>Filters:</h3>
+            <h3 class="filter_heading">Filters:</h3>
             </span>
                 <div class="filters_block">
                         <div class="date_filter">
                             <form id="trans_date_form" method="post">
                                     <b>Show transactions : </b>
-                                    <label for="date_from">From :</label><input type="text" style="width: 90px;" id="date_from"
-                                            name="date_from" value="<?php echo date('m-01-Y',time()-60*60*24*7*4)?>" />
-                                    <label for="date_to">To :</label><input type="text" style="width: 90px;" id="date_to"
-                                            name="date_to" value="<?php echo date('m-d-Y',time())?>" /> 
+                                    <label for="date_from">From :</label><input type="text" id="date_from"
+                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4)?>" />
+                                    <label for="date_to">To :</label><input type="text" id="date_to"
+                                            name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
                                     <input type="submit" value="Submit">
                             </form>
                         </div>
@@ -93,9 +93,7 @@
             <span class="ttl_trans_listed dash_bar"></span>
 <!--            <span class="log_display"></span>-->
     </div>        
-    <div id="ready">
-        <div style="padding:1px 0px;" id="trans_list_replace_block"></div>
-    </div>
+        <div id="trans_list_replace_block"></div>
 
 </div>
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>
@@ -129,9 +127,9 @@
             $(".page_num").val=pg;
         }
         pg = (typeof pg== 'undefined') ? $(".page_num").val() : $(".page_num").val();
-//        alert(pg);
+
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
-        $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); //trans_list_replace_block
+        $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
         $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+limit+"/"+pg+"",{},function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
@@ -142,7 +140,7 @@ $(document).ready(function() {
         //FIRST RUN
         $( "#date_from").datepicker({
              changeMonth: true,
-             dateFormat:'mm-dd-yy',//'yy-mm-dd',
+             dateFormat:'yy-mm-dd',
              numberOfMonths: 1,
              maxDate:0,
 //             minDate: new Date(reg_date),
@@ -152,15 +150,14 @@ $(document).ready(function() {
            });
         $( "#date_to" ).datepicker({
             changeMonth: true,
-             dateFormat:'mm-dd-yy',//'yy-mm-dd',
+             dateFormat:'yy-mm-dd',
 //             numberOfMonths: 1,
              maxDate:0,
              onClose: function( selectedDate ) {
                $( "#date_from" ).datepicker( "option", "maxDate", selectedDate );
              }
         });
-
-        prepare_daterange('date_from','date_to');
+        //prepare_daterange('date_from','date_to');
     });
     
     function done(data) { }

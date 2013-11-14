@@ -163,7 +163,7 @@ color: #121213;
                             <div class="show_totalamount dash_bar"></div> 
                         </td>
                         <td align="right" valign="middle">
-                            <select id="sel_product" name="sel_product" colspan="2">
+                            <select id="sel_menu" name="sel_product" colspan="2">
                                 <option value="00">Select Product</option>
                                  <?php foreach($pnh_menu as $menu): ?>
                                         <option value="<?php echo $menu['id'];?>"><?php echo $menu['name'];?></option>
