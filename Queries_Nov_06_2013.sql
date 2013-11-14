@@ -391,4 +391,19 @@ select * from `pnh_town_courier_priority_link` tcp
 join pnh_towns tw on tw.id = tcp.town_id
 where tcp.is_active=1;
 
-#
+# Nov_14_2013
+
+select distinct tw.id as townid,tw.town_name,tcp.* from pnh_towns tw
+left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id
+order by town_name;
+
+select town_id from `pnh_town_courier_priority_link` where town_id='3'
+
+select * from `pnh_town_courier_priority_link` tcp;
+
+select * from pnh_towns
+select * from pnh_m_territory_info;
+
+select ter.id,ter.territory_name from pnh_m_territory_info ter
+join pnh_towns tw on tw.territory_id = ter.id
+group by ter.id order by territory_name

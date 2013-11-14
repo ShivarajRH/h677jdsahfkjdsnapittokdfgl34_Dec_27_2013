@@ -12,12 +12,31 @@ class reservation_model extends Model
     {
             parent::__construct();
     }
-    function put_town_courier_prio() {
-        foreach(array("town_id","courier_priority_1","courier_priority_2","courier_priority_3","delivery_hours_1","delivery_hours_2","delivery_hours_3") as $i)
+    function put_town_courier_priority() {
+        foreach(array("townid","courier_priority_1","courier_priority_2","courier_priority_3","delivery_hours_1","delivery_hours_2","delivery_hours_3","userid") as $i) {
                 $$i= $this->input->post($i);
+        }
+        
         $is_active = 1;
-        $this->db->query("insert into `pnh_town_courier_priority_link`(`town_id`,`courier_priority_1`,`courier_priority_2`,`courier_priority_3`,`delivery_hours_1`,`delivery_hours_2`,`delivery_hours_3`,`is_active`,`created_on`,`created_by`,`modified_on`,`modified_by`) 
-            values (?,?,?,?,?,?,?,?,?,?,?,?)",array($town_id,$courier_priority_1,$courier_priority_2,$courier_priority_3,$delivery_hours_1,$delivery_hours_2,$delivery_hours_3,$is_active));
+        $townid_exits = $this->db->query("select town_id from `pnh_town_courier_priority_link` where town_id=?",$townid);
+        //echo "=".$townid_exits."=".$this->db->last_query(); die();
+        if($townid_exits->num_rows() <= 0) {
+            $created_on = date("Y-m-d H:i:s",time('now'));
+            $created_by = $userid;
+
+            $this->db->query("insert into `pnh_town_courier_priority_link`
+                (`town_id`,`courier_priority_1`,`courier_priority_2`,`courier_priority_3`,`delivery_hours_1`,`delivery_hours_2`,`delivery_hours_3`,`is_active`,`created_on`,`created_by`) 
+                values (?,?,?,?,?,?,?,?,?,?)",array($townid,$courier_priority_1,$courier_priority_2,$courier_priority_3,$delivery_hours_1,$delivery_hours_2,$delivery_hours_3,$is_active,$created_on,$created_by));
+        }
+        else {
+            $modified_on = date("Y-m-d H:i:s",time('now'));
+            $modified_by = $userid;
+            $arr_details=array("town_id"=>$townid,"courier_priority_1"=>$courier_priority_1,"courier_priority_2"=>$courier_priority_2
+                ,"courier_priority_3"=>$courier_priority_3,"delivery_hours_1"=>$delivery_hours_1,"delivery_hours_2"=>$delivery_hours_2
+                ,"delivery_hours_3"=>$delivery_hours_3,"is_active"=>$is_active,"modified_on"=>$modified_on,"modified_by"=>$modified_by);
+            $this->db->update("pnh_town_courier_priority_link",$arr_details,array("town_id"=>$townid));
+        }
+        return true;
     }
     /**
      * Get franchise experience information based on created_time

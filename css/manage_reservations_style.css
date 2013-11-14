@@ -13,7 +13,7 @@ fieldset {
 }
 select {
     margin: 10px 0 5px 5px;
-    width: 204px;
+/*    width: 204px;*/
 }
 label {
     margin:10px 0 15px 5px;
@@ -191,3 +191,4 @@ h3.filter_heading { margin-bottom: 0px; margin-top: 0;width: 788px;}
 #date_from,#date_to {width: 90px;}
 #trans_list_replace_block {padding:1px 0px; clear: both;}
 .str_time { padding: 5px 0 5px; }
+.datagrid .small_text { font-size: 10px; }

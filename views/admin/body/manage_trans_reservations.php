@@ -65,7 +65,7 @@
                                         <option value="<?php echo $town['id'];?>"><?php echo $town['town_name'];?></option>
                                 <?php endforeach; */ ?>
                             </select>
-                            <select id="sel_franchise" name="sel_franchise">
+                            <select id="sel_franchise" name="sel_franchise" style="width: 204px;">
                                 <option value="00">All Franchise</option>
                             </select>
                         </div>

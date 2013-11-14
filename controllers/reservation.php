@@ -6,24 +6,45 @@
  */
 include APPPATH.'/controllers/analytics.php';
 class Reservation extends Analytics {
+    function put_courier_priority() {
+        $user=$this->erpm->auth(); //return current login user details
+        if($_POST) {
+            $_POST['userid'] = $user['userid'];
+            $this->load->model("reservation_model");
+            if($this->reservation_model->put_town_courier_priority()) {
+                echo 'Success';
+            }
+            else
+                echo 'fail';
+        }
+    }
     /**
      * Set towns courier priority
      */
-    function towns_courier_priority() {
+    function towns_courier_priority($terrid='') {
+        $field_cond=$cond='';
+        if($terrid != '' and is_numeric($terrid)) {
+            $cond = " where territory_id=".$terrid;
+            $data['terr_selected'] = $this->db->query("select id as territory_id,territory_name from pnh_m_territory_info  where id=? order by territory_name",$terrid)->row_array();
+        }
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         
-        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
-        $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+        $data['pnh_terr'] = $this->db->query("select ter.id,ter.territory_name from pnh_m_territory_info ter
+                                                join pnh_towns tw on tw.territory_id = ter.id
+                                                group by ter.id order by territory_name")->result_array();
+        
+        
+        
+        $data['towns_courier_priority']=$this->db->query("select distinct tw.id as townid,tw.town_name,tcp.*$field_cond from pnh_towns tw
+                                                            left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id
+                                                            $cond
+                                                            order by town_name")->result_array();
         
         $data['courier_providers'] = $this->db->query("select * from m_courier_info where is_active =1")->result_array();
         
         $data['town_courier_priority_link'] = $this->db->query("select * from `pnh_town_courier_priority_link` tcp
                                                             join pnh_towns tw on tw.id = tcp.town_id
                                                             where tcp.is_active=1")->result_array();
-        if($_POST) {
-            $this->load->model("reservation_model");
-            $this->reservation_model->put_town_courier_prio();
-        }
         $data['user']=$user;
         $data['page']='towns_courier_priority';
         $this->load->view("admin",$data);
