@@ -407,3 +407,7 @@ select * from pnh_m_territory_info;
 select ter.id,ter.territory_name from pnh_m_territory_info ter
 join pnh_towns tw on tw.territory_id = ter.id
 group by ter.id order by territory_name
+
+select distinct tw.id as townid,tw.town_name,tcp.* from pnh_towns tw
+    left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1    
+    order by town_name;
