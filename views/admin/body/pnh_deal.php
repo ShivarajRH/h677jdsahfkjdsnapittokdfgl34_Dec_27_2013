@@ -44,11 +44,11 @@ ul.tabs
 {
 	margin: 0;
 	padding: 0;
-	float: left;
+	
 	list-style: none;
-	height: 32px;
 	width: 100%;
 	border:none;
+	margin-top:20px;
 }
 
 ul.tabs li 
@@ -56,14 +56,15 @@ ul.tabs li
 	float: left;
 	margin: 0;
 	cursor: pointer;
-	padding: 0px 15px ;
-	height: 31px;
-	line-height: 31px;
-	border: 1px solid #999999;
-	border-left: none;
+	padding: 3px 20px;
+	line-height: 25px;
+	border: 1px solid #f8f8f8;
 	font-weight: bold;
 	background: #EEEEEE;
 	position: relative;
+	border-bottom:0px;
+	border-radius:5px 5px 0px 0px;
+	margin-right:3px;
 }
 ul.tabs li:hover 
 {
@@ -71,8 +72,8 @@ ul.tabs li:hover
 }	
 ul.tabs li.active
 {
-	background: #D3C8C8;
-	border-bottom: 1px solid #D3C8C8;
+	background: #FAFAF5;
+	border: 1px solid #FAFAF5;
 }
 .tab_container 
 {
@@ -162,12 +163,15 @@ ul.tabs li.active
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasTextRenderer.min.js"></script>
 
+<?php $linked_prod = $this->db->query("select gl.*,g.group_name from m_product_group_deal_link gl join products_group g on g.group_id=gl.group_id where gl.itemid=?",$deal['id']);
+	
+	  $pack_qty = $this->db->query("select * from m_product_deal_link where qty>1 and itemid = ?",$deal['id']);
+?>
 
-<div style="width:75%;margin-left:12px; ">	
-	<?=$deal['menu_name']?>  &raquo; 
-	<a href="<?=site_url("admin/viewcat/{$deal['catid']}")?>"><?=$deal['category']?></a>  &raquo; 
-	<a href="<?=site_url("admin/viewbrand/{$deal['brandid']}")?>"><?=$deal['brand']?></a>
-</div>
+
+<div class="container page_wrap" style="padding:10px">
+
+
 <div style="float:right">
 	<div>
 	<?php $d=$deal; $stock=$this->erpm->do_stock_check(array($d['id'])); if(empty($stock)){?>
@@ -178,16 +182,21 @@ ul.tabs li.active
 	</div>
 </div>
 
-<h3 class="head_wrap">
-	<?=$deal['name']?> <a style="font-size: 11px;" href="<?=site_url("admin/pnh_editdeal/{$deal['id']}")?>">Edit</a> 
-	
+<div style="width:75%;">	
+	<?=$deal['menu_name']?>  &raquo; 
+	<a href="<?=site_url("admin/viewcat/{$deal['catid']}")?>"><?=$deal['category']?></a>  &raquo; 
+	<a href="<?=site_url("admin/viewbrand/{$deal['brandid']}")?>"><?=$deal['brand']?></a>
+</div>
+<h3 class="page_title">
+	<br>
+	<?=$deal['name']?> <a style="font-size: 9px;" href="<?=site_url("admin/pnh_editdeal/{$deal['id']}")?>">Edit</a> 
 </h3>
 
 <div class="body_center_content">
 	<div class="">
 		<div class="">
 			<ul class="tabs"> 
-		        <li rel="deal_det"  class="active" >Deal Details</li>
+		        <li rel="deal_det" style="margin-left:10px;" class="active" >Deal Details</li>
 		        <li rel="prod_linked">Product Linked</li>
 		        <li rel="prc_chanlog">Price Changelog</li>
 		        <li rel="recent">Recent Orders</li>
@@ -590,7 +599,7 @@ ul.tabs li.active
 															{
 															?>
 															<tr>
-																<td width="250px"><?=$most['franchise_name']?></td>
+																<td width="250px"><a target="_blank" href="<?=site_url('admin/pnh_franchise/'.$most['franchise_id'])?>"><?=$most['franchise_name']?></a></td>
 																<td><?=$most['sold_qty']?></td>
 																<td><a target="_blank" style="color:blue" href="<?=site_url("admin/trans/{$most['transid']}")?>" class="link"><?=$most['transid']?></a></td>
 															</tr>
@@ -606,13 +615,12 @@ ul.tabs li.active
 															<tr>
 																<th>Name</th><th>Qty</th><th>Transaction Id</th><th>Date</th>
 															</tr>
-															
 															<?php
 															foreach($latest_fran as $l)
 															{
 															?>
 															<tr>
-																<td width="250px"><?=$l['franchise_name']?></td>
+																<td width="250px"><a target="_blank" href="<?=site_url('admin/pnh_franchise/'.$l['franchise_id'])?>"><?=$l['franchise_name']?></a></td>
 																<td><?=$l['sold_qty']?></td>
 																<td><a target="_blank" style="color:blue" href="<?=site_url("admin/trans/{$l['transid']}")?>"><?=$l['transid']?></a></td>
 																<td><?=date($l['date'])?></td>
@@ -636,7 +644,7 @@ ul.tabs li.active
 															{
 															?>
 															<tr>
-																<td width="250px"><?=$f['franchise_name']?></td>
+																<td width="250px"><a target="_blank" href="<?=site_url('admin/pnh_franchise/'.$f['franchise_id'])?>"><?=$f['franchise_name']?></a></td>
 																<td><?=$f['sold_qty']?></td>
 																<td><?=round($f['ttl_sales_value'])?></td>
 															</tr>
@@ -692,7 +700,7 @@ ul.tabs li.active
 		 </div>      		
 	</div>	       			
 </div>	       			
-
+</div>
 <style>
 	#description {padding:10px;background: #fcfcfc;max-height: 200px;overflow: hidden}
 	#description table{background: #FFF;font-size: 11px;width: 100%;}
@@ -790,7 +798,7 @@ function deal_sale_stat(deal_yr)
 		       	series:
 		       	[
 		       	
-		       			{highlighter: {formatString: "Deal<br />Quantity : %d"},label:'Deal'}
+		       			{highlighter: {formatString: "Deal<br />Month : %d<br />Quantity : %d"},label:'Deal'}
 		      	
 		      	],
 		       
@@ -881,8 +889,7 @@ function deal_sale_stat(deal_yr)
 						fran_html+='<table class="datagrid" width="100%"><tr><th style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">Sl.No</th><th style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">Franchise Name</th></tr>';
 						var k=1;
 						$.each(resp.fran_list,function(i,f){
-						
-						fran_html+='<tr><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">'+(k++)+'</td><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">'+f.franchise_name+'</td></tr>';
+							fran_html+='<tr><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">'+(k++)+'</td><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;"><a href="<?php echo site_url("admin/pnh_franchise/'+f.franchise_id+'") ?>">'+f.franchise_name+'</td></tr>';
 						});
 						fran_html+='</table>';
 						$('.franch_list').html(fran_html);

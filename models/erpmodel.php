@@ -668,9 +668,30 @@ class Erpmodel extends Model
 		return 0;
 	}
 	
+	function getcourier_details($cid)
+	{
+		$cs=$this->db->query("select ci.courier_id,ci.courier_name,ci.is_active,ci.cod_available,ci.ref_partner_id
+                    from m_courier_info ci where courier_id=? order by courier_name asc",$cid)->result_array();
+		foreach($cs as $i=>$c)
+		{
+			$cs['pincodes']=$this->db->query("select pincode,status from m_courier_pincodes where courier_id=?",$c['courier_id'])->result_array();
+			
+                        
+                        $awb=$this->db->query("select * from m_courier_awb_series where courier_id=?",$c['courier_id'])->row_array();
+			$cs['awb']['awb_no_prefix']=$awb['awb_no_prefix'];
+			$cs['awb']['awb_current_no']=$awb['awb_current_no'];
+			$cs['awb']['awb_no_suffix']=$awb['awb_no_suffix'];
+                        $cs['awb']['awb_end_no']=$awb['awb_end_no'];
+			$cs['awb']['awb_current_no']=$awb['awb_current_no'];
+		}
+		return $cs;
+	}
+	
 	function getcouriers()
 	{
-		$cs=$this->db->query("select * from m_courier_info order by courier_name asc")->result_array();
+		$cs=$this->db->query("select ci.*,pt.name,pt.trans_prefix,trans_mode from m_courier_info ci
+                                        left join `partner_info` as pt on pt.id = ci.ref_partner_id
+                                        order by courier_name asc")->result_array();
 		foreach($cs as $i=>$c)
 		{
 			$cs[$i]['pincodes']=$this->db->query("select count(1) as l from m_courier_pincodes where courier_id=?",$c['courier_id'])->row()->l;
@@ -681,7 +702,16 @@ class Erpmodel extends Model
 		return $cs;
 	}
 	
-	function getpincodesforcourier($cid)
+        function getpartners() {
+            $pts_rslt = $this->db->query("select pt.* from partner_info pt order by name;")->result_array();
+            $pts_arr = array();
+            foreach($pts_rslt as $key=>$pts) {
+                    $pts_arr[$key] =$pts; 
+            }
+            return $pts_arr;
+        }
+        
+        function getpincodesforcourier($cid)
 	{
 		$raw=$this->db->query("select pincode from m_courier_pincodes where courier_id=? and status=1 order by pincode asc",$cid)->result_array();
 		$pincodes=array();
@@ -696,8 +726,10 @@ class Erpmodel extends Model
 			$pincodes=explode(",",$pincodes);
 		$pincodes=array_unique($pincodes);
 		$this->db->query("delete from m_courier_pincodes where courier_id=?",$courier_id);
-		foreach($pincodes as $p)
+		foreach($pincodes as $p) {
+                        if($p=='') continue;
 			$this->db->query("insert into m_courier_pincodes(courier_id,pincode,status) values(?,?,1)",array($courier_id,$p));
+                }
 	}
 	
 	function do_updateawb($cid)
@@ -709,18 +741,61 @@ class Erpmodel extends Model
 		$this->db->query("insert into m_courier_awb_series(courier_id,awb_no_prefix,awb_no_suffix,awb_start_no,awb_end_no,awb_current_no,is_active) values(?,?,?,?,?,?,1)",array($courier,$awb_prefix,$awb_suffix,$awb_start,$awb_end,$awb_start));
 	}
 	
+	function do_updatecourier()
+	{
+		foreach(array("courier_id","name","awb_prefix","awb_suffix","awb_start","awb_end","pincodes","used_for","cod") as $inp)
+			$$inp=$_POST[$inp];
+                
+                if($used_for=='00') { echo 'Please select Courier used for option.'; die(); }
+                $is_active = 0; $ref_partner_id=0;
+                if($used_for=='pnh')  //Used for PNH
+                        $is_active = 1;
+                elseif($used_for == 'sit') { //Used for SIT
+                    $ref_partner_id = 0;
+                }
+                elseif( in_array($used_for,range(1,6)) ) {// Used for all are partners
+                    $ref_partner_id = $used_for;
+                }
+
+		$sql="update m_courier_info set courier_name =?,ref_partner_id=?,is_active=?,cod_available=? where courier_id=?";
+		$this->db->query($sql,array($name,$ref_partner_id,$is_active,$cod,$courier_id));
+		
+		$pincodes=explode(",",$pincodes);
+		$this->erpm->do_updatepincodesforcourier($courier_id,$pincodes);
+		$this->db->query("update m_courier_awb_series set courier_id=?,awb_no_prefix=?,awb_no_suffix=?,awb_start_no=?,awb_end_no=?,awb_current_no=?,is_active=?",array($courier_id,$awb_prefix,$awb_suffix,$awb_start,$awb_end,$awb_start,1));
+		$this->session->set_flashdata("erp_pop_info","Courier info updated");
+		redirect("admin/courier");
+	}
+	
 	function do_addcourier()
 	{
-		foreach(array("name","awb_prefix","awb_suffix","awb_start","awb_end","pincodes") as $inp)
+                error_reporting("all");
+                foreach(array("name","awb_prefix","awb_suffix","awb_start","awb_end","pincodes","used_for","cod") as $inp)
 			$$inp=$_POST[$inp];
-		$sql="insert into m_courier_info(courier_name) values(?)";
-		$this->db->query($sql,$name);
+                
+                $is_active = ''; $ref_partner_id=0;
+                if($used_for=='pnh')  //Used for PNH
+                        $is_active = 1;
+                elseif($used_for == 'sit') { //Used for SIT
+                    $ref_partner_id = 0;
+                }
+                elseif( in_array($used_for,range(1,6)) ) {// Used for all are partners
+                    $ref_partner_id = $used_for;
+                }
+		$this->db->query("insert into `m_courier_info`(`courier_name`,`ref_partner_id`,`is_active`,`cod_available`) values(?,?,?,?) ",
+                        array($name,$ref_partner_id,$is_active,$cod));
 		$courier_id=$this->db->insert_id();
+                
+                if($courier_id=='') {                   
+                    //echo mysql_error().'<pre>';print_r($_POST); echo $this->db->last_query(); 
+                    die("Error in contnetn id"); 
+                }
+                
 		$pincodes=explode(",",$pincodes);
 		$this->erpm->do_updatepincodesforcourier($courier_id,$pincodes);
 		$this->db->query("insert into m_courier_awb_series(courier_id,awb_no_prefix,awb_no_suffix,awb_start_no,awb_end_no,awb_current_no,is_active) values(?,?,?,?,?,?,1)",array($courier_id,$awb_prefix,$awb_suffix,$awb_start,$awb_end,$awb_start));
 		$this->session->set_flashdata("erp_pop_info","New courier added");
-		redirect("admin/courier");
+                redirect("admin/courier");
 	}
 	
 	function do_changepwd()

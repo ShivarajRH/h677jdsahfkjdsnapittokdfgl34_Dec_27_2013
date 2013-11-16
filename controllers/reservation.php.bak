@@ -121,8 +121,8 @@ class Reservation extends Analytics {
                             //die($s.'<br>'.$e);
         }
         else {
-                $s=date("Y-m-d",strtotime("last month")); 
-                $e=date("Y-m-d",strtotime("today"));
+                $s=date("m-d-Y",strtotime("last month")); 
+                $e=date("m-d-Y",strtotime("today"));
         }
         
         $data['user']=$user;

@@ -1003,3 +1003,5 @@ CREATE TABLE `pnh_town_courier_priority_link` (
 	  `modified_by` int(11) DEFAULT '0',             
 	  PRIMARY KEY (`id`)
 	);
+
+alter table `m_courier_info` add column `ref_partner_id` int (11) DEFAULT '0' NULL  after `remarks`;

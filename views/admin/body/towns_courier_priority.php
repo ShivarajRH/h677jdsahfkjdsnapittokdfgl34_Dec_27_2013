@@ -193,7 +193,7 @@
          var courier_3_id=$("#courier_priority_3_"+townid).find(":selected").val(); if(courier_3_id == '00') courier_3_id=0;
          var delivery_hours_3_id=$("#delivery_hours_3_"+townid).find(":selected").val(); if(delivery_hours_3_id == '00') delivery_hours_3_id=0;
          
-         $("#submit_"+townid).attr("disabled","disabled");
+         $("#submit_"+townid).attr("disabled","disabled");//.val("Loading");
          $("#response_status_"+townid).html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>").slideDown("slow");
          var postdata = {townid:townid
                             ,courier_priority_1:courier_1_id,delivery_hours_1:delivery_hours_1_id
@@ -201,8 +201,8 @@
                             ,courier_priority_3:courier_3_id,delivery_hours_3:delivery_hours_3_id};
          $.post(site_url+"admin/jx_put_courier_priority/",postdata,function(rdata) {
                 $("#response_status_"+townid).html(rdata);
-                $("#submit_"+townid).removeAttr("disabled").val("Change").delay(3000);
-                $("#response_status_"+townid).slideUp("slow");
+                $("#submit_"+townid).removeAttr("disabled"); //.val("Change");
+                $("#response_status_"+townid).delay(3000).slideUp("slow");
                 return true;
          },"html").done(done).fail(fail);
          

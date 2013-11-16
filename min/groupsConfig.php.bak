@@ -27,6 +27,7 @@
 	$min_assets['js'][] = '../js/gen_validatorv4.js';//BY S
 	$min_assets['js'][] = '../js/jquery.print-objects.js';//BY S
 	$min_assets['js'][] = '../js/jquery.timeago.js';//BY S
+	//$min_assets['js'][] = '../js/jquery-ui-timepicker-addon.js'; //R
         
 	$min_assets['css'][] = '../css/jquery-ui-lib/jquery-ui-1.10.2.custom.min.css';
 	$min_assets['css'][] = '../css/chosen.css';
@@ -35,6 +36,7 @@
 	$min_assets['css'][] = '../css/buttons.css';
 	$min_assets['css'][] = '../css/erp.css';
 	
+        //$min_assets['css'][] = '../css/jquery-ui-timepicker-addon.css';// R
 
 return array(
 	'js'=>array("../js/jquery.js","../js/jquery.ui.js","../js/cookie.js","../js/func.js","../js/jquery.easing.js","../js/fanb.js","../js/common.js","../js/jquery.pngFix.js","../js/countdown.js","../js/cloud-zoom.1.0.2.min.js","../js/chosen.jquery.min.js"),

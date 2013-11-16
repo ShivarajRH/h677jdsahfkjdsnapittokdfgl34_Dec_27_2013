@@ -367,7 +367,7 @@ select from_days(6767)
 SELECT STR_TO_DATE('10.31.2013',GET_FORMAT(DATE,'INR'));
         -> '2003-10-31'
 
-#New work
+#New work ---------------------------------------
 CREATE TABLE `pnh_town_courier_priority_link` (  
 	  `id` bigint(11) NOT NULL AUTO_INCREMENT,       
 	  `town_id` int(11) DEFAULT '0',                 
@@ -384,7 +384,7 @@ CREATE TABLE `pnh_town_courier_priority_link` (
 	  `modified_by` int(11) DEFAULT '0',             
 	  PRIMARY KEY (`id`)
 	);
-
+#---------------------------------------------------------
 select * from m_courier_info where is_active =1;
 
 select * from `pnh_town_courier_priority_link` tcp
@@ -411,3 +411,39 @@ group by ter.id order by territory_name
 select distinct tw.id as townid,tw.town_name,tcp.* from pnh_towns tw
     left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1    
     order by town_name;
+
+# Nov_15_2013
+
+select distinct tw.id as townid,tw.town_name,tcp.* from pnh_towns tw
+    left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1    
+    order by town_name;
+
+select * from `pnh_town_courier_priority_link`;
+
+select ci.courier_name,ci.ref_partner_id,is_active,pt.name,pt.trans_prefix,trans_mode from m_courier_info ci
+left join `partner_info` as pt on pt.id = ci.ref_partner_id
+order by courier_name asc;
+#============================================
+alter table `m_courier_info` add column `ref_partner_id` int (11) DEFAULT '0' NULL  after `remarks`;
+#============================================
+select * from partner_info;
+select * from m_courier_info;
+
+select * from partner_info order by name;
+
+select * from m_courier_awb_series where courier_id='';
+select * from m_courier_pincodes where courier_id='';
+select * from m_courier_info where courier_id='';
+
+#######################
+delete from m_courier_awb_series where courier_id='21';
+delete from m_courier_pincodes where courier_id='21';
+delete from m_courier_info where courier_id='21';
+#######################
+select * from m_courier_pincodes where courier_id=20
+select * from m_courier_awb_series where courier_id=21
+
+insert into m_courier_info(courier_name,ref_partner_id,is_active) values('SHIVARAJ COUR','6',0)
+
+select pt.*,ci.ref_partner_id,ci.is_active from partner_info pt
+order by name;

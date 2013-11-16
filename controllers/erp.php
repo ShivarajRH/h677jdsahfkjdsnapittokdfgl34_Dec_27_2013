@@ -2609,7 +2609,25 @@ class Erp extends Stream
 		$user=$this->auth(OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
 		if($_POST)
 			$this->erpm->do_addcourier();
+                
+                $data['partners']=$this->erpm->getpartners();
 		$data['page']="add_courier";
+		$this->load->view("admin",$data);
+	}
+	/**
+         * 
+         * @param type $cid is courier id
+         */
+        function courier_edit($cid=false)
+	{
+		$user=$this->auth(OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+                if(!$cid) show_404();
+		if($_POST)
+			$this->erpm->do_updatecourier();
+                
+                $data['couriers']=$this->erpm->getcourier_details($cid);
+                $data['partners']=$this->erpm->getpartners();
+		$data['page']="courier_edit";
 		$this->load->view("admin",$data);
 	}
 	
@@ -2633,6 +2651,7 @@ class Erp extends Stream
 	{
 		$user=$this->auth(OUTSCAN_ROLE|INVOICE_PRINT_ROLE|ORDER_BATCH_PROCESS_ROLE);
 		$data['couriers']=$this->erpm->getcouriers();
+		
 		$data['page']="couriers";
 		$this->load->view("admin",$data);
 	}
@@ -9470,21 +9489,21 @@ group by product_id,location",$bid)->result_array();
 		$data['prods']=$this->db->query("select p.product_id,p.product_name,l.qty from m_product_deal_link l join m_product_info p on p.product_id=l.product_id where l.itemid=?",$data['deal']['id'])->result_array();
 		$pnh_Deal_upd_log=$this->erpm->get_pnh_deal_update_log($id);
 		
-		$data['ttl_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
+		$data['ttl_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
 										group by b.franchise_id
 										order by franchise_name asc ",$id)->result_array(); 
-		$data['most_sold_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid
+		$data['most_sold_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
 										group by b.franchise_id
 										order by sold_qty desc limit 10 ",$id)->result_array();
-		$data['latest_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
+		$data['latest_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
