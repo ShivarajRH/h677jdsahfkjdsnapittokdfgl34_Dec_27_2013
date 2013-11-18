@@ -447,3 +447,45 @@ insert into m_courier_info(courier_name,ref_partner_id,is_active) values('SHIVAR
 
 select pt.*,ci.ref_partner_id,ci.is_active from partner_info pt
 order by name;
+
+#Nov_16_2013
+
+select * from `pnh_town_courier_priority_link`;
+
+#========================================
+alter table `snapittoday_db_oct`.`pnh_town_courier_priority_link` add column `delivery_type_priority1` int (3) DEFAULT '0' NULL  after `delivery_hours_3`, add column `delivery_type_priority2` int (3) DEFAULT '0' NULL  after `delivery_type_priority1`, add column `delivery_type_priority3` int (3) DEFAULT '0' NULL  after `delivery_type_priority2`
+#========================================
+
+insert into `pnh_town_courier_priority_link` (`town_id`,`courier_priority_1`,`courier_priority_2`,`courier_priority_3`
+,`delivery_hours_1`,`delivery_hours_2`,`delivery_hours_3`,`is_active`,`created_on`,`created_by`) 
+values ('6','1','0','0','24','0','0',0,0,0,1,'2013-11-16 12:03:45','1')
+
+select * from `pnh_town_courier_priority_link` where town_id=6;
+
+select distinct tw.id as townid,tw.town_name,tcp.* from pnh_towns tw
+                                                            left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1
+                                                             where territory_id=1
+                                                            order by town_name
+
+select cp.* from pnh_town_courier_priority_link cp
+left join pnh_towns tw on tw.id = cp.town_id
+#left join pnh_m_franchise_info f on tw.id = f.town_id where f.franchise_id = '163';
+
+select ci.courier_name,cp.* #courier_priority_1,cp.delivery_hours_1,cp.delivery_type_priority1 
+from pnh_m_franchise_info f
+left join pnh_towns tw on tw.id = f.town_id
+left join pnh_town_courier_priority_link cp on cp.town_id=tw.id and cp.is_active=1
+left join m_courier_info ci on ci.courier_id=cp.courier_priority_1
+ where f.franchise_id = '335' and ci.courier_name!='';
+
+select ci.courier_name,cp.courier_priority_2,cp.delivery_hours_2,cp.delivery_type_priority2 
+from pnh_m_franchise_info f left join pnh_towns tw on tw.id = f.town_id 
+left join pnh_town_courier_priority_link cp on cp.town_id=tw.id and cp.is_active=1 
+left join m_courier_info ci on ci.courier_id=cp.courier_priority_2 
+where f.franchise_id = '335' and ci.courier_name!='';
+
+select * from pnh_town_courier_priority_link order by id desc
+
+select * from pnh_towns;
+
+# Nov_18_2013

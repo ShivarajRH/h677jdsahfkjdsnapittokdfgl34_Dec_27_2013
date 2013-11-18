@@ -4,10 +4,7 @@
 <form method="post" onsubmit="return validate();">
 
 <table cellpadding=3>
-    <?php //echo '<pre>';
-  //print_r($couriers[0]); 
- // print_r($partners); 
-//die();
+    <?php //echo '<pre>'; print_r($couriers[0]); print_r($partners); die();
     $c=$couriers[0];
     $awb = $couriers['awb'];
     

@@ -5621,6 +5621,9 @@ group by product_id,location",$bid)->result_array();
 		$fran_crdet = $this->erpm->get_fran_availcreditlimit($fid);
 		$fran['balance'] = $fran_crdet[3];
 		
+                $fran_courier = $this->erpm->get_fran_courier_details($fid);
+		$fran['courier'] = $fran_courier;
+		
 		$fran['total_ord'] = $this->db->query("select count(transid) as t from king_transactions where franchise_id = ? ",$_POST['id'])->row()->t;
 		
 		$ttl_ords_res = $this->db->query("select init from king_transactions where franchise_id = ? order by id desc limit 1",$_POST['id']);
@@ -24793,6 +24796,43 @@ die; */
 
 		echo json_encode($output);
 		
-	}	
+	}
+        
+        function jx_put_courier_priority() {
+        $user=$this->erpm->auth(); //return current login user details
+        if($_POST) {
+            $_POST['userid'] = $user['userid'];
+            echo $this->erpm->put_town_courier_priority();
+            
+        }
+    }
+    /**
+     * Set towns courier priority
+     */
+    function towns_courier_priority($terrid='') {
+        $user=$this->erpm->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        
+        $field_cond=$cond='';
+        if($terrid != '' and is_numeric($terrid)) {
+            $cond = " where territory_id=".$terrid;
+            $data['terr_selected'] = $this->db->query("select id as territory_id,territory_name from pnh_m_territory_info  where id=? order by territory_name",$terrid)->row_array();
+        }
+        $data['pnh_terr'] = $this->db->query("select ter.id,ter.territory_name from pnh_m_territory_info as ter group by ter.id order by territory_name")->result_array();
+        
+        $sql="select distinct tw.id as townid,tw.town_name,tcp.* from pnh_towns tw
+                                                            left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1
+                                                            $cond
+                                                            order by town_name";
+        //echo '<pre>';die($sql);
+        $data['towns_courier_priority']=$this->db->query($sql)->result_array();
+        
+        $data['courier_providers'] = $this->db->query("select * from m_courier_info where is_active =1")->result_array();
+        $data['town_courier_priority_link'] = $this->db->query("select * from `pnh_town_courier_priority_link` tcp
+                                                            join pnh_towns tw on tw.id = tcp.town_id
+                                                            where tcp.is_active=1")->result_array();
+        $data['user']=$user;
+        $data['page']='towns_courier_priority';
+        $this->load->view("admin",$data);
+    }
 
 }

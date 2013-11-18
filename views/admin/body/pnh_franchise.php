@@ -24,9 +24,9 @@ foreach($menu_list as $menu_li)
 
 ?>
 <style>
-	.dash_bar_right{font-size: 11px;min-width: 100px !important;text-align: center;padding:3px 6px;}
-	.dash_bar_right span{display: block;font-size: 16px;}
-	h4{margin:5px 0px;}
+        .dash_bar_right{font-size: 11px;min-width: 100px !important;text-align: center;padding:3px 6px;}
+        .dash_bar_right span{display: block;font-size: 16px;}
+        h4{margin:5px 0px;}
 </style>
 
 <div class="container page_wrap" style="padding-top:7px;margin-top: 10px;">
@@ -518,7 +518,35 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 								$f['town_name'] = $this->db->query("select town_name from pnh_towns a join pnh_m_franchise_info b on a.id = b.town_id where franchise_id = ? ",$f['franchise_id'])->row()->town_name; 
 							?>
 							<tr><td class="label">Town  | Territory</td><td><b><?=$f['town_name']?> | </b><b><?=$f['territory_name']?></b></td></tr>
-							
+							<tr><td class="label">Town Courier Priorities</td><td>
+                                                        <?php
+                                                        
+                                                        $courier = $this->erpm->get_fran_courier_details($f['franchise_id']);
+                                                        if($courier === false) {
+                                                            echo 'Not set.'; ?>
+                                                            <a href="<?=site_url().'admin/towns_courier_priority/'.$f['territory_id'];?>" target="_blank" style="float:right;">Update</a>
+                                                        <?php }
+                                                        else {
+							?>
+                                                        <ol>
+                                                            <li><span>
+                                                                <b><?=$courier["c1"]['courier_name']?> / </b>
+                                                                <b><?=$courier["c1"]['delivery_hours_1']?> Hrs</b> / 
+                                                                Deliver <b><?php echo $this->erpm->get_delivery_type_msg($courier["c1"]['delivery_type_priority1']); ?></b>
+                                                            </span></li>
+                                                            <li><span>
+                                                                <b><?=$courier["c2"]['courier_name']?> / </b>
+                                                                <b><?=$courier["c2"]['delivery_hours_2']?> Hrs</b> / 
+                                                                Deliver <b><?php echo $this->erpm->get_delivery_type_msg($courier["c2"]['delivery_type_priority2']); ?></b>
+                                                            </span></li>
+                                                            <li><span>
+                                                                <b><?=$courier["c3"]['courier_name']?> / </b>
+                                                                <b><?=$courier["c3"]['delivery_hours_3']?> Hrs</b> / 
+                                                                Deliver <b><?php echo $this->erpm->get_delivery_type_msg($courier["c3"]['delivery_type_priority3']); ?></b>
+                                                            </span></li>
+                                                        </ol>
+							<?php } ?>
+                                                        </td></tr>
 							<?php if($f['lat']){?><tr><td class="label">Latitude</td><td><b><?=$f['lat']?></b></td></tr><?php }?>
 							<?php if($f['long']){?><tr><td class="label">Longitude</td><td><b><?=$f['long']?></b></td></tr><?php }?>
 							</table>

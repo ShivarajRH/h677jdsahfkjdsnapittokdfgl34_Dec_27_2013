@@ -1,3 +1,7 @@
+<style type="text/css">
+.datagrid td { padding: 7px; }
+.datagrid th { background: #443266;color: #C3C3E5; }
+</style>
 <div class="container">
 <h2>Couriers</h2>
 <a href="<?=site_url("admin/add_courier")?>">Add new courier</a>

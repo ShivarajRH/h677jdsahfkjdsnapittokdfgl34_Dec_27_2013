@@ -11078,7 +11078,82 @@ order by action_date";
 		
 		return $this->db->insert_id();
 	}
-	
+	function get_fran_courier_details($fid) { $output=array();
+            $courier_1 = $this->db->query("select ci.courier_name,cp.courier_priority_1,cp.delivery_hours_1,cp.delivery_type_priority1
+                                                            from pnh_m_franchise_info f
+                                                            left join pnh_towns tw on tw.id = f.town_id
+                                                            left join pnh_town_courier_priority_link cp on cp.town_id=tw.id and cp.is_active=1
+                                                            left join m_courier_info ci on ci.courier_id=cp.courier_priority_1
+                                                            where f.franchise_id = ?",$fid)->row_array(); 
+            if($courier_1['courier_name'] == '') {
+                    return false;
+
+            }
+            else {
+                    $courier_2 = $this->db->query("select ci.courier_name,cp.courier_priority_2,cp.delivery_hours_2,cp.delivery_type_priority2
+                                                            from pnh_m_franchise_info f
+                                                            left join pnh_towns tw on tw.id = f.town_id
+                                                            left join pnh_town_courier_priority_link cp on cp.town_id=tw.id and cp.is_active=1
+                                                            left join m_courier_info ci on ci.courier_id=cp.courier_priority_2
+                                                            where f.franchise_id = ? and ci.courier_name!='' ",$fid)->row_array(); 
+                    $courier_3 = $this->db->query("select ci.courier_name,cp.courier_priority_3,cp.delivery_hours_3,cp.delivery_type_priority3
+                                                            from pnh_m_franchise_info f
+                                                            left join pnh_towns tw on tw.id = f.town_id
+                                                            left join pnh_town_courier_priority_link cp on cp.town_id=tw.id and cp.is_active=1
+                                                            left join m_courier_info ci on ci.courier_id=cp.courier_priority_3
+                                                            where f.franchise_id = ? and ci.courier_name!='' ",$fid)->row_array(); 
+                    $output['c1']=$courier_1;
+                    $output['c2']=(count($courier_2))?$courier_2:false;
+                    $output['c3']=(count($courier_3))?$courier_3:false;
+                    
+                    return $output;
+             }
+    }
+    function get_delivery_type_msg($delivery_type) { $type_msg='';
+            if($delivery_type =='') {$type_msg .= "Not Set";} 
+            elseif($delivery_type == 0)  { $type_msg .= "By Hand";} 
+            elseif($delivery_type == 1) { $type_msg .= "To Door";}
+            else { $type_msg .= "--";}
+            return $type_msg;
+    }
+    function put_town_courier_priority() {
+        foreach(array("townid","courier_priority_1","courier_priority_2","courier_priority_3","delivery_hours_1","delivery_hours_2","delivery_hours_3","userid","delivery_type_priority1","delivery_type_priority2","delivery_type_priority3") as $i) {
+                $$i= $this->input->post($i);
+        }
+        $output='';
+        $is_active = 1;
+        $created_on = date("Y-m-d H:i:s",time('now'));
+        $created_by = $userid;
+        
+        $townid_exits = $this->db->query("select town_id from `pnh_town_courier_priority_link` where 
+            town_id=? and courier_priority_1=? and courier_priority_2=? and courier_priority_3=? 
+            and delivery_hours_1=? and delivery_hours_2=? and delivery_hours_3=?
+            and delivery_type_priority1=? and delivery_type_priority2=? and delivery_type_priority3=? and is_active=? ",
+            array($townid,$courier_priority_1,$courier_priority_2,$courier_priority_3
+                ,$delivery_hours_1,$delivery_hours_2,$delivery_hours_3
+                ,$delivery_type_priority1,$delivery_type_priority2,$delivery_type_priority3
+                ,$is_active));
+        
+        if($townid_exits->num_rows() == 0) { 
+            //If update old config records if exists
+            $modified_on = date("Y-m-d H:i:s",time('now'));
+            $modified_by = $userid;
+            $arr_details=array("is_active"=>0,"modified_on"=>$modified_on,"modified_by"=>$modified_by);
+            $this->db->update("pnh_town_courier_priority_link",$arr_details,array("town_id"=>$townid,'is_active'=>1));
+            
+            $this->db->query("insert into `pnh_town_courier_priority_link`
+                (`town_id`,`courier_priority_1`,`courier_priority_2`,`courier_priority_3`,`delivery_hours_1`,`delivery_hours_2`,`delivery_hours_3`,delivery_type_priority1,delivery_type_priority2,delivery_type_priority3,`is_active`,`created_on`,`created_by`) 
+                values (?,?,?,?,?,?,?,?,?,?,?,?,?)",array($townid,$courier_priority_1,$courier_priority_2,$courier_priority_3
+                ,$delivery_hours_1,$delivery_hours_2,$delivery_hours_3
+                ,$delivery_type_priority1,$delivery_type_priority2,$delivery_type_priority3
+                ,$is_active,$created_on,$created_by));
+            $output .= 'Added.';
+        }
+        else {
+            $output .= 'No changes <br>found.';
+        }
+        return $output;
+    }
 }
 
 
