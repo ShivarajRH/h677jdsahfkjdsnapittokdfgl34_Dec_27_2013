@@ -166,7 +166,10 @@ $(document).ready(function() {
             $('#trans_list_replace_block').html(resp);
     }
 // ]]>
-    
+$("#pick_all").live("change",function() {
+    var checkBoxes=$(".pick_list_trans_ready");
+    checkBoxes.attr("checked", !checkBoxes.attr("checked"));
+});
 </script>
 
 <?php

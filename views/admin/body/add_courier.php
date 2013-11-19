@@ -43,8 +43,6 @@
             return false;
         }
     }
-    $("body").load(function() {
-       alert("Hi"); 
-    });
+
 </script>
 <?php

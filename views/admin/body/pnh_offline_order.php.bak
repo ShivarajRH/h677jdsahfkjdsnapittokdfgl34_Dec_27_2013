@@ -2,6 +2,7 @@
 <div style="position:absolute;top:0px;right:60px;"><a href="javascript:void(0)" style="background:#ffaa00;border:1px solid #aaa;border-top:0px;text-decoration:none;display:block;padding:0px 5px 1px 5px;border-radius:0px 0px 5px 5px;color:#555;" onclick='$("#hd").slideDown("slow");$(this).parent().hide();$("#prod_suggest_list").css({"top":"184px"})'>show menu</a></div>
 <div style="clear: both;overflow: hidden;">
 	<h2 style="margin:5px 0px;float: left;">PNH Offline Order <span id="fran_name_disp" style="font-size: 80%"></span></h2>
+        <div class="offn_courier_detail"></div>
 </div>
 <div id="fran_select_cont">
 	<select class="chzn-select" data-placeholder="Choose Franchise "  name="sel_fid" style="width:250px;" ></select>
@@ -818,7 +819,31 @@ function select_fran(fid)
 			fran_type_msg = '<span class="blinker" style="background-color:#cd0000;color:#FFF;font-size:11px;padding:2px 10px">'+f+'</span>';
 			fran_sus_msg = '<div style="float:right;font-size:11px;color:red;margin-right:-125px;margin-top:-1px">Batch will be disabled for '+o.reason+'</div>';
 		}
+                var courier_msg='';
+                if(o.courier === false) courier_msg='Not set';
+                else {
+                    courier_msg += '<span class="">1. <b>'+o.courier['c1']['courier_name']+'</b> - ';
+                    courier_msg += " / <b>"+o.courier['c1']['delivery_hours_1']+" Hrs</b> - ";
+                    courier_msg += " / Deliver <b>"+get_delivery_type_msg(o.courier['c1']['delivery_type_priority1'])+"</b></span>";
+                    
+                    courier_msg +='<span class="">2. ';
+                    if(o.courier['c2'] === false) { courier_msg +='Not set'; } else {
+                        courier_msg += '<b>'+o.courier['c2']['courier_name']+'</b>';
+                        courier_msg += " - <b>"+o.courier['c2']['delivery_hours_2']+" Hrs</b>";
+                        courier_msg += " / Deliver <b>"+get_delivery_type_msg(o.courier['c2']['delivery_type_priority2'])+"</b>";
+                    }
+                    courier_msg +=  "</span>";
+                    
+                    courier_msg +='<span class="">3. ';
+                    if(o.courier['c3'] === false) { courier_msg +='Not set'; } else {
+                        courier_msg += '<b>'+o.courier['c3']['courier_name']+'</b>';
+                        courier_msg += " / <b>"+o.courier['c3']['delivery_hours_3']+" Hrs</b>";
+                        courier_msg += " / Deliver <b>"+get_delivery_type_msg(o.courier['c3']['delivery_type_priority3'])+"</b>";
+                    }
+                    courier_msg +=  "</span>";
+                }
 		$("#fran_name_disp").html(" for '<a href='<?=site_url("admin/pnh_franchise")?>/"+$("#i_fid").val()+"' target='_blank'>"+$("#franchise_det h4 a").text()+' '+$("#franchise_det h4 a").attr('loc')+"</a>' - Mobile: "+$(".ff_mob").text()+' '+fran_type_msg+'<br>'+fran_sus_msg);
+                $(".offn_courier_detail").html('Courier Priorities: '+courier_msg);
 		
 		
 		if(is_new_fran)
@@ -842,7 +867,13 @@ function select_fran(fid)
 	
 	
 }
-
+function get_delivery_type_msg(delivery_type) { var type_msg='';
+        if(delivery_type =='') {type_msg += "Not Set";} 
+        else if(delivery_type == 0)  {type_msg += "By Hand";} 
+        else if(delivery_type == 1) { type_msg += "To Door";}
+        else { type_msg += "--";}
+        return type_msg;
+}
 function show_memids(frid)
 {
 	$("#member_ids").html("Loading...");
@@ -1097,7 +1128,7 @@ $(function(){
 
 			if(mid==0 && menu_id != 112)
 			{
-				if(confirm("Instant Registration is required because Other than Electronics Products are there in Cart"))
+				if(confirm("Instant Registration is required because Other than Electronics Products are there in the Cart"))
 					 mem_reg();
 				 return false;
 			}
@@ -1565,7 +1596,6 @@ $("#show_scheme_details").dialog({
 </div>
 
 <style>
-
 #newbie_confirm_dlg{
 position: absolute;
 top: 66px;
@@ -1742,6 +1772,12 @@ padding:3px 6px !important ;
 
 .landing_cost{
 background-color:#89c403;display:block;padding:12px 15px;
+}
+.offn_courier_detail {
+    margin: 5px; font-size: 12px; clear: both;
+}
+.offn_courier_detail span {
+    margin:0 10px;
 }
 </style>
 

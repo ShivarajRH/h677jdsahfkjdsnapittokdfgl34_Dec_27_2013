@@ -24,9 +24,9 @@ foreach($menu_list as $menu_li)
 
 ?>
 <style>
-        .dash_bar_right{font-size: 11px;min-width: 100px !important;text-align: center;padding:3px 6px;}
-        .dash_bar_right span{display: block;font-size: 16px;}
-        h4{margin:5px 0px;}
+	.dash_bar_right{font-size: 11px;min-width: 100px !important;text-align: center;padding:3px 6px;}
+	.dash_bar_right span{display: block;font-size: 16px;}
+	h4{margin:5px 0px;}
 </style>
 
 <div class="container page_wrap" style="padding-top:7px;margin-top: 10px;">

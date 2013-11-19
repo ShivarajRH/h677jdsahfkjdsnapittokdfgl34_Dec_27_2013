@@ -689,10 +689,7 @@ class Erpmodel extends Model
 	
 	function getcouriers()
 	{
-		$cs=$this->db->query("select ci.*
-                    ,if(ci.is_active=1,'PNH',if(ref_partner_id=0,'SIT',pt.name)) as used_for
-                    ,if(ci.is_active=1,'PNH',if(ref_partner_id=0,'SIT',pt.trans_prefix)) as trans_prefix
-                    ,trans_mode from m_courier_info ci
+		$cs=$this->db->query("select ci.*,pt.name,pt.trans_prefix,trans_mode from m_courier_info ci
                                         left join `partner_info` as pt on pt.id = ci.ref_partner_id
                                         order by courier_name asc")->result_array();
 		foreach($cs as $i=>$c)
@@ -702,16 +699,6 @@ class Erpmodel extends Model
 			$cs[$i]['awb']=$awb['awb_no_prefix'].$awb['awb_current_no'].$awb['awb_no_suffix'];
 			$cs[$i]['rem_awb']=$awb['awb_end_no']-$awb['awb_current_no'];
 		}
-		return $cs;
-	}
-	function getcouriers_used_for()
-	{
-		$cs=$this->db->query("select distinct ci.ref_partner_id,is_active
-                                    ,if(ci.is_active=1,'PNH',if(ref_partner_id=0,'SIT',pt.name)) as used_for
-                                    ,if(ci.is_active=1,'PNH',if(ref_partner_id=0,'SIT',pt.trans_prefix)) as trans_prefix,trans_mode 
-                                    from m_courier_info ci
-                                    left join `partner_info` as pt on pt.id = ci.ref_partner_id
-                                    order by courier_name asc")->result_array();
 		return $cs;
 	}
 	
@@ -7438,7 +7425,7 @@ order by p.product_name asc
 		foreach(array("fid","pid","qty","mid","redeem","redeem_points","mid_entrytype") as $i)
 			$$i=$this->input->post($i);
 		
-        $updated_by=$admin["userid"];
+		
 
 		if($redeem)
 			$redeem_points = 150;

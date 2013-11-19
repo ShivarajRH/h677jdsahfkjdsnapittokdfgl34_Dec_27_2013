@@ -2609,7 +2609,25 @@ class Erp extends Stream
 		$user=$this->auth(OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
 		if($_POST)
 			$this->erpm->do_addcourier();
+                
+                $data['partners']=$this->erpm->getpartners();
 		$data['page']="add_courier";
+		$this->load->view("admin",$data);
+	}
+	/**
+         * 
+         * @param type $cid is courier id
+         */
+        function courier_edit($cid=false)
+	{
+		$user=$this->auth(OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+                if(!$cid) show_404();
+		if($_POST)
+			$this->erpm->do_updatecourier();
+                
+                $data['couriers']=$this->erpm->getcourier_details($cid);
+                $data['partners']=$this->erpm->getpartners();
+		$data['page']="courier_edit";
 		$this->load->view("admin",$data);
 	}
 	
@@ -5601,6 +5619,9 @@ group by product_id,location",$bid)->result_array();
 		
 		$fran_crdet = $this->erpm->get_fran_availcreditlimit($fid);
 		$fran['balance'] = $fran_crdet[3];
+		
+        $fran_courier = $this->erpm->get_fran_courier_details($fid);
+		$fran['courier'] = $fran_courier;
 		
 		$fran['total_ord'] = $this->db->query("select count(transid) as t from king_transactions where franchise_id = ? ",$_POST['id'])->row()->t;
 		
@@ -9470,21 +9491,21 @@ group by product_id,location",$bid)->result_array();
 		$data['prods']=$this->db->query("select p.product_id,p.product_name,l.qty from m_product_deal_link l join m_product_info p on p.product_id=l.product_id where l.itemid=?",$data['deal']['id'])->result_array();
 		$pnh_Deal_upd_log=$this->erpm->get_pnh_deal_update_log($id);
 		
-		$data['ttl_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
+		$data['ttl_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
 										group by b.franchise_id
 										order by franchise_name asc ",$id)->result_array(); 
-		$data['most_sold_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid
+		$data['most_sold_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
 										group by b.franchise_id
 										order by sold_qty desc limit 10 ",$id)->result_array();
-		$data['latest_fran'] =$this->db->query("select franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
+		$data['latest_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
@@ -24774,6 +24795,44 @@ die; */
 
 		echo json_encode($output);
 		
-	}	
+	}
+        
+    function jx_put_courier_priority() {
+        $user=$this->erpm->auth(); //return current login user details
+        if($_POST) {
+            $_POST['userid'] = $user['userid'];
+            echo $this->erpm->put_town_courier_priority();
+
+        }
+    }
+    /**
+     * Set towns courier priority
+     */
+    function towns_courier_priority($terrid='') {
+        $user=$this->erpm->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+
+        $field_cond=$cond='';
+        if($terrid != '' and is_numeric($terrid)) {
+            $cond = " where tw.territory_id=".$terrid;
+            $data['terr_selected'] = $this->db->query("select id as territory_id,territory_name from pnh_m_territory_info  where id=? order by territory_name",$terrid)->row_array();
+        }
+        $data['pnh_terr'] = $this->db->query("select ter.id,ter.territory_name from pnh_m_territory_info as ter group by ter.id order by territory_name")->result_array();
+
+        $sql="select distinct tw.id as townid,tw.town_name,count(frn.franchise_id) as fran_count,tcp.* from pnh_towns tw
+                                                            left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1
+                                                            left join `pnh_m_franchise_info` frn on frn.town_id = tw.id and frn.is_suspended=0
+                                                            $cond
+                                                            group by tw.id order by tw.town_name";
+        //echo '<pre>';die($sql);
+        $data['towns_courier_priority']=$this->db->query($sql)->result_array();
+
+        $data['courier_providers'] = $this->db->query("select * from m_courier_info where is_active =1")->result_array();
+        /*$data['town_courier_priority_link'] = $this->db->query("select * from `pnh_town_courier_priority_link` tcp
+                                                            join pnh_towns tw on tw.id = tcp.town_id
+                                                            where tcp.is_active=1")->result_array();*/
+        $data['user']=$user;
+        $data['page']='towns_courier_priority';
+        $this->load->view("admin",$data);
+    }
 
 }

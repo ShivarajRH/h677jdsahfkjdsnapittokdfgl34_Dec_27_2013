@@ -38,7 +38,7 @@ Select Vendor : <select id="vendorsel">
 <th>Last 90 days order</th>
 <th>MRP</th>
 <th>DP Price</th>
-<th style="display: none;">margin</th>
+<th>margin</th>
 <th>Scheme discount</th>
 <th>Discount Type</th>
 <th>Purchase Unit price</th>
@@ -78,9 +78,9 @@ Search &amp; Add : <input type="text" class="inp" id="po_search" style="width:40
 <tr>
 <td>Expected Date of Delivery</td>
 <td>
-	<input type="text" size="8" name="e_dod" class="datetimepick" value="<?php echo date('Y-m-d') ?>" >
+	<input type="text"  name="e_dod" class="datetimepick" value="<?php// echo date('Y-m-d') ?>" >
 		
-	<select name="e_dod_h">
+	<!--  <select name="e_dod_h">
 		<?php 
 			for($d=8;$d<22;$d++){
 		?>
@@ -88,7 +88,7 @@ Search &amp; Add : <input type="text" class="inp" id="po_search" style="width:40
 		<?php 
 			}	 
 		?>
-	</select>
+	</select>-->
 </td>
 </tr>
 <tr>
@@ -124,7 +124,7 @@ Search &amp; Add : <input type="text" class="inp" id="po_search" style="width:40
 <td>
 	<div style="visibility: %dp_price_inp% "><input type="text" class="dp_price inp" size="8" name="dp_price[]" value="%dp_price%"></div>
 </td>
-<td style="display:none"><input type="text" class="margin inp readonly" size="6" readonly="readonly" name="margin[]" value="%margin%"></td>
+<td><input type="text" class="margin inp" size="6" name="margin[]" value="%margin%"></td>
 <td><input type="text" class="sdiscount inp" size="6" name="sch_discount[]" value="0"></td>
 <td><select class="stype" name="sch_type[]">
 <option value="1">percent</option>
@@ -138,7 +138,6 @@ Search &amp; Add : <input type="text" class="inp" id="po_search" style="width:40
 <td><a href="javascript:void(0)" onclick='$(this).parent().parent().remove();'>remove</a></td>
 </tr>
 </table>
-
 
 </div>
 
@@ -212,7 +211,13 @@ $(".chk_all").click(function(){
 
 
 
-$('.datetimepick').datepicker({minDate:new Date()});
+//$('.datetimepick').datepicker({minDate:new Date()});
+
+$('.datetimepick').datetimepicker({
+	timeFormat: "hh:mm tt"
+});
+
+
 $('#addvenbrandfrm_dlg select[name="newbrand"]').chosen();
 
 $('#addvenbrandfrm_dlg').dialog({
@@ -333,7 +338,8 @@ function addproduct(id,name,mrp,margin,orders,qty)
 		template=template.replace("product_name",name);
 		template=template.replace("mrpvalue",mrp);
 		template=template.replace(/%sno%/g,i+1);
-		template=template.replace(/%margin%/g,margin);
+		margin = 0;
+		template=template.replace(/%margin%/g,"");
 		template=template.replace(/%foc%/g,"foc"+i);
 		template=template.replace(/%dp_price%/g,o.dp_price);
 		
@@ -342,7 +348,7 @@ function addproduct(id,name,mrp,margin,orders,qty)
 		else
 			template=template.replace(/%dp_price_inp%/g,'hidden');
 			
-		template=template.replace(/%qty%/g,qty);
+		template=template.replace(/%qty%/g,o.pen_ord_qty);
 		template=template.replace(/%orders%/g,o.orders);
 		template=template.replace(/%offer%/g,"offer"+i);
 		template=template.replace(/--barcode--/g,o.barcode);
@@ -408,7 +414,7 @@ $(function(){
 		}
 	});
 
-	$("#pprods .sdiscount,#pprods .mrp, #pprods .stype, #pprods .qty,#pprods .dp_price").live("change",function(){
+	$("#pprods .sdiscount,#pprods .margin,#pprods .mrp, #pprods .stype, #pprods .qty,#pprods .dp_price").live("change",function(){
 		$p=$(this).parents("tr").get(0);
 		qty=parseInt($(".qty",$p).val());
 		mrp=parseInt($(".mrp",$p).val());
@@ -471,13 +477,42 @@ $(function(){
 		{
 			if($("#pprods tbody tr").length==0)
 			{
-				alert("Add products please");
+				alert("No products added for creating PO, Please add atleast one product");
 				return false;
 			}
-			return true;
+			
+			var block_frm_submit = 0;
+			var qty_pending = 0;
+			var ven_pending = 0;
+			var marg_pending = 0;
+				$('#pprods tbody tr:visible',this).each(function(){
+					qty = $('input[name="qty[]"]',this).val()*1;
+					marg = $('input[name="margin[]"]',this).val()*1;
+					
+					if(isNaN(marg) || marg == 0)
+						marg_pending += 1;
+					
+					if(qty==0)
+						qty_pending += 1;
+					
+				});
+				
+				if(marg_pending)
+				{
+					alert("Invalid Margins entered,Please check and update margins");
+					return false;
+				}
+				
+				if(qty_pending || ven_pending){
+					alert("Unable to submit request, please enter valid qty for purchase");
+					return false;
+				}
+				if(confirm("Are you sure want to create this PO ?"))
+					return true;
+				else
+					return false;
 		}
 		return false;
-		
 	});
 	
 	$("#vendorsel").change(function(){
@@ -754,5 +789,7 @@ position:fixed;
 top:400px;
 right:50px;
 }
+.margin{border:2px solid #000 !important;width: 40px !important}
+.sdiscount{width: 40px !important}
 </style>
 <?php

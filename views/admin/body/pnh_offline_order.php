@@ -1596,6 +1596,7 @@ $("#show_scheme_details").dialog({
 </div>
 
 <style>
+
 #newbie_confirm_dlg{
 position: absolute;
 top: 66px;

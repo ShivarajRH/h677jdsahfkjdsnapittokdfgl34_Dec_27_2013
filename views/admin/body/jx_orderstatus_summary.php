@@ -28,7 +28,6 @@ $sql_all = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.men
             join king_transactions c on o.transid = c.transid 
             join king_dealitems dl on dl.id=o.itemid
             join king_deals deal on deal.dealid=dl.dealid
-
             join pnh_member_info pu on pu.user_id=o.userid 
             join pnh_m_franchise_info d on d.franchise_id = c.franchise_id
             join pnh_m_territory_info f on f.id = d.territory_id
@@ -38,7 +37,6 @@ $sql_all = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.men
     where c.init between $st_ts and $en_ts $cond
     group by c.transid  
     order by c.init desc  ";
-
 ##=
 $sql_shipped = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,c.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id 
                     from shipment_batch_process_invoice_link sd
@@ -59,7 +57,7 @@ $sql_shipped = "select distinct c.batch_enabled,d.franchise_id,deal.brandid,deal
                     order by sd.shipped_on desc";
 
 $sql_unshipped = "select distinct b.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,b.transid,sum(o.i_coup_discount) as com,b.amount,o.transid,o.status,o.time,o.actiontime,pu.user_id as userid,pu.pnh_member_id
-                        from king_orders o 
+                from king_orders o 
                         join king_transactions b on o.transid = b.transid 
                         left join proforma_invoices c on c.order_id = o.id and c.invoice_status = 1 
                         left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
@@ -94,19 +92,19 @@ $sql_cancelled = "select distinct b.batch_enabled,d.franchise_id,deal.brandid,de
                     group by b.transid 
                     order by b.init desc  ";
 
-		$sql_removed="select distinct tr.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,tr.transid,sum(o.i_coup_discount) as com,tr.amount,o.transid,o.status,o.time,o.actiontime,mi.user_id as userid,mi.pnh_member_id from king_orders o
-		                        join king_transactions tr on tr.transid=o.transid
-		                        join pnh_member_info mi on mi.user_id=o.userid 
-		                        join pnh_m_franchise_info d on d.franchise_id = tr.franchise_id
-		                        join pnh_m_territory_info f on f.id = d.territory_id
-		                        join pnh_towns e on e.id = d.town_id 
-		                        join king_dealitems dl on dl.id=o.itemid
-		                        join king_deals deal on deal.dealid=dl.dealid
-		                        join king_brands br on br.id = deal.brandid 
-		                        join pnh_menu m on m.id = deal.menuid 
-		                        where tr.batch_enabled=0 and o.status=0 and o.actiontime between $st_ts and $en_ts $cond
-		                        group by tr.transid
-		                        order by tr.init desc";
+$sql_removed="select distinct tr.batch_enabled,d.franchise_id,deal.brandid,deal.menuid,m.name as menu_name,br.name as brand_name,tr.transid,sum(o.i_coup_discount) as com,tr.amount,o.transid,o.status,o.time,o.actiontime,mi.user_id as userid,mi.pnh_member_id from king_orders o
+                        join king_transactions tr on tr.transid=o.transid
+                        join pnh_member_info mi on mi.user_id=o.userid 
+                        join pnh_m_franchise_info d on d.franchise_id = tr.franchise_id
+                        join pnh_m_territory_info f on f.id = d.territory_id
+                        join pnh_towns e on e.id = d.town_id 
+                        join king_dealitems dl on dl.id=o.itemid
+                        join king_deals deal on deal.dealid=dl.dealid
+                        join king_brands br on br.id = deal.brandid 
+                        join pnh_menu m on m.id = deal.menuid 
+                        where tr.batch_enabled=0 and o.status=0 and o.actiontime between $st_ts and $en_ts $cond
+                        group by tr.transid
+                        order by tr.init desc";
         
 if($type == 'all') {
         $sql=$sql_all;

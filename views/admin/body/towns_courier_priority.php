@@ -1,26 +1,24 @@
 <style>
 /*   select { background: #C09292; color: #fff; }*/
+h2 {    width: 60%;    float: left; }
+.filter_territory {float:right;margin-top: 15px;}
 .leftcont { display: none;}
 .loading {
-    text-align: center;
-    margin: 2% 0 0 4%;
-    visibility: visible; 
-    font-size: 15px; 
+    text-align: center; font-size: 15px;
+    margin: 2% 0 0 4%;  visibility: visible; 
 }
 .response_status { color: #029332; }
-
 .datagrid td { padding: 7px; }
 .datagrid th { background: #443266;color: #C3C3E5; }
 .nodata { margin-top: 130px; text-align:center; }
 .delivery_type {padding: 5px 0 4px 2px; }
 .delivery_type span{ font-size: 11px;}
-.delivery_type input[type="radio"] { width: 11px;
-padding-top: 10px;
-margin: 2px 3px 0 2px;}
+.delivery_type input[type="radio"] { width: 11px;padding-top: 10px;margin: 2px 3px 0 2px;}
+.clear { clear: both; }
 </style>
 <div class="container">
     <h2>Manage Towns Courier Priority</h2>
-    <div style="float:right;">
+    <div class="filter_territory">
         <select id="sel_territory" name="sel_territory" >
             <option value="">Choose Territory</option>
             <?php  foreach($pnh_terr as $terr): 
@@ -34,8 +32,14 @@ margin: 2px 3px 0 2px;}
             <?php }
             endforeach;  ?>
         </select>
+        Status:
+        <select id="sel_assign_status" name="sel_assign_status" >
+            <option value="00" <?=($assign_status == '')?"selected":"";?>>All</option>
+            <option value="y" <?=($assign_status == 'y')?"selected":"";?>>Assigned</option>
+            <option value="n" <?=($assign_status == 'n')?"selected":"";?>>Unassigned</option>
+        </select>
     </div>
-   
+    <div class="clear"></div>
     <div class="towns_courier_priority_list">
         <?php
         if(count($towns_courier_priority) == 0 ) {
@@ -49,7 +53,7 @@ margin: 2px 3px 0 2px;}
         <?php
             }
         ?>
-        <table width="100%" class="datagrid">
+        <table width="100%" class="datagrid datagridsort">
             <thead>
                 <tr>
                     <th>id</th>
@@ -75,7 +79,7 @@ margin: 2px 3px 0 2px;}
                             <?=++$i?>
                             <form name="form_<?=$town['id'];?>" method="post" onsubmit="return save_courier_priority(<?=$townid?>);">
                         </td>
-                        <td><input type="hidden" value="<?=$townid?>" /><a href="javascript:void(0);" onclick="return disp_franchise(<?=$townid?>);"><?php echo $town['town_name'];?></a></td>
+                        <td><input type="hidden" value="<?=$townid?>" /><a href="javascript:void(0);" onclick="return disp_franchise(<?=$townid?>);"><?php echo $town['town_name'];?></a> <span title="No of franchises in this town">(<?=$town["fran_count"];?>)</span></td>
                         <td>
                             <select id="courier_priority_1_<?=$townid?>" name="courier_priority_1_<?=$townid?>" class="courier_priority_1">
                                 <option value="00">Select courier</option>
@@ -177,7 +181,7 @@ margin: 2px 3px 0 2px;}
                             <input type="submit" name="submit" id="submit_<?=$townid;?>" value="Update"/>
                             </form>
                             <div class="response_status" id="response_status_<?=$townid;?>"></div>
-                            <div id="show_fran_info_block_<?=$townid;?>" style="display: none;">Hi</div>
+                            
                         </td>
                     </tr>
                 
@@ -188,7 +192,7 @@ margin: 2px 3px 0 2px;}
                 }
         ?>
     </div>
-    
+    <div id="show_fran_info_block" style="display: none;" ></div>
 </div>
 <script>
     //$(".courier_priority_1").chosen();
@@ -246,49 +250,56 @@ margin: 2px 3px 0 2px;}
          
         return false;
     }
+    
+    $("#show_fran_info_block").attr('title',"Franchise list");
+    $("#show_fran_info_block").dialog({
+        autoOpen: false,
+        height: 300,
+        width: 350,
+        modal: true
+    });
+                    
     function disp_franchise(townid) {
+        
+        
         $.post(site_url+"admin/get_franchisebytwn_id",{townid:townid},function(rdata){
            if(rdata.status == 'success') {
                var franchiselist_html='';
                $.each(rdata.franchise_list,function(i,itm) {
-                   franchiselist_html+='<div style="white-space:nowrap;margin-bottom:3px;margin-right:3px;padding:3px;background:#eee;cursor:pointer;">'
+                   franchiselist_html+='<div style="white-space:nowrap;margin-bottom:3px;margin-right:3px;padding:3px;background:#757D92;color:#fff;cursor:pointer;">'
                         +'<input type="hidden" name="fids[]" value="'+itm.franchise_id+'"/>'
-                        +itm.franchise_name
+                        +(++i)+". "+itm.franchise_name
                         +'</div>';
-                   
-                   //
                });
                   //output = ""+franchiselist_html;
-                  $("#show_fran_info_block_"+townid).html(franchiselist_html)
-                  .dialog({
-                        autoOpen: true,
-                          height: 300,
-                          width: 350,
-                          modal: true
-                    });
+                  $("#show_fran_info_block").attr('title',"Franchise list for "+townid);
+                  $("#show_fran_info_block").html(franchiselist_html).dialog("open");
            }
            else {
-               //alert("Error: "+rdata.message);
-               $("#show_fran_info_block_"+townid).html(rdata.message)
-                .dialog({
-                      autoOpen: true,
-                        height: 300,
-                        width: 350,
-                        modal: true
-                  });
+               alert("Error: "+rdata.message);
            }
         },"json");
     }
 //ONCHANGE Territory
 $("#sel_territory").live("change",function() {
     var terrid=$(this).find(":selected").val();//text(); 
-    window.location=site_url+"/admin/towns_courier_priority/"+terrid;
-    //var pathname = window.location.pathname; alert(pathname);return false;
-    //document.URL    window.status = "message";
+    var assigns_tatus=$("#sel_assign_status").find(":selected").val();//text(); 
+    reload_page(terrid,assigns_tatus);
 });
+
+$("#sel_assign_status").live("change",function() {
+    var assigns_tatus=$(this).find(":selected").val();//text(); 
+    var terrid=$("#sel_territory").find(":selected").val();//text(); 
+    reload_page(terrid,assigns_tatus);
+        //var pathname = window.location.pathname; alert(pathname);return false;document.URL    window.status = "message";
+});
+function reload_page(terrid,assigns_tatus) {
+    window.location=site_url+"/admin/towns_courier_priority/"+terrid+"/"+assigns_tatus;
+}
 function done(data) { }
 function fail(xhr,status) { print("Error: "+xhr.responseText+" "+xhr+" | "+status);}
 function success(resp) {
         //$('#trans_list_replace_block').html(resp);
 }
+$(".datagridsort").tablesorter({sortList:[[0,0]]});
 </script>

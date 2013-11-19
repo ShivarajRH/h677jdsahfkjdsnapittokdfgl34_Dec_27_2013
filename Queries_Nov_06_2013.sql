@@ -489,3 +489,55 @@ select * from pnh_town_courier_priority_link order by id desc
 select * from pnh_towns;
 
 # Nov_18_2013
+select * from pnh_m_franchise_info;
+
+select distinct tw.id as townid,tw.town_name,count(frn.franchise_id) as fran_count,tcp.* from pnh_towns tw
+	    left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1
+	    left join `pnh_m_franchise_info` frn on frn.town_id = tw.id and frn.is_suspended=0
+	     where tw.territory_id=3
+	    group by tw.id order by tw.town_name asc
+
+select ci.*,pt.name,pt.trans_prefix,trans_mode from m_courier_info ci
+                                        left join `partner_info` as pt on pt.id = ci.ref_partner_id
+                                        order by courier_name asc
+
+
+select  ci.*,if(ci.is_active=1,"PNH",if(ref_partner_id=0,"SIT",pt.name)) as used_for,pt.trans_prefix,trans_mode 
+from m_courier_info ci
+                                        left join `partner_info` as pt on pt.id = ci.ref_partner_id
+                                        order by courier_name asc
+
+select distinct ci.ref_partner_id,is_active
+,if(ci.is_active=1,'PNH',if(ref_partner_id=0,'SIT',pt.name)) as used_for
+,if(ci.is_active=1,'PNH',if(ref_partner_id=0,'SIT',pt.trans_prefix)) as trans_prefix,trans_mode 
+from m_courier_info ci
+left join `partner_info` as pt on pt.id = ci.ref_partner_id
+order by courier_name asc
+
+#Assigned users
+select distinct tw.id as townid,tw.town_name,count(frn.franchise_id) as fran_count,tcp.* from pnh_towns tw
+    left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1
+    left join `pnh_m_franchise_info` frn on frn.town_id = tw.id and frn.is_suspended=0
+     where  tw.territory_id=3
+    group by tw.id order by tw.town_name;
+
+#Unassigned users
+select distinct tw.id as townid,tw.town_name,count(frn.franchise_id) as fran_count,tcp.* from pnh_towns tw
+	left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1
+	left join `pnh_m_franchise_info` frn on frn.town_id = tw.id and frn.is_suspended=0
+	where  tw.territory_id=3 and tcp.courier_priority_1 is NOT null
+	group by tw.id order by tw.town_name;
+
+select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.batch_id,sd.shipped_on,a.status,a.id,a.itemid,b.name,a.quantity,i_orgprice,i_price,i_discount,i_coup_discount,c.p_invoice_no 
+                                                                        from king_orders a
+                                                                        join king_dealitems b on a.itemid = b.id
+                                                                        join king_deals dl on dl.dealid = b.dealid
+                                                                        join king_transactions t on t.transid = a.transid   
+                                                                        left join proforma_invoices c on c.order_id = a.id and c.invoice_status = 1
+                                                                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no and sd.invoice_no = 0
+                                                                        left join king_invoice e on e.invoice_no = sd.invoice_no
+                                                                where a.transid = 'PNHFFV43589' and a.status in (0,1) and sd.shipped=0
+                                                                order by c.p_invoice_no desc;
+
+
+# Nov_19_2013

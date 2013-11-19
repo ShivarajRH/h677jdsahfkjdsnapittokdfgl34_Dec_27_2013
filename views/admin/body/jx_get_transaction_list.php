@@ -4,17 +4,17 @@ $from=strtotime($s);
 $to=strtotime("23:59:59 $e");
 if( $batch_type == "ready") 
 {
-    $pg_trans_description='Following transactions are ready for shipping.';
+    #$pg_trans_description='Following transactions are ready for shipping.';
     $cond_2 = ' g.is_pending = g.total_trans ';
 }
 if( $batch_type == "partial") 
 {
-    $pg_trans_description='Following transactions are partial ready.';
+    #$pg_trans_description='Following transactions are partial ready.';
     $cond_2 = ' g.`is_pending` < g.`total_trans` and g.`is_pending` <> 0 ';
 }
 if( $batch_type == "pending") 
 {
-    $pg_trans_description='Following transactions are not ready or pending.';
+    #$pg_trans_description='Following transactions are not ready or pending.';
     $cond_2 = ' g.`is_pending` = 0 ';
 }
 
@@ -55,6 +55,7 @@ select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.i
                 left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
         WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond
         group by o.transid order by tr.actiontime desc) as g where $cond_2 group by transid";
+
 // and i.invoice_status=1 and sd.shipped=1 
 //echo "<p><pre>".$sql.'</pre></p>';die(); 
 $transactions_src=$this->db->query($sql);
@@ -79,7 +80,7 @@ else
                         <th style="width:120px">Ordered On</th>
                         <th style="width:160px">Transaction Reference</th>
                         <th style="padding:0px !important;">Item details</th>
-                        <th><input type="checkbox" value="chk_all" name="chk_all" id="chk_all" /></th>
+                        <th align="center">Pick List<br> <input type="checkbox" value="" name="pick_all" id="pick_all" /></th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -122,10 +123,10 @@ else
                                                                         join king_dealitems b on a.itemid = b.id
                                                                         join king_deals dl on dl.dealid = b.dealid
                                                                         join king_transactions t on t.transid = a.transid   
-                                                                        left join proforma_invoices c on c.order_id = a.id and c.invoice_status = 1 
-                                                                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no 
+                                                                        left join proforma_invoices c on c.order_id = a.id and c.invoice_status = 1
+                                                                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no and sd.invoice_no = 0
                                                                         left join king_invoice e on e.invoice_no = sd.invoice_no
-                                                                where a.transid = ? and a.status in (0,1)
+                                                                where a.transid = ? and a.status in (0,1) and sd.shipped=0
                                                                 order by c.p_invoice_no desc",$trans_arr['transid'])->result_array();
                         $trans_ttl_shipped = 0;
                         $trans_pending=0; 
@@ -135,11 +136,8 @@ else
                                 
                                     $output .='<input type="hidden" size="2" class="'.$trans_arr['transid'].'_total_orders" value="'.count($trans_orders).'" />';
                                         
-                                                    //=================
-                                                        
-                                    
-                                    //$ship_dets = array(); 
-                                    //$invoice_block='';
+                                    //=================
+                                    //$ship_dets = array(); $invoice_block='';
                                     $is_shipped = ($order_i['shipped'])?1:0;
                                     if($order_i['shipped'] && $order_i['invoice_status'])
                                     {
@@ -151,7 +149,6 @@ else
                                     foreach($ship_dets as $s_invno =>$s_shipdate)
                                     {
                                             $status_mrp= $this->db->query("select round(sum(nlc*quantity)) as amt from king_invoice a join king_orders b on a.order_id = b.id where a.invoice_no = '".$s_invno."' ")->row()->amt;
-
                                             $invoice_block.='<div style="margin:3px 0;"><a target="_blank" href="'.site_url('admin/invoice/'.$s_invno).'">'.$s_invno.'-'.$s_shipdate.'</a> - Rs.'.$status_mrp.' </div>';
                                     }
                                     $invoice_block.='</div>';*/
@@ -179,41 +176,47 @@ else
                         
                         $batch_ids = array_unique($batch_ids);
                         $invoice_infos = array_unique($invoice_infos);
-                        
+                        $pick_list_msg = '';
                         if($trans_pending == 0) {
                             $order_status_msg = '<span class="partial_ready">Ready</span>';
-                            foreach ($invoice_infos as $invoice_info ) {
-                                if($invoice_info != '') {
+                            foreach ($invoice_infos as $p_invoice_id ) {
+                                if($p_invoice_id != '') {
                                     $trans_action_msg .= '<div>
-                                                        <a class="proceed_link clear" href="pack_invoice/'.$invoice_info.'" target="_blank">Generate invoice</a><br>
-                                                        <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$invoice_info.'\','.$pg.')" class="">De-Allot</a>
+                                                        <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
+                                                        <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$pg.')" class="">De-Allot</a>
                                                     </div>';
+                                    $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_'.$p_invoice_id.'" name="pick_list_trans[]" class="pick_list_trans_ready" />';
                                 }
                             }
-                            if( $is_shipped == "Yes") {
+                            /*if( $is_shipped == "Yes") {
                                 $order_status_msg = 'Done';
-                                $trans_action_msg = '<div><a class="proceed_link clear" href="javascript:void(0)">Done</a></div>';
-                            }
+                                $trans_action_msg .= '<div><a class="proceed_link clear" href="javascript:void(0)">Done</a></div>';
+                            }*/
                         }
                         elseif($trans_pending == count($trans_orders)) {
                             $order_status_msg = '<span class="partial_ready">Not Ready</span>';
                             $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
+                            $pick_list_msg .= '--';
                         }
                         elseif($trans_pending < count($trans_orders)) {
                             $order_status_msg = '<span class="partial_ready">Partial Ready</span>';
-                            foreach ($invoice_infos as $invoice_info ) {
-                                 if($invoice_info != '') {
+                            foreach ($invoice_infos as $p_invoice_id ) {
+                                 if($p_invoice_id != '') {
                                      $trans_action_msg .= '<div>
-                                                         <a class="proceed_link clear" href="pack_invoice/'.$invoice_info.'" target="_blank">Generate invoice</a><br>
-                                                         <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$invoice_info.'\','.$pg.')" class="">De-Allot</a>
+                                                         <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
+                                                         <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$pg.')" class="">De-Allot</a>
                                                      </div>';
+                                     
+                                        $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_'.$p_invoice_id.'" name="pick_list_trans[]" class="pick_list_trans_partial" />';
                                  }
                              }
                             
                         }
-                        $output .= '</table></td>
-                            <td style="width:20px"><input type="checkbox" value="" name="" class="chk_'.$trans_arr['transid'].'" /></td>
-                            <td width="200">'.$trans_action_msg.'</td>
+                        $output .= '</table></td>';
+                        
+                        $output .= '<td style="width:70px">'.$pick_list_msg.'</td>';
+                                
+                        $output .= '<td width="200">'.$trans_action_msg.'</td>
                         </tr>';
                         
                 $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];

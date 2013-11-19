@@ -24,13 +24,15 @@
 <form method="post" id="poprodfrm" autocomplete="off">
 
 <div style="margin-bottom:22px;clear:both;">
-<table class="datagrid datagridsort" id="pprods" width="100%">
+<table class="datagrid datagridsort" id="pprods" width="100%" cellpadding="8">
 <thead>
 <tr>
 <th>S.No</th>
 <th>Product</th>
 <th></th>
 <th>Oldest Order Details</th>
+<th>Open PO Details</th>
+<th></th>
 <th>Qty</th>
 <th>MRP</th>
 <th>DP Price</th>
@@ -41,23 +43,26 @@
 <th>FOC</th>
 <th>Has Offer</th>
 <th>Vendor</th>
-<th colspan='3'>Partner Orders</th>
+<th colspan="3">Partner Orders</th>
 </tr>
 </thead>
 <tbody>
 </tbody>
 </table>
-</div>
-
-
-
-
-
 
 </div>
+</div>
 
-<div style="padding:127px 4px ;">
-	<input type="submit" value="Place Purchase Orders">
+<div style="padding:21px 4px ;">
+<table id="show_submit" style="display:none;">
+<tr>
+<td valign="top">Remarks:</td><td><textarea rows="3" cols="30" name="po_remarks"></textarea></td>
+<?php for($i=1;$i<=200;$i++){?>
+<td></td>
+<?php }?>
+<td style="float: right"><input type="submit" value="Place Purchase Orders" ></td>
+</tr>
+</table>
 </div>
 </form>
 
@@ -116,18 +121,23 @@
 <br />
 <b>(%product_brand%)</b>
 <br />
-<a href="javascript:void(0)" onclick="view_orderdet(%product_id%)">order details</a>
+<a href="javascript:void(0)" style="font-size: 11px;" onclick="view_orderdet(%product_id%)">View order details</a>
 <br />
-<a href="javascript:void(0)" onclick="view_purchasepattern(%product_id%)">purchase pattern</a>
+<a href="javascript:void(0)" style="font-size: 11px;" onclick="view_purchasepattern(%product_id%)">purchase pattern</a>
 </td>
 <td></td>
 <!--  <p>Transid:%transid%</p>-->
+
 <td>Date:%last_orderdon% <br />Transid:<a target="_blank" href="<?php echo site_url('admin/trans/%transid%')?>">%transid%</a></p>
 </td>
+
+<td style="width:100px;cellspacing:2"; id="is_po_raised_%product_id%"></td>
+
+<td></td>
 <td><input type="text" class="inp calc_pp qty" id="prod_qty_%product_id%"  size=2 name="qty[]" value="%require_qty%"></td>
 <td><input type="text" class="inp calc_pp mrp" size=4 name="mrp[]" value="%mrpvalue%"></td>
 <td><input type="text" title="Change/Update DP Price on change" class="inp calc_pp has_dp_price dp_price" size=4 name="dp_price[]" value="%dp_price%"></td>
-<td><input type="text" class="inp calc_pp margin" size=3 name="margin[]" value="%margin%"></td>
+<td><input type="text" class="inp calc_pp margin" size=3 name="margin[]" style="border:2px solid #000" value="%margin%"></td>
 <td><input type="text" class="inp calc_pp discount" size=3 name="sch_discount[]" value="0"></td>
 <td><select class="calc_pp type" name="sch_type[]">
 <option value="1">percent</option>
@@ -189,7 +199,7 @@
 <div id="modal" style="display:none;align="center">
 <div id="loading" align="center">
 Loading.Please wait...<br /><br />
-<img src="<?php echo base_url().'images/ajax-loader.gif'?>" alt="" />
+<img src="<?php echo base_url().'images/jx_loading.gif'?>" alt="" />
 </div>
 </div>
  <form id="src_form" action="<?=site_url("admin/jx_mark_src_products")?>" method="post">
@@ -207,21 +217,31 @@ Loading.Please wait...<br /><br />
 
 function show() {
     document.getElementById("modal").style.display="block";
-    setTimeout("hide()", 30000);  // 10 seconds
+    setTimeout("hide()", 3000);  // 3 seconds
 }
 
 function hide() {
     document.getElementById("modal").style.display="none";
 }
-    
+var psubmit= false;   
 $('#poprodfrm').submit(function(){
 
+	
+	if(!psubmit)
+	{
 	var block_frm_submit = 0;
 	var qty_pending = 0;
 	var ven_pending = 0;
+	var marg_pending = 0;
 		$('.datagrid tbody tr:visible',this).each(function(){
 			qty = $('input[name="qty[]"]',this).val()*1;
 			ven = $('select[name="vendor[]"]',this).val()*1;
+			marg = $('input[name="margin[]"]',this).val()*1;
+			
+			if(isNaN(marg) || marg == 0)
+				marg_pending += 1;
+				
+			
 			if(qty==0)
 				qty_pending += 1;
 
@@ -229,20 +249,26 @@ $('#poprodfrm').submit(function(){
 				ven_pending += 1;
 			
 		});
-if(confirm("Are you sure want to place po?"))
-{
+		
+		if(marg_pending)
+		{
+			alert("Invalid Margins entered,Please check and update margins");
+			return false;
+		}
+		
 		if(qty_pending || ven_pending){
 			alert("Unable to submit request, please choose vendor or qty is missing");
 			return false;
-		}else
+		}
+
+		if(confirm('Are You sure want to place PO?'))
 		{
-			$('.datagrid tbody tr:hidden').remove();
 			return true;
 		}
-}else
-{
-	return false;
-}
+		else
+			return false;
+		
+	}
 });
 
 
@@ -280,19 +306,18 @@ function addproduct(id,name,mrp,require)
 		
 	if(data.length && data!=undefined && o.product_id != undefined)
 	{
-
-		
-		
 		template=$("#p_clone_template tbody").html();
 		template=template.replace(/%sno%/g,i+1);
-		template=template.replace(/%require_qty%/g,require);
+		//template=template.replace(/%require_qty%/g,require);
+		if(o.require_qty <= 0)
+			o.require_qty =0;
+		template=template.replace(/%require_qty%/g,o.require_qty);
 		template=template.replace(/%product_id%/g,o.product_id);
 		template=template.replace(/%brand_id%/g,o.brand_id);
 		template=template.replace(/%menuid%/g,o.menuid);
 		template=template.replace(/%brand_name%/g,o.brand_name);
 		template=template.replace(/%menu%/g,o.menu);
 		template=template.replace(/%vendor_id%/g,o.vendor_id);
-	
 		template=template.replace(/%product_name%/g,o.product_name);
 		template=template.replace(/%last_orderdon%/g,o.last_orderdon);
 		template=template.replace(/%transid%/g,o.transid);
@@ -300,7 +325,13 @@ function addproduct(id,name,mrp,require)
 		template=template.replace(/--barcode--/g,o.barcode);
 		template=template.replace(/%mrpvalue%/g,o.mrp);
 		template=template.replace(/%dp_price%/g,o.dp_price);
-		template=template.replace(/%margin%/g,o.margin);
+
+		//template=template.replace(/%po_id%/g,o.po_id);
+		//template=template.replace(/%ord_poqty%/g,o.order_qty);
+
+		o.margin = 0;
+		
+		template=template.replace(/%margin%/g,"");
 		template=template.replace(/%foc%/g,"foc"+i);
 		template=template.replace(/%offer%/g,"offer"+i);
 		
@@ -313,12 +344,16 @@ function addproduct(id,name,mrp,require)
 			
 		template=template.replace(/%pprice%/g,pprice);
 
+		
 	
 		vendors="";
 		$.each(o.vendors,function(i,v){
 			vendors=vendors+'<option value="'+v.vendor_id+'">'+v.vendor+'</option>';
 		});
 
+		
+		
+		
 		partners="";
 		$.each(o.partners,function(i,v){
 
@@ -357,6 +392,18 @@ function addproduct(id,name,mrp,require)
 
 		template=template.replace(/%partnerlist%/g,partners);
 		$("#pprods tbody").append(template);
+
+		if(o.is_po_raised != null)
+		{
+			is_po_raised_html = "";
+			$.each(o.is_po_raised,function(i,p){
+				if(p.po_order_qty<0)
+					p.po_order_qty=0;
+				is_po_raised_html+="<a href='"+site_url+'/admin/viewpo/'+p.po_id+"' target='_blank'>"+p.po_id+"</a>"+'-'+'<input type="text" readonly="readonly" style="background-color: #F1F1F1" size="2" value='+p.po_order_qty+' >';
+				
+				});
+			$("#is_po_raised_"+o.product_id).append(is_po_raised_html);
+		}
 		
 		if(!o.dp_price.length)
 		{
@@ -365,6 +412,7 @@ function addproduct(id,name,mrp,require)
 		{
 			$('#pprods tbody .has_dp_price:last').css('visibility','visible');
 		}
+
 		
 		added_po.push(id);
 
@@ -390,6 +438,7 @@ function addproduct(id,name,mrp,require)
 	}
 	});
 }
+
 var search_timer=0;
 var jHR=0;
 $(function(){
@@ -419,10 +468,11 @@ $(function(){
 			if(data.status=='error')
 			{
 				alert(data.msg);
+				$('#show_submit').hide();
 			}
 			else
 			{
-			
+			$('#show_submit').show();
 			$('#filter_prods').hide('');
 			$('select[name="fil_brand"]').html('<option value="">Choose</option>');
 			$('select[name="fil_menu"]').html('<option value="">Choose</option>');
@@ -645,6 +695,8 @@ $(function(){
 			mmrp="-";
 		$(".pprice",$r).val(mmrp);
 	});
+	
+	
 	$("#pprods .vendor").live("change",function(){
 		$r=$(this).parents("tr").get(0);
 		$.post("<?=site_url("admin/jx_getbrandmargin")?>",{v:$(this).val(),b:$(".brand",$r).val()},function(data){
@@ -670,7 +722,7 @@ function view_orderdet(pid)
 $('#orderd_productdet').dialog({
 	modal:true,
 	autoOpen:false,
-	width:500,
+	width:726,
 	height:400,
 	autoResize:true,
 	open:function(){
@@ -680,7 +732,10 @@ $('#orderd_productdet').dialog({
 		$("#orderd_podet tbody").html("");
 		$.post(site_url+'/admin/to_load_orderdprd_details',{pid:dlg.data('product_id')},function(result){
 			if(result.status=='error')
+			{
+				dlg.dialog('close');
 				alert(result.msg);
+			}
 			else
 			{
 				if(result.product_orderdet !=  undefined)
@@ -754,7 +809,11 @@ $("#purchase_productdet").dialog({
 							+"</tr>";
 					});
 					
+				}else
+				{
+					pofr_orderdrow +="<b style='align:center;'>No Record Found</b>";
 				}
+				
 				$("#last30_pdet tbody").html(pofr_orderdrow);
 
 				var pomid_orderdrow = '';
@@ -771,6 +830,10 @@ $("#purchase_productdet").dialog({
 					});
 					
 				}
+				else
+				{
+					pomid_orderdrow +="<b style='align:center;'>No Record Found</b>";
+				}
 				$("#last60_pdet tbody").html(pomid_orderdrow);
 
 				var polast_orderdrow = '';
@@ -786,6 +849,9 @@ $("#purchase_productdet").dialog({
 							+"</tr>";
 					});
 					
+				}else
+				{
+					polast_orderdrow +="<b style='align:center;'>No Record Found</b>";
 				}
 				$("#last90_pdet tbody").html(polast_orderdrow);
 				
@@ -822,11 +888,16 @@ $('.partner_det a.tgl_viewtransids').live("click",function(e){
 			{
 				 qcktiphtml += '<div style="max-height:200px;overflow:auto;clear:both">';
 				qcktiphtml += '<table width="100%" border=1 class="datagrid" cellpadding=3 cellspacing=0>';
-				qcktiphtml += '<thead><tr><th>Transids</th><th>Quantity</th><th>Orderd On</th></tr></thead><tbody>';
+				qcktiphtml += '<thead><tr><th>Transids</th><th>Order From</th><th>Quantity</th><th>Orderd On</th></tr></thead><tbody>';
 				$.each(resp.partner_transdet,function(a,b){
+					if(b.is_pnh==0)
+						b.is_pnh='Customer';
+					else
+						b.is_pnh=b.bill_person;
 					qcktiphtml+="<tr>"
 					qcktiphtml+="<td><a  href='"+site_url+'/admin/trans/'+b.transid+"' target='_blank'>"+b.transid+"</a></td>";
-					qcktiphtml+="<td>"+b.quantity+"</td>";
+					qcktiphtml+="<td>"+b.is_pnh+"</td>";
+					qcktiphtml+="<td>"+b.ord_qty+"</td>";
 					qcktiphtml+="<td>"+b.orderd_on+"</td>";
 					qcktiphtml+="</tr>";
 				});
@@ -1087,7 +1158,7 @@ background:#ff9900;
         min-height: 100%;
         width: 100%;
     }
-    #loading
+  /*  #loading
     {
         font-family: Arial;
         font-size: 10pt;
@@ -1098,9 +1169,9 @@ background:#ff9900;
         background-color: White;
         z-index: 999;
         margin-top: 225px;
-       
+       	display:none;
         margin-left: 531px;
-    }
+    }*/
         
         #ui-datepicker-div{
         top:179px !important;
@@ -1114,6 +1185,7 @@ background:#ff9900;
 #sl_products td {text-align: center;}
 
 .psrcstat a{font-size: 10px;color: blue;}
+#purchase_productdet_frm tfoot{display:none !important}
 </style>
 
 

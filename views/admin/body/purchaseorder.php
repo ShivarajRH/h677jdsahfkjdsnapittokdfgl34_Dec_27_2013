@@ -124,7 +124,7 @@ Search &amp; Add : <input type="text" class="inp" id="po_search" style="width:40
 <td>
 	<div style="visibility: %dp_price_inp% "><input type="text" class="dp_price inp" size="8" name="dp_price[]" value="%dp_price%"></div>
 </td>
-<td><input type="text" class="margin inp" size="6" name="margin[]" value="%margin%"></td>
+<td><input type="text" class="margin inp" size="6" name="margin[]" value="%margin%"><span id="marg_prc"><input type="text" name="marg_prc" value="" class="marg_prc">%</span></td>
 <td><input type="text" class="sdiscount inp" size="6" name="sch_discount[]" value="0"></td>
 <td><select class="stype" name="sch_type[]">
 <option value="1">percent</option>
@@ -378,7 +378,7 @@ function calc_total_pov()
 		}
 		margin=parseInt($(".margin",$p).val());
 		
-		if(dp_price*1 > 0)
+	/*	if(dp_price*1 > 0)
 		{
 			price=dp_price-(dp_price*margin/100);
 			if(stype==1)
@@ -392,7 +392,30 @@ function calc_total_pov()
 				price=price-(mrp*sdiscount/100);
 			else
 				price=price-sdiscount;
+		}*/
+		if(dp_price*1 > 0)
+		{
+			price=dp_price-(dp_price*margin/100);
+			if(stype==1)
+				price=price-(dp_price*sdiscount/100);
+			else
+			{
+				
+				price=dp_price-margin;
+				margin_prc=(1-(price/dp_price))*100;
+				
+			}
+				
+		}else
+		{
+			price=mrp-(mrp*margin/100);
+			if(stype==1)
+				price=price-(mrp*sdiscount/100);
+			else
+				price=mrp-margin;
+				
 		}
+		
 		total+=(price*qty);
 	});
 	$("#total_po_value").html(Math.round(total,2));
@@ -421,6 +444,7 @@ $(function(){
 		dp_price=parseInt($(".dp_price",$p).val());
 		stype=parseInt($(".stype",$p).val());
 		sdiscount=parseFloat($(".sdiscount",$p).val());
+		
 		if(isNaN(sdiscount))
 		{
 			sdiscount=0;
@@ -432,16 +456,34 @@ $(function(){
 		{
 			price=dp_price-(dp_price*margin/100);
 			if(stype==1)
+			{
+				$('.marg_prc',$p).hide();
 				price=price-(dp_price*sdiscount/100);
+			}
 			else
-				price=price-sdiscount;	
+			{
+				
+				price=dp_price-margin;
+				margin_prc=(1-(price/dp_price))*100;
+				$('.marg_prc',$p).show();
+				$('.marg_prc').val(margin_prc);
+			}
+				
 		}else
 		{
 			price=mrp-(mrp*margin/100);
 			if(stype==1)
+			{
+				$('.marg_prc',$p).hide();
 				price=price-(mrp*sdiscount/100);
+			}
 			else
-				price=price-sdiscount;
+			{
+				price=mrp-margin;
+				margin_prc=(1-(price/mrp))*100;
+				$('.marg_prc',$p).show();
+				$('.marg_prc').val(margin_prc);
+			}
 		}
 		
 		$(".pprice",$p).val(price);
@@ -791,5 +833,6 @@ right:50px;
 }
 .margin{border:2px solid #000 !important;width: 40px !important}
 .sdiscount{width: 40px !important}
+.marg_prc{display:none;}
 </style>
 <?php
