@@ -7822,10 +7822,9 @@ order by p.product_name asc
 			
 			$this->db->query("update king_transactions set amount = ?,paid=? where transid=?",array($trans_amt,$trans_amt,$transid));
 				
-            // Process to batch this transaction
-            $this->load->model("reservation_model");
-            $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
-            //$this->session->set_flashdata("erp_pop_info","$transid is processed for batch");
+                    // Process to batch this transaction
+                    $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+                    //$this->session->set_flashdata("erp_pop_info","$transid is processed for batch");
                         
 		}
      	//die("TESTING");

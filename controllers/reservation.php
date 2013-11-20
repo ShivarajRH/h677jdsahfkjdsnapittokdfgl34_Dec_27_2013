@@ -7,6 +7,36 @@
 include APPPATH.'/controllers/analytics.php';
 class Reservation extends Analytics {
     
+    function product_proc_list_for_invoice($p_invoiceid)
+    {
+            $user=$this->auth(INVOICE_PRINT_ROLE);
+            //$data['prods']=$this->erpm->getprodproclist($bid);
+
+            $prod_list = $this->db->query("select product_id,product,location,sum(rqty) as qty from ( 
+                        select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
+                                from t_reserved_batch_stock a 
+                                join t_stock_info b on a.stock_info_id = b.stock_id 
+                                join m_product_info c on c.product_id = b.product_id 
+                                join m_rack_bin_info d on d.id = b.rack_bin_id 
+                                join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
+                                where e.p_invoice_no=? 
+                        group by a.id  ) as g 
+                        group by product_id,location",$p_invoiceid)->result_array();
+            return $prod_list;
+            #e.batch_id in (?)
+    }
+    /**
+     * Process proforma ids selected 
+     */
+    function p_invoice_for_picklist() {
+        $p_invoice_ids = explode(",",$_POST['pick_list_trans']);
+        foreach ($p_invoice_ids as $p_inv_id) {
+            //echo '<br>'.$p_inv_id;
+            $data['prods'][] = $this->product_proc_list_for_invoice($p_inv_id);
+        }
+        
+        $this->load->view("admin/body/product_proc_list_pinvoice",$data);
+    }
     /**
      * @access public
      * @param type $transid
@@ -31,21 +61,25 @@ class Reservation extends Analytics {
      */
     function reserve_avail_stock_all_transaction($updated_by,$batch_remarks='By transaction reservation system') {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
-        
-        $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
-		from king_orders a
-                join king_transactions tr on tr.transid = a.transid
-                where a.status in (0,1) and tr.batch_enabled=1 #and a.transid=@tid
-		group by a.transid) as ddd
-                where ddd.orders_status=0")->result_array() or die("Error");
-        foreach($rslt_for_trans as $rslt) {
-            $transid = $rslt['transid'];
-            $ttl_num_orders = $rslt['num_order_ids'];
-            
-            //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
-            // Process to batch this transaction
-            $this->load->model("reservation_model");
-            $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        if($user) {
+            $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
+                    from king_orders a
+                    join king_transactions tr on tr.transid = a.transid
+                    where a.status in (0,1) and tr.batch_enabled=1 #and a.transid=@tid
+                    group by a.transid) as ddd
+                    where ddd.orders_status=0")->result_array() or die("Error");
+            foreach($rslt_for_trans as $rslt) {
+                $transid = $rslt['transid'];
+                $ttl_num_orders = $rslt['num_order_ids'];
+
+                //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
+                // Process to batch this transaction
+                $this->load->model("reservation_model");
+                $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+            }
+        }
+        else {
+            echo 'You dodn\'t have access permission to do this acation';
         }
         //$this->output->set_output($output);
     }

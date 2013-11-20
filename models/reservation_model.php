@@ -423,6 +423,7 @@ class reservation_model extends Model
                                     foreach($alloted_stock as $allot_stk)
                                             $this->db->insert("t_reserved_batch_stock",$allot_stk);
                                     
+                                    $tot_qty=array();
                                     foreach($alloted_stock2 as $stk_prod)
                                     {
                                             $stk_movtype=0;
@@ -430,15 +431,19 @@ class reservation_model extends Model
                                             if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,$batch_remarks)) {
                                                 //Stock log updated.
                                                 $stk_movtype_msg = ($stk_movtype)?' De-Alloted. ': " Alloted. ";
-                                                
-                                                $output .= "\nProduct (".$stk_prod['product_id'].') with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
+                                                $tot_prdt[$stk_prod['product_id']]=true;
+                                                //$success = "\nProduct (".$stk_prod['product_id'].') with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
                                             }
                                             else {
-                                                $output .= "\nStock log not updated.";
+                                                $output .= "\nTransaction Stock log not updated.";
                                             }
                                              
                                     }
-                                    
+                                    $output .= "\nTransaction $i_transid with ".count($alloted_stock)." product".$stk_movtype_msg.'.';
+
+                            }
+                            else {
+                                $output .= "\nTransaction $i_transid  have insufficient stock.";
                             }
                     }
 

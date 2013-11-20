@@ -3,7 +3,7 @@
 <div class="container">
     <div>
         <h2>Manage Transaction Reservations</h2>
-        <div class="high_link"><a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction(<?=$user['userid'];?>);">Re-Allot all pending transactions</a></div>
+        <div class="re_allot_all_block"></div>
     </div>
     <div class="clear"></div>
     <div id="list_wrapper">
@@ -25,14 +25,15 @@
     <div class="level1_filters">
         <fieldset>
             <span title="Toggle Filter Block" class="close_filters"><span class="close_btn">Show</span>
-            <h3 class="filter_heading">Filters:</h3>
+                <h3 class="filter_heading">Filters:</h3>
             </span>
                 <div class="filters_block">
                         <div class="date_filter">
                             <form id="trans_date_form" method="post">
                                     <b>Show transactions : </b>
                                     <label for="date_from">From :</label><input type="text" id="date_from"
-                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4)?>" />
+                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7)?>" />
+                                    <!--time()-60*60*24*7*4)-->
                                     <label for="date_to">To :</label><input type="text" id="date_to"
                                             name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
                                     <input type="submit" value="Submit">
@@ -90,12 +91,22 @@
     <div class="level2_filters">
             <div class="trans_pagination pagination_top"></div>
             
+            <div class="btn_picklist_block"></div>
+            
             <span class="ttl_trans_listed dash_bar"></span>
-<!--            <span class="log_display"></span>-->
+<!--            <span class="log_display"></span> -->
     </div>        
         <div id="trans_list_replace_block"></div>
 
 </div>
+<div id="show_picklist_block" style="display: none;" >
+    <form target="hndl_picklist_print" action="<?=site_url("admin/p_invoice_for_picklist")?>" method="post">
+        <input type="hidden" name="pick_list_trans" value=""/>
+    </form>
+    <iframe id="hndl_picklist_print" name="hndl_picklist_print" style="width: 100%;height: 100%; border: none;"></iframe>
+    <!--566px-->
+</div>
+
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>
 <script>
 // <![CDATA[
@@ -168,8 +179,65 @@ $(document).ready(function() {
 // ]]>
 $("#pick_all").live("change",function() {
     var checkBoxes=$(".pick_list_trans_ready");
-    checkBoxes.attr("checked", !checkBoxes.attr("checked"));
+    if($(this).is(":checked")) {
+        checkBoxes.attr("checked", !checkBoxes.attr("checked"));
+    }
+    else {
+        checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
+    }
+    
 });
+
+    $("#show_picklist_block").attr('title',"Pick list");
+    $("#show_picklist_block").dialog({
+        autoOpen: false,
+        open:function() {
+          $("form",this).submit();  
+        },
+        height: 650,
+        width:900,
+        modal: true
+    });
+
+$("#btn_generate_pick_list").live("click",function(){
+    //var pick_list_trans=$("#pick_list_trans").length;
+    //$("#p_invoice_for_picklist").submit();
+    var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
+    var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
+    var total=(pick_list_trans_ready+pick_list_trans_partial);
+    if(total==0) { alert("Please select any of transaction to generate pick list"); return false;}
+    var p_invoice_ids=[];
+    $.each($("input.pick_list_trans_ready:checked"),function() {
+        p_invoice_ids.push($(this).val());
+    });
+    $.each($("input.pick_list_trans_partial:checked"),function() {
+        p_invoice_ids.push($(this).val());
+    });
+    p_invoice_ids = p_invoice_ids.join(",");
+    
+    $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids);
+    
+    $("#show_picklist_block").dialog("open");
+    
+    //print($("#show_picklist_block input[name='pick_list_trans']").val());
+    //print(p_invoice_ids);
+    /*var postData = {"pick_list_trans":p_invoice_ids};
+    $.post(site_url+"admin/p_invoice_for_picklist",postData,function(rdata) {
+        $("#show_picklist_block").html(""+rdata).dialog("open");
+        
+    });*/
+    
+});
+
+
+    
+    
+function pinvoice_for_picklist() {
+    //var pick_list_trans=$("#pick_list_trans:checked").length;
+   // var pick_list_trans=$("input:checked").length;
+   // print(pick_list_trans);
+    return false;
+}
 </script>
 
 <?php

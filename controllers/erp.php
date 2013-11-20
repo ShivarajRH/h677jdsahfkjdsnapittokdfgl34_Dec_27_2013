@@ -4097,15 +4097,15 @@ group by g.product_id ");
 		//$data['prods']=$this->erpm->getprodproclist($bid);
 		
 		$data['prods'] = $this->db->query("select product_id,product,location,sum(rqty) as qty from ( 
-select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
-	from t_reserved_batch_stock a 
-	join t_stock_info b on a.stock_info_id = b.stock_id 
-	join m_product_info c on c.product_id = b.product_id 
-	join m_rack_bin_info d on d.id = b.rack_bin_id 
-	join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
-	where e.batch_id in (?)
-group by a.id  ) as g 
-group by product_id,location",$bid)->result_array();
+                            select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
+                                    from t_reserved_batch_stock a 
+                                    join t_stock_info b on a.stock_info_id = b.stock_id 
+                                    join m_product_info c on c.product_id = b.product_id 
+                                    join m_rack_bin_info d on d.id = b.rack_bin_id 
+                                    join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
+                                    where e.batch_id in (?)
+                            group by a.id  ) as g 
+                            group by product_id,location",$bid)->result_array();
 		
 		$this->load->view("admin/body/product_proc_list",$data);
 	}
@@ -24813,20 +24813,20 @@ die; */
         $user=$this->erpm->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
 
         $field_cond=$cond='';
-        if($terrid != '' and is_numeric($terrid)) {
-            $cond .= " tw.territory_id=".$terrid;
+        if($terrid != '' and $terrid!=0 and is_numeric($terrid)) {
+            $cond .= " and tw.territory_id=".$terrid;
             $data['terr_selected'] = $this->db->query("select id as territory_id,territory_name from pnh_m_territory_info  where id=? order by territory_name",$terrid)->row_array();
         }
-        if($assign_status != '' and $assign_status == 'y') {
+        if(($assign_status != '' or $assign_status != 0) and $assign_status == 'y') {
             $cond .= "  and tcp.courier_priority_1 is NOT null ";
             //$data['terr_selected'] = $this->db->query("select id as territory_id,territory_name from pnh_m_territory_info  where id=? order by territory_name",$terrid)->row_array();
         }
-        if($assign_status != '' and $assign_status == 'n') {
-            $cond .= "  and tcp.courier_priority_1 is null ";
+        if(($assign_status != '' or $assign_status != 0) and $assign_status == 'n') {
+            $cond .= " and tcp.courier_priority_1 is null ";
             //$data['terr_selected'] = $this->db->query("select id as territory_id,territory_name from pnh_m_territory_info  where id=? order by territory_name",$terrid)->row_array();
         }
         if($cond!='') {
-            $cond = " where ".$cond;
+            $cond = " where 1=1 ".$cond;
         }
         $data['pnh_terr'] = $this->db->query("select ter.id,ter.territory_name from pnh_m_territory_info as ter group by ter.id order by territory_name")->result_array();
 
@@ -24840,7 +24840,7 @@ die; */
 
         $data['courier_providers'] = $this->db->query("select * from m_courier_info where is_active =1")->result_array();
         
-        $data['assign_status']=$assign_status;
+        $data['sel_assign_status']=$assign_status;
         $data['user']=$user;
         $data['page']='towns_courier_priority';
         $this->load->view("admin",$data);

@@ -1,38 +1,51 @@
-<html>
-<head>
+<?php
+	$user = $this->erpm->auth();
+?>
+<!--<html>-->
+<!--<head>-->
 <title>Product procurement list</title>
 <style>
-	body{font-family:arial;font-size:14px;margin:2%}
+	body{font-family:arial;font-size:14px;}
+	.onscreen{width:850px;margin:10px auto;}
+	@media print
+	  {
+	  	.onscreen {width:100%}
+	  }
 </style>
 </head>
-<body style="">
+<body class="onscreen">
 <div>
 	
 	<div class="block">	
-		<div style="float: left">
-			<h2 >Product procurement list for BATCH<?=$this->uri->segment(3)?></h2>	
-		</div>
 		<div style="float:right;">
 			<b>Date :</b> <?=Date('d-m-Y'); ?><br />
-			<b>By :</b> <?php echo $username ?>
+			<b>By :</b> <?php echo $user['username'] ?>
 		</div> 
+		<div style="float: left">
+			<h2 style="margin-bottom: 5px;">Product procurement list for Proforma Invoices<?=$this->uri->segment(3)?></h2>	
+		</div>
+                <div><a href="javascript:void(0)" style="font-weight:bold" onclick="print();">Print</a></div>
 	</div>
 	
 	<div id="wrapper" style="clear: both">
-		<table border=1 style="font-family:arial;font-size:13px;" width="100%" cellpadding=3>
+		<table border=1 style="font-family:arial;font-size:13px;width: 100%"  cellpadding=3>
 		<tr style="background:#aaa">
 			<th>Product ID</th><th>Product Name</th><th>Qty</th><Th>MRP</Th><th>Location</th>
 		</tr>
-		<?php $i=0; foreach($prods as $p){?>
+		<?php $i=0; 
+                foreach($prods as $pp){
+                    foreach($pp as $p){
+                    ?>
 			<tr <?php if($i%2==0){?>style="background:#eee;"<?php }?>>
 				<td  width="80"><a target="_blank" href="<?php echo site_url('admin/product/'.$p['product_id'])?>"><?=$p['product_id']?></a></td>
 				<td><?=$p['product']?></td>
 				<td width="20" align="center"><?=$p['qty']?></td>
 				<?php list($loc,$mrp) = explode('::',$p['location']);?>
 				<td width="30" ><?=$mrp?></td>
-				<td width="100"><?=$loc?>&nbsp;</td>
+				<td width="150"><?=$loc?>&nbsp;</td>
 			</tr>
 		<?php $i++;
+                    }
 		}?>
 		</table>
 	</div>
@@ -45,5 +58,5 @@
 	</div> 
 
 </body>
-</html>
+<!--</html>-->
 <?php

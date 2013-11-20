@@ -536,8 +536,41 @@ select e.invoice_no,sd.packed,sd.shipped,e.invoice_status,sd.batch_id,sd.shipped
                                                                         left join proforma_invoices c on c.order_id = a.id and c.invoice_status = 1
                                                                         left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no and sd.invoice_no = 0
                                                                         left join king_invoice e on e.invoice_no = sd.invoice_no
-                                                                where a.transid = 'PNHFFV43589' and a.status in (0,1) and sd.shipped=0
+                                                                where #a.transid = 'PNHFFV43589' and 
+												a.status in (0,1) and sd.shipped=0
                                                                 order by c.p_invoice_no desc;
 
 
 # Nov_19_2013
+select * from shipment_batch_process_invoice_link sd
+select * from proforma_invoices;
+select * from king_invoice;
+
+select product_id,product,location,sum(rqty) as qty from ( 
+                            select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
+                                    from t_reserved_batch_stock a 
+                                    join t_stock_info b on a.stock_info_id = b.stock_id 
+                                    join m_product_info c on c.product_id = b.product_id 
+                                    join m_rack_bin_info d on d.id = b.rack_bin_id 
+                                    join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
+                                    where e.batch_id in (?)
+                            group by a.id  ) as g 
+                            group by product_id,location
+
+select product_id,product,location,sum(rqty) as qty from ( 
+                            select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
+                                    from t_reserved_batch_stock a 
+                                    join t_stock_info b on a.stock_info_id = b.stock_id 
+                                    join m_product_info c on c.product_id = b.product_id 
+                                    join m_rack_bin_info d on d.id = b.rack_bin_id 
+                                    join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
+                                    where 
+				e.p_invoice_no = '111602' 
+				#e.batch_id ='4370'
+                            group by a.id  ) as g 
+                            group by product_id,location;
+
+select distinct tw.id as townid,tw.town_name,count(frn.franchise_id) as fran_count,tcp.* 
+from pnh_towns tw left join `pnh_town_courier_priority_link` tcp on tcp.town_id=tw.id and tcp.is_active=1 
+left join `pnh_m_franchise_info` frn on frn.town_id = tw.id and frn.is_suspended=0 
+where 1=1 and tcp.courier_priority_1 is NOT null group by tw.id order by tw.town_name

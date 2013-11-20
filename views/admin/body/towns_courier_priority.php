@@ -15,12 +15,13 @@ h2 {    width: 60%;    float: left; }
 .delivery_type span{ font-size: 11px;}
 .delivery_type input[type="radio"] { width: 11px;padding-top: 10px;margin: 2px 3px 0 2px;}
 .clear { clear: both; }
+.dia_fran_list,.dia_fran_list a { white-space:nowrap;margin-bottom:3px;margin-right:3px;padding:3px;background:#757D92;color:#fff;cursor:pointer; }
 </style>
 <div class="container">
     <h2>Manage Towns Courier Priority</h2>
     <div class="filter_territory">
         <select id="sel_territory" name="sel_territory" >
-            <option value="">Choose Territory</option>
+            <option value="00">Choose Territory</option>
             <?php  foreach($pnh_terr as $terr): 
                 if(isset($terr_selected['territory_id']) and $terr_selected['territory_id'] == $terr['id']) {?>
                     <option value="<?php echo $terr['id'];?>" selected><?php echo $terr['territory_name'];?></option>
@@ -34,9 +35,9 @@ h2 {    width: 60%;    float: left; }
         </select>
         Status:
         <select id="sel_assign_status" name="sel_assign_status" >
-            <option value="00" <?=($assign_status == '')?"selected":"";?>>All</option>
-            <option value="y" <?=($assign_status == 'y')?"selected":"";?>>Assigned</option>
-            <option value="n" <?=($assign_status == 'n')?"selected":"";?>>Unassigned</option>
+            <option value="00">All</option>
+            <option value="y" <?=($sel_assign_status == 'y')?"selected":"";?> >Assigned</option>
+            <option value="n" <?=($sel_assign_status == 'n')?"selected":"";?> >Unassigned</option>
         </select>
     </div>
     <div class="clear"></div>
@@ -261,14 +262,13 @@ h2 {    width: 60%;    float: left; }
                     
     function disp_franchise(townid) {
         
-        
         $.post(site_url+"admin/get_franchisebytwn_id",{townid:townid},function(rdata){
            if(rdata.status == 'success') {
                var franchiselist_html='';
                $.each(rdata.franchise_list,function(i,itm) {
-                   franchiselist_html+='<div style="white-space:nowrap;margin-bottom:3px;margin-right:3px;padding:3px;background:#757D92;color:#fff;cursor:pointer;">'
+                   franchiselist_html+='<div class="dia_fran_list">'
                         +'<input type="hidden" name="fids[]" value="'+itm.franchise_id+'"/>'
-                        +(++i)+". "+itm.franchise_name
+                        +(++i)+". <a href='"+site_url+"admin/pnh_franchise/"+itm.franchise_id+"' target='_blank'>"+itm.franchise_name+"</a>"
                         +'</div>';
                });
                   //output = ""+franchiselist_html;
@@ -283,18 +283,27 @@ h2 {    width: 60%;    float: left; }
 //ONCHANGE Territory
 $("#sel_territory").live("change",function() {
     var terrid=$(this).find(":selected").val();//text(); 
-    var assigns_tatus=$("#sel_assign_status").find(":selected").val();//text(); 
-    reload_page(terrid,assigns_tatus);
+    var assigns_status=$("#sel_assign_status").find(":selected").val();//text(); 
+    
+    if(terrid=='00') terrid='0';
+    if(assigns_status=='00') assigns_status='0';
+    
+    reload_page(terrid,assigns_status);
+    
 });
 
 $("#sel_assign_status").live("change",function() {
-    var assigns_tatus=$(this).find(":selected").val();//text(); 
+    var assigns_status=$(this).find(":selected").val();//text(); 
     var terrid=$("#sel_territory").find(":selected").val();//text(); 
-    reload_page(terrid,assigns_tatus);
+    
+    if(terrid=='00') terrid='0';
+    if(assigns_status=='00') assigns_status='0';
+    
+    reload_page(terrid,assigns_status);
         //var pathname = window.location.pathname; alert(pathname);return false;document.URL    window.status = "message";
 });
-function reload_page(terrid,assigns_tatus) {
-    window.location=site_url+"/admin/towns_courier_priority/"+terrid+"/"+assigns_tatus;
+function reload_page(terrid,assigns_status) {
+    window.location=site_url+"/admin/towns_courier_priority/"+terrid+"/"+assigns_status;
 }
 function done(data) { }
 function fail(xhr,status) { print("Error: "+xhr.responseText+" "+xhr+" | "+status);}

@@ -1,21 +1,29 @@
 <?php
-$output = $cond = $cond_2 = '';
+$output = $cond = $cond_2 = $inner_loop_cond = $re_allot_all_block='';
 $from=strtotime($s);
 $to=strtotime("23:59:59 $e");
+
+$chk_box_global = '<input type="checkbox" value="" name="pick_all" id="pick_all" />';
+$generate_btn_link = '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list"/>';
 if( $batch_type == "ready") 
 {
     #$pg_trans_description='Following transactions are ready for shipping.';
     $cond_2 = ' g.is_pending = g.total_trans ';
+    $inner_loop_cond = ' and sd.shipped=0 ';
 }
 if( $batch_type == "partial") 
 {
     #$pg_trans_description='Following transactions are partial ready.';
     $cond_2 = ' g.`is_pending` < g.`total_trans` and g.`is_pending` <> 0 ';
+    $inner_loop_cond = ' and sd.shipped=0 ';
 }
 if( $batch_type == "pending") 
 {
     #$pg_trans_description='Following transactions are not ready or pending.';
     $cond_2 = ' g.`is_pending` = 0 ';
+    //$inner_loop_cond = ' and sd.shipped=0 ';
+    //cant generate pick list
+    $chk_box_global = ''; $generate_btn_link='';
 }
 
 if($menuid!=0) {
@@ -65,6 +73,7 @@ if(!$transactions_src->num_rows())
     $output.='<script>$(".ttl_trans_listed").html("");
                         $(".log_display").html("");
                         $(".pagination_top").html("");
+                        $(".re_allot_all_block").css({"padding":"0"});
             </script>
             <h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
 }
@@ -80,11 +89,12 @@ else
                         <th style="width:120px">Ordered On</th>
                         <th style="width:160px">Transaction Reference</th>
                         <th style="padding:0px !important;">Item details</th>
-                        <th align="center">Pick List<br> <input type="checkbox" value="" name="pick_all" id="pick_all" /></th>
+                        <th align="center">Pick List<br> '.$chk_box_global.'</th>
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>';
+                <tbody> 
+                <form name="p_invoice_for_picklist" id="p_invoice_for_picklist" onsubmit="return pinvoice_for_picklist();">'; //
         $slno = $pg;
         foreach($transactions as $i=>$trans_arr) 
         {
@@ -94,8 +104,9 @@ else
             
             $slno+=1;
             $ord_stat_txt = '';$action_str = '';
+            $output .= '<script>$(".re_allot_all_block").css({"padding":"0"});</script>';
             
-            $arr_fran = $this->reservation_model->fran_experience_info($f['f_created_on']);
+            $arr_fran = $this->reservations->fran_experience_info($f['f_created_on']);
             
             $output .= '<tr class="'.$ord_stat_txt.'_ord">
                 <td>'.$slno.'</td>
@@ -124,9 +135,9 @@ else
                                                                         join king_deals dl on dl.dealid = b.dealid
                                                                         join king_transactions t on t.transid = a.transid   
                                                                         left join proforma_invoices c on c.order_id = a.id and c.invoice_status = 1
-                                                                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no and sd.invoice_no = 0
+                                                                        left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no
                                                                         left join king_invoice e on e.invoice_no = sd.invoice_no
-                                                                where a.transid = ? and a.status in (0,1) and sd.shipped=0
+                                                                where a.transid = ? and a.status in (0,1) $inner_loop_cond
                                                                 order by c.p_invoice_no desc",$trans_arr['transid'])->result_array();
                         $trans_ttl_shipped = 0;
                         $trans_pending=0; 
@@ -185,7 +196,7 @@ else
                                                         <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
                                                         <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$pg.')" class="">De-Allot</a>
                                                     </div>';
-                                    $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_'.$p_invoice_id.'" name="pick_list_trans[]" class="pick_list_trans_ready" />';
+                                    $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_ready" />';
                                 }
                             }
                             /*if( $is_shipped == "Yes") {
@@ -197,6 +208,8 @@ else
                             $order_status_msg = '<span class="partial_ready">Not Ready</span>';
                             $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
                             $pick_list_msg .= '--';
+                            $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$userid.');">Re-Allot all pending transactions</a>';
+                            $output .= '<script>$(".re_allot_all_block").css({"padding":"4px 10px"});</script>';
                         }
                         elseif($trans_pending < count($trans_orders)) {
                             $order_status_msg = '<span class="partial_ready">Partial Ready</span>';
@@ -207,10 +220,9 @@ else
                                                          <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$pg.')" class="">De-Allot</a>
                                                      </div>';
                                      
-                                        $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_'.$p_invoice_id.'" name="pick_list_trans[]" class="pick_list_trans_partial" />';
+                                        $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_partial" />';
                                  }
                              }
-                            
                         }
                         $output .= '</table></td>';
                         
@@ -243,12 +255,15 @@ else
     $endlimit=($pg+1*$limit);
     $endlimit=($endlimit>$total_trans_rows)?$total_trans_rows : $endlimit;
     
-    $output .= '</tbody>
+    $output .= '</form>
+                </tbody>
             </table>
             <div class="trans_pagination">'.$trans_pagination.' </div>
                 <script>
                     $(".pagination_top").html(\''.($trans_pagination).'\');
                     $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
+                    $(".btn_picklist_block").html(\''.($generate_btn_link).'\');
+                    $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
                 </script>';
             
 //          $output.='<script>$(".log_display").html("Orders from ");$(".page_trans_description").html(\''.($pg_trans_description).'\');</script>';

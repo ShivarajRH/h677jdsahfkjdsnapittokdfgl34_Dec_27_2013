@@ -54,7 +54,7 @@ table.datagridsort tbody td { padding: 4px; }
 }
 .pagination_top {
     padding-top: 0px;
-    margin: 0 4px 6px 0;
+    margin: 2px 4px 6px 0;
 }
 .curr_pg_link {
     background: #443266;
@@ -110,9 +110,9 @@ table.datagridsort tbody td { padding: 4px; }
 .danger_link {
     margin: 7px;
 }
-.high_link a  { color: #F1EFEE; }
-.high_link {    float:right;font-weight: bold; padding: 4px 10px !important;min-width: inherit;background:#FF7777; border-radius: 3px; margin-top: 20px; }
-.high_link:hover,.high_link a:hover {  background-color: #FA1527 }
+.re_allot_all_block a  { color: #F1EFEE; }
+.re_allot_all_block {    float:right;font-weight: bold; padding: 0px;min-width: inherit;background:#FF7777; border-radius: 3px; margin-top: 20px; }
+.re_allot_all_block:hover,.re_allot_all_block a:hover {  background-color: #FA1527 }
 
 .ttl_trans_listed {float: left; 
 max-width: inherit;
@@ -192,3 +192,5 @@ h3.filter_heading { margin-bottom: 0px; margin-top: 0;width: 788px;}
 #trans_list_replace_block {padding:1px 0px; clear: both;}
 .str_time { padding: 5px 0 5px; }
 .datagrid .small_text { font-size: 10px; }
+.btn_picklist_block { float: right; margin-right: 25px;}
+.btn_picklist_block input[type="submit"] { height: 30px; }
