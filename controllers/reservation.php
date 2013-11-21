@@ -13,14 +13,14 @@ class Reservation extends Analytics {
             //$data['prods']=$this->erpm->getprodproclist($bid);
 
             $prod_list = $this->db->query("select product_id,product,location,sum(rqty) as qty from ( 
-                        select a.product_id,c.product_name as product,concat(concat(rack_name,bin_name),'::',b.mrp) as location,a.qty as rqty 
-                                from t_reserved_batch_stock a 
-                                join t_stock_info b on a.stock_info_id = b.stock_id 
-                                join m_product_info c on c.product_id = b.product_id 
-                                join m_rack_bin_info d on d.id = b.rack_bin_id 
-                                join shipment_batch_process_invoice_link e on e.p_invoice_no = a.p_invoice_no and invoice_no = 0 
+                        select rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty 
+                                from t_reserved_batch_stock rbs 
+                                join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                                join m_product_info pi on pi.product_id = si.product_id 
+                                join m_rack_bin_info rak on rak.id = si.rack_bin_id 
+                                join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and invoice_no = 0 
                                 where e.p_invoice_no=? 
-                        group by a.id  ) as g 
+                        group by rbs.id  ) as g 
                         group by product_id,location",$p_invoiceid)->result_array();
             return $prod_list;
             #e.batch_id in (?)
@@ -34,9 +34,9 @@ class Reservation extends Analytics {
             //echo '<br>'.$p_inv_id;
             $data['prods'][] = $this->product_proc_list_for_invoice($p_inv_id);
         }
-        
         $this->load->view("admin/body/product_proc_list_pinvoice",$data);
     }
+    
     /**
      * @access public
      * @param type $transid
@@ -45,7 +45,6 @@ class Reservation extends Analytics {
     {
             $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
             //if($this->db->query("select batch_enabled from king_transactions where transid=?",$transid)->row()->batch_enabled==1)
-            //        $flag=0;
             
             $this->db->query("update king_transactions set batch_enabled=? where transid=? limit 1",array($flag,$transid));
             $this->erpm->do_trans_changelog($transid,"Transaction ".($flag==1?"ENABLED":"DISABLED")." for batch process");
@@ -74,8 +73,7 @@ class Reservation extends Analytics {
 
                 //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
                 // Process to batch this transaction
-                $this->load->model("reservation_model");
-                $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+                $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
             }
         }
         else {
@@ -96,8 +94,7 @@ class Reservation extends Analytics {
         $batch_remarks=$batch_remarks=='' ? 'by transaction reservation system' : $batch_remarks ;
         
         // Process to batch this transaction
-        $this->load->model("reservation_model");
-        $this->reservation_model->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        echo $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
     }
        
     /**

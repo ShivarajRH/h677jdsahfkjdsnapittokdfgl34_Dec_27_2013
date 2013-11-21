@@ -75,8 +75,10 @@ class reservation_model extends Model
             $user = $this->erpm->auth();
             $output='';
 
-            if(empty($num))
-                    show_error("Enter no of orders to process");
+            if(empty($num)) {
+                    $output.=("Enter no of orders to process"); 
+            }
+            
             $i_transid=$transid;//$this->input->post("transid");
 
 
@@ -108,11 +110,11 @@ class reservation_model extends Model
 
             if($i_transid)
                     $raw_trans=$this->db->query("select o.* from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 where t.batch_enabled=1 and t.transid=?",$i_transid)->result_array();
-            /*else
+            else
                     $raw_trans=$this->db->query("select o.*,t.partner_reference_no from king_transactions t join king_orders o on o.transid=t.transid and o.status=0 join king_dealitems di on di.id = o.itemid join king_deals d on d.dealid = di.dealid  where t.batch_enabled=1 and t.is_pnh=$is_pnh $cond order by t.priority desc, t.init asc")->result_array();
-                    */
+                    
 
-
+            
             $v_transids=array();
             foreach($raw_trans as $t)
             {
@@ -123,8 +125,9 @@ class reservation_model extends Model
                     $itemids[]=$t['itemid'];
                     $v_transids[]=$t['transid'];
             }
-            if(empty($trans))
-                    show_error("No orders to process");
+            if(empty($trans)) {
+                    $output = ("No orders to process");
+            }
 
             $itemids=array_unique($itemids);
             $raw_prods=$this->db->query("select itemid,qty,product_id from m_product_deal_link where itemid in ('".implode("','",$itemids)."')")->result_array();
@@ -269,12 +272,12 @@ class reservation_model extends Model
             
             $orders=array_unique($to_process_orders);
 
-            /*
+            /*echo '<pre>';
             print_r($productids);
             print_r($orders);
             print_r($stock);
-            exit;
-            */
+            exit;*/
+            
 
             $p_invoices=$this->erpm->do_proforma_invoice($orders);
 

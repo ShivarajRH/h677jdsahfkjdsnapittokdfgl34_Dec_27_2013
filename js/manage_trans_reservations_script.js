@@ -1,21 +1,54 @@
 //var GM_TIMING_END_CHUNK1=(new Date).getTime();
-function reallot_stock_for_all_transaction(userid) {
+$(".reservation_action_status").dialog({
+    autoOpen: false,
+    open:function() {
+      //$("form",this).submit();
+    },
+    top:120,
+    height: 133,
+    width:433,
+    modal: true
+});
+function reallot_stock_for_all_transaction(userid,pg) {
     if(!confirm("Are you sure you want to reserve available stock for all pending or partial transactions?")) {
+        return false;
+    }
+    var updated_by = userid;
+    $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
+    $.post(site_url+"admin/reserve_avail_stock_all_transaction/"+updated_by,"",function(rdata) {
+        if(rdata == '') {
+            rdata=("No transaction processed for allotment.");
+        }
+        else {
+            loadTransactionList(pg);
+        }
+        $(".reservation_action_status").html(rdata).dialog("open");
+        
+    });
+     
+    return false;
+}
+ 
+function reserve_stock_for_trans(userid,transid,pg) {
+    if(!confirm("Are you sure you want to process \nthis transaction for batch?")) {
         return false;
         //var batch_remarks=prompt("Enter remarks?");
     }
-    /*
-    var batch_remarks='';'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'*/
+    var ttl_num_orders=$("."+transid+"_total_orders").val();
+    var batch_remarks='';
     var updated_by = userid;
-    $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
-    $.post('reserve_avail_stock_all_transaction/'+updated_by,"",function(rdata) {
-        loadTransactionList();
 
-        if(rdata!='') {
-            alert(rdata);
+    $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
+        
+        if(rdata == '') {
+            rdata=("No transaction processed for allotment.");
+        }else {
+            loadTransactionList(pg);
         }
+        $(".reservation_action_status").html(rdata).dialog("open");
+        
     });
-//        $(".working_status").html("");
+
     return false;
 }
 
@@ -40,25 +73,7 @@ $(".close_filters").toggle(function() {
     $(".close_filters .close_btn").html("Show");
     //    $(".level1_filters").animate({"width":"auto"});
 });
-    
-function reserve_stock_for_trans(userid,transid,pg) {
-    if(!confirm("Are you sure you want to process \nthis transaction for batch?")) {
-        return false;
-        //var batch_remarks=prompt("Enter remarks?");
-    }
-    var ttl_num_orders=$("."+transid+"_total_orders").val();
-    var batch_remarks='';
-    var updated_by = userid;
-
-    $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
-        loadTransactionList(pg);
-        if(rdata!='') {
-            alert(rdata);
-        }
-    });
-
-    return false;
-}
+   
 //Onchange limit
 $("#limit_filter").live("change",function() {
     loadTransactionList(0);

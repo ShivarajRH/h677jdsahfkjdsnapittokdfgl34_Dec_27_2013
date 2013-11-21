@@ -249,8 +249,7 @@ ul.tabs li.active
 								</table>
 							</td>
 							<td width="50%">
-								<img src="<?=IMAGES_URL?>items/<?=$deal['pic']?>.jpg" style="margin-left:20px;"><br />
-								<a class="upload_pic_wrapper" href="<?=site_url("admin/pnh_deal_extra_images/{$deal['id']}")?>"><button type="button" class="btn btn-info btn-mini">Click Here</button></a>
+								<img src="<?=IMAGES_URL?>items/<?=$deal['pic']?>.jpg" style="margin-left:20px;">
 							</td>
 						</tr>
 					</table>

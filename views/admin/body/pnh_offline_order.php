@@ -1122,13 +1122,13 @@ $(function(){
 			var menu_qty=qty[i];
 			if(menu_qty>1 && mid!=0 && menu_id  == 112)
 			{
-				alert("More than 1 qty of Electronics Item for 1 member can't be processed");
+				alert("More than 1 qty of Electronic Items for 1 member can't be processed");
 				return false;
 			}
 
 			if(mid==0 && menu_id != 112)
 			{
-				if(confirm("Instant Registration is required because Other than Electronics Products are there in the Cart"))
+				if(confirm("Instant Registration is required because Other than Electronic items are there in the Cart"))
 					 mem_reg();
 				 return false;
 			}

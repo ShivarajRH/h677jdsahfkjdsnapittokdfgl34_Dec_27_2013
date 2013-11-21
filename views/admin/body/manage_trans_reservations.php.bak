@@ -32,7 +32,7 @@
                             <form id="trans_date_form" method="post">
                                     <b>Show transactions : </b>
                                     <label for="date_from">From :</label><input type="text" id="date_from"
-                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4)?>" />
+                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7)?>" /><!--time()-60*60*24*7*4-->
                                     <label for="date_to">To :</label><input type="text" id="date_to"
                                             name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
                                     <input type="submit" value="Submit">

@@ -101,7 +101,7 @@ else
             $batch_ids = array();
             $invoice_infos=array();
             $trans_action_msg = '';
-            
+            //"Confirmed","Processed","Shipped","Cancelled","Returned"
             $slno+=1;
             $ord_stat_txt = '';$action_str = '';
             
