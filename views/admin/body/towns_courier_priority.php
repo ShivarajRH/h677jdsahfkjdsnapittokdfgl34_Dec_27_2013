@@ -44,7 +44,7 @@ h2 {    width: 60%;    float: left; }
     <div class="towns_courier_priority_list">
         <?php
         if(count($towns_courier_priority) == 0 ) {
-            echo '<h3 class="nodata">No towns available</h3>'; 
+            echo '<h3 class="nodata">No match found for search criteria.</h3>'; 
         }
         else 
             {
@@ -303,7 +303,7 @@ $("#sel_assign_status").live("change",function() {
         //var pathname = window.location.pathname; alert(pathname);return false;document.URL    window.status = "message";
 });
 function reload_page(terrid,assigns_status) {
-    window.location=site_url+"/admin/towns_courier_priority/"+terrid+"/"+assigns_status;
+    window.location=site_url+"admin/towns_courier_priority/"+terrid+"/"+assigns_status;
 }
 function done(data) { }
 function fail(xhr,status) { print("Error: "+xhr.responseText+" "+xhr+" | "+status);}

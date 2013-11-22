@@ -13,6 +13,21 @@ class reservation_model extends Model
             parent::__construct();
     }
     
+    function product_proc_list_for_invoice($p_invoiceid) {
+        //$data['prods']=$this->erpm->getprodproclist($bid);
+        $arr_rslt = $this->db->query("select product_id,product,location,sum(rqty) as qty from ( 
+                select rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty 
+                        from t_reserved_batch_stock rbs 
+                        join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                        join m_product_info pi on pi.product_id = si.product_id 
+                        join m_rack_bin_info rak on rak.id = si.rack_bin_id 
+                        join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and invoice_no = 0 
+                        where e.p_invoice_no=? 
+                group by rbs.id  ) as g 
+                group by product_id,location",$p_invoiceid)->result_array();#e.batch_id in (?)
+        return $arr_rslt;
+    }
+    
     /**
      * Get franchise experience information based on created_time
      * @param type $f_created_on
@@ -363,8 +378,8 @@ class reservation_model extends Model
                             $total_qty = $p['quantity']*$p['qty'];
                             $order_id = $p['order_id'];
 
-//                            if($down_import_summ)
-//                                    $down_summary[$p['partner_reference_no']] = $pinvno;
+                            if($down_import_summ)
+                                    $down_summary[$p['partner_reference_no']] = $pinvno;
 
                             /*
                             for($i=1;$i<=$p['quantity']*$p['qty'];$i++)
@@ -431,29 +446,232 @@ class reservation_model extends Model
                                     {
                                             $stk_movtype=0;
                                             //$prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg=''
-                                            if($this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,$batch_remarks)) {
+                                            $rdata=$this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,$batch_remarks);
+                                            if($rdata) {
                                                 //Stock log updated.
                                                 $stk_movtype_msg = ($stk_movtype)?' De-Alloted. ': " Alloted. ";
                                                 $tot_prdt[$stk_prod['product_id']]=true;
-                                                //$success = "\nProduct (".$stk_prod['product_id'].') with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
+                                                $success = "<br>Product-".$stk_prod['product_id']." and stock-".$stk_prod['stock_info_id'].' with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
                                             }
-                                            else {
-                                                $output .= "\nTransaction Stock log not updated.";
+                                            elseif(is_array($rdata)) {
+                                                $output .= "<br>".$rdata;
+                                                
+                                            }else {
+                                                $output .= "<br>Transaction Stock log not updated.";
                                             }
                                              
                                     }
-                                    $output .= "\nTransaction $i_transid with ".count($alloted_stock)." product".$stk_movtype_msg.'.';
+                                    
+                                    $output .= '<br>STOCK ALLOTED - '.$i_transid.' with '.count($alloted_stock).' product'.$stk_movtype_msg.'';
+                            }
+                           
+                    }
+                    
+            }
+            if($down_import_summ)
+            {
+			 
+				//$csv_oids = array();
+				//$csv_oids[] = '"Partner Reference no","Batch ID","Invoice no"';
+				//$p_oids = $this->input->post('p_oids');
+				//$p_oid_arr = explode(',',$p_oids);
+				/*foreach($p_oid_arr as $p_oid)
+				{
+					$tmp = array();
+					$tmp['partner_reference_no'] = $p_oid;
+					$tmp['batch_id'] = '';
+					$tmp['p_invoice_no'] = '';
+					if(isset($down_summary[$p_oid]))
+					{
+						$tmp['p_invoice_no'] = isset($down_summary[$p_oid])?$down_summary[$p_oid]:'';
+						$tmp['batch_id'] = isset($batch_inv_link[$tmp['p_invoice_no']])?$batch_inv_link[$tmp['p_invoice_no']]:'';	
+					}else
+					{
+						//$pinv_det = $this->db->query("select ");
+					}
+					
+					array_push($csv_oids,'"'.implode('","',$tmp).'"');
+				}
+				
+				header('Content-Type: application/csv');
+				header('Content-Disposition: attachment; filename=import_stat.csv');
+				header('Pragma: no-cache');
 
+				echo implode("\r\n",$csv_oids);
+				exit;*/
+                
+                               
+					$tmp = array();
+					//$tmp['partner_reference_no'] = $p_oid;
+					$tmp['batch_id'] = '';
+					$tmp['p_invoice_no'] = '';
+					if(isset($down_summary[$p_oid]))
+					{
+						$tmp['p_invoice_no'] = isset($down_summary[$p_oid])?$down_summary[$p_oid]:'';
+						$tmp['batch_id'] = isset($batch_inv_link[$tmp['p_invoice_no']])?$batch_inv_link[$tmp['p_invoice_no']]:'';	
+					}
+					
+					$data = implode('","',$tmp);
+				
+                                
+                                        $output .= "<br>>Transaction $i_transid with ".$data.'.';
+                                
+		}else
+		{
+			if(!count($batch_inv_link))
+				$output.="<br>INSUFFICIENT STOCK - $i_transid";
+		}
+                echo ($output);
+    }
+    
+    function reservation_cancel_proforma_invoice($p_invoice,$update_by=1,$msg) {
+            $output='';
+            $invoice=$this->db->query("select transid,order_id,p_invoice_no,p_invoice_no as invoice_no from proforma_invoices where p_invoice_no=? and invoice_status=1",$p_invoice)->result_array();
+            
+            if(empty($invoice)) {
+                    return "Proforma Invoice not found or Invoice already cancelled"; 
+            }
+                    
+                    
+            $transid=$invoice[0]['transid'];
+            $oids=array();
+            foreach($invoice as $i)
+                    $oids[]=$i['order_id'];
+
+            $orders=$this->db->query("select quantity as qty,itemid,id from king_orders where id in ('".implode("','",$oids)."') and transid = ? ",$transid)->result_array();
+
+            $batch_id = $this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no=?",$p_invoice)->row()->batch_id;
+
+            $proforma_inv_det = $this->db->query("select id,is_b2b from proforma_invoices where p_invoice_no=? ",$p_invoice)->row_array();
+
+            $proforma_inv_id = $proforma_inv_det['id'];
+            $is_pnh = $proforma_inv_det['is_b2b'];
+
+
+            foreach($orders as $o)
+            {
+                    $pls=$this->db->query("select qty,pl.product_id,p.mrp,p.brand_id from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
+
+                    $pls2=$this->db->query("select pl.qty,p.product_id,p.mrp,p.brand_id 
+                                            from products_group_orders pgo
+                                            join king_orders o on o.id = pgo.order_id 
+                                            join m_product_group_deal_link pl on pl.itemid=o.itemid 
+                                            join m_product_info p on p.product_id=pgo.product_id 
+                                            where pgo.order_id=? and o.transid = ? ",array($o['id'],$transid))->result_array();
+
+                    $pls=array_merge($pls,$pls2);
+
+                    foreach($pls as $p)
+                    {
+
+                            /** Default rack bin used if brand is not linked for loc **/ 
+                            $p['location'] = 1;
+                            $p['rackbin'] = 10;
+                            $loc_det_res = $this->db->query("select location_id,rack_bin_id from m_rack_bin_brand_link a join m_rack_bin_info b on a.rack_bin_id = b.id where brandid = ? limit 1 ",$p['brand_id']);
+                            if($loc_det_res->num_rows())
+                            {
+                                    $loc_det = $loc_det_res->row_array();	
+                                    $p['location'] = $loc_det['location_id'];
+                                    $p['rackbin'] = $loc_det['rack_bin_id'];
                             }
-                            else {
-                                $output .= "\nTransaction $i_transid  have insufficient stock.";
+
+                            $p_reserv_qty = 0;
+                            //$reserv_stk_res = $this->db->query('select id,release_qty,extra_qty,stock_info_id,qty from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and status = 1 and order_id = ? and product_id = ? ',array($batch_id,$p_invoice,$o['id'],$transid,$p['product_id']));
+
+                            $reserv_stk_res = $this->db->query('select a.id,a.release_qty,a.extra_qty,a.stock_info_id,a.qty 
+                                                                            from t_reserved_batch_stock a
+                                                                            join king_orders b on a.order_id = b.id  
+                                                                            where batch_id = ? and p_invoice_no = ? 
+                                                                            and a.status = 0 and a.order_id = ? and b.transid = ? and product_id = ?',array($batch_id,$p_invoice,$o['id'],$transid,$p['product_id']));
+
+
+                            $stk_movtype=1; //IN
+                            if($reserv_stk_res->num_rows())
+                            {
+                                    foreach($reserv_stk_res->result_array() as $reserv_stk_det)
+                                    {
+                                            $rqty = $reserv_stk_det['qty']-$reserv_stk_det['release_qty']+$reserv_stk_det['extra_qty'];
+                                            $p_reserv_qty += $rqty;
+                                            //$sql="update t_stock_info set available_qty=available_qty+? where product_id=? and stock_id = ? limit 1";
+                                            //$this->db->query($sql,array($rqty,$p['product_id'],$reserv_stk_det['stock_info_id']));
+                                            $this->db->query("update t_reserved_batch_stock set status=3 where id = ? ",array($reserv_stk_det['id']));
+                                            //$this->erpm->do_stock_log(1,$rqty,$p['product_id'],$proforma_inv_id,false,true,true,-1,0,0,$reserv_stk_det['stock_info_id']);
+
+
+                                            $stk_info = $this->db->query("select * from t_stock_info where stock_id = ? ",$reserv_stk_det['stock_info_id'])->row_array();
+
+                                            if($stk_info)
+                                            {
+                                                     //($prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg='')
+                                                    $this->erpm->_upd_product_stock($stk_info['product_id'],$stk_info['mrp'],$stk_info['product_barcode'],$stk_info['location_id'],$stk_info['rack_bin_id'],0,$rqty,$update_by,$stk_movtype,$proforma_inv_id,-1,$msg);	
+                                            }else
+                                            {
+
+                                                    $this->erpm->_upd_product_stock($p['product_id'],$p['mrp'],'',$p['location'],$p['rackbin'],0,$rqty,$update_by,$stk_movtype,$proforma_inv_id,-1,$msg);
+                                            }
+                                    }
+
+                            }else{
+                                    //($prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg='')
+                                    $this->erpm->_upd_product_stock($p['product_id'],$p['mrp'],'',$p['location'],$p['rackbin'],0,($p['qty']*$o['qty']),$update_by,$stk_movtype,$proforma_inv_id,-1,$msg);
+
+                                    /*
+                                    $new_stock_entry = true;
+                                    $sp_det_res = $this->db->query("select product_id,mrp from t_stock_info where product_id = ? ",$p['product_id']);
+                                    if($sp_det_res->num_rows())
+                                    {
+                                            foreach($sp_det_res->result_array() as $sp_row)
+                                                    if($sp_row['mrp'] == $p['mrp'])
+                                                            $new_stock_entry = false;
+                                    }
+                                    if($new_stock_entry)
+                                             $this->db->query("insert into t_stock_info(product_id,location_id,rack_bin_id,mrp,available_qty,product_barcode,created_on) values(?,?,?,?,?,?,now())",array($p['product_id'],$p['location'],$p['rackbin'],$p['mrp'],0,''));
+
+                                    $stk_ref_id = @$this->db->query("select stock_id from t_stock_info where product_id=? and mrp=? limit 1 ",array($p['product_id'],$p['mrp']))->row()->stock_id;
+                                    if($stk_ref_id)
+                                    {
+                                            $sql="update t_stock_info set available_qty=available_qty+? where stock_id=? limit 1";
+                                            $this->db->query($sql,array($p['qty']*$o['qty'],$stk_ref_id));
+                                            $this->erpm->do_stock_log(1,$p['qty']*$o['qty'],$p['product_id'],$proforma_inv_id,false,true,true,-1,0,0,$stk_ref_id);
+                                    }
+                                    **/
                             }
+
+
+
                     }
 
             }
-            echo ($output);
-    }
 
+
+            $this->db->query("update king_orders set status=0 where id in ('".implode("','",$oids)."') and transid=? ",$transid);
+            $this->db->query("update proforma_invoices set invoice_status=0 where p_invoice_no=? and transid = ? ",array($p_invoice,$transid));
+            $this->erpm->do_trans_changelog($transid,"Proforma Invoice no $p_invoice cancelled");
+//                $this->session->set_flashdata("erp_pop_info","Proforma Invoice cancelled");
+            
+            
+            $bid=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no=?",$p_invoice)->row()->batch_id;
+
+            $is_batch_open = $this->db->query("select count(*) as t from (
+                    select  a.batch_id,a.p_invoice_no,sum(1) as total,sum(b.invoice_status) as ttl_active,sum(if(a.invoice_no,1,0)) as ttl_invoiced 
+                            from shipment_batch_process_invoice_link a
+                            join proforma_invoices b on a.p_invoice_no = b.p_invoice_no 
+                            join shipment_batch_process c on c.batch_id = a.batch_id 
+                            where a.batch_id = ?  
+                    group by a.batch_id
+                    having ttl_active != ttl_invoiced 
+                    ) as g ",$bid)->row()->t;
+
+                    if($is_batch_open)
+                            $this->db->query("update shipment_batch_process set status=1 where batch_id=? limit 1",$bid);
+                    else
+                            $this->db->query("update shipment_batch_process set status=2 where batch_id=? limit 1",$bid);
+            
+            $output .= "Proforma Invoice-$p_invoice cancelled under $transid transaction";
+            return $output;
+            //redirect("admin/proforma_invoice/$p_invoice");
+    }
+    
 }
 
 ?>

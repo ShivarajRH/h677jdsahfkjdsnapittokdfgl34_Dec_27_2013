@@ -1,8 +1,46 @@
 //var GM_TIMING_END_CHUNK1=(new Date).getTime();
-$(".reservation_action_status").dialog({
+//*************/
+$("#show_picklist_block").dialog({
     autoOpen: false,
     open:function() {
-      //$("form",this).submit();
+      $("form",this).submit();  
+    },
+    height: 650,
+    width:950,
+    modal: true
+});
+$("#pick_all").live("change",function() {
+    var checkBoxes=$(".pick_list_trans_ready");
+    if($(this).is(":checked")) {
+        checkBoxes.attr("checked", !checkBoxes.attr("checked"));
+    }
+    else {
+        checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
+    }
+});
+
+$("#btn_generate_pick_list").live("click",function(){
+    var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
+    var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
+    var total=(pick_list_trans_ready+pick_list_trans_partial);
+    if(total==0) { alert("Please select any of transaction to generate pick list"); return false;}
+    var p_invoice_ids=[];
+    $.each($("input.pick_list_trans_ready:checked"),function() {
+        p_invoice_ids.push($(this).val());
+    });
+    $.each($("input.pick_list_trans_partial:checked"),function() {
+        p_invoice_ids.push($(this).val());
+    });
+    var p_invoice_ids_str = p_invoice_ids.join(",");
+    
+    $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
+    $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+});
+/* end picklist code*/
+
+$(".reservation_action_status").dialog({
+    autoOpen: false,
+    open:function() {   //$("form",this).submit();
     },
     top:120,
     height: 133,
@@ -16,16 +54,14 @@ function reallot_stock_for_all_transaction(userid,pg) {
     var updated_by = userid;
     $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
     $.post(site_url+"admin/reserve_avail_stock_all_transaction/"+updated_by,"",function(rdata) {
-        if(rdata == '') {
-            rdata=("No transaction processed for allotment.");
-        }
-        else {
-            loadTransactionList(pg);
-        }
-        $(".reservation_action_status").html(rdata).dialog("open");
-        
+            if(rdata == '') {
+                rdata=("No transaction processed for allotment.");
+            }
+            else {
+                loadTransactionList(pg);
+            }
+            $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
     });
-     
     return false;
 }
  
@@ -40,24 +76,28 @@ function reserve_stock_for_trans(userid,transid,pg) {
 
     $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
         
-        if(rdata == '') {
-            rdata=("No transaction processed for allotment.");
-        }else {
-            loadTransactionList(pg);
-        }
-        $(".reservation_action_status").html(rdata).dialog("open");
-        
-    });
+            if(rdata == '') {
+                rdata=("No transaction processed for allotment.");
+            }else {
+                loadTransactionList(pg);
+            }
+            $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
 
+    });
     return false;
 }
 
-function cancel_proforma_invoice(p_invoice_no,pg) {
+function cancel_proforma_invoice(p_invoice_no,userid,pg) {
     if(!confirm("Are you sure you want to cancel proforma invoice?")) {
         return false;
     }
-    $.post(site_url+"admin/reservation_cancel_proforma_invoice/"+p_invoice_no,{},function() {
-        loadTransactionList(pg);
+    $.post(site_url+"admin/cancel_reserved_proforma_invoice/"+p_invoice_no+"/"+userid,{},function(rdata) {
+            if(rdata == '') {
+                rdata=("Unable to cancel the proforma.");
+            }else {
+                loadTransactionList(pg);
+            }
+            $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Cancel proforma invoice report');
     });
     return false;
 }
@@ -236,12 +276,18 @@ function batch_enable_disable(transid,flag,pg) {
     var d_msg=(flag==1)?"enable":"disable";
     if(confirm("Are you sure you want to "+d_msg+" for batch?")) {
         $.post(site_url+"admin/jx_batch_enable_disable/"+transid+"/"+flag,{},function(rdata) {
-            alert(rdata);
-//                $(".pg").val(pg);
-
             loadTransactionList(pg);
-
         }).done(done).fail(fail);
     }
 }
 */
+function f1(){
+    //21/12/2013
+    
+    var re= /[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}/;
+    var el= document.getElementById('temp_date');
+    var M;
+        if (M= el.value.match(re));
+        return false;
+    return true;
+}

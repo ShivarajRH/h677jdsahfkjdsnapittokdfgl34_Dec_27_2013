@@ -103,7 +103,7 @@
     </form>
     <iframe id="hndl_picklist_print" name="hndl_picklist_print" style="width: 100%;height: 100%; border: none;"></iframe>
 </div>
-<div class="reservation_action_status" style="display: none;" ></div>
+<div class="reservation_action_status" style="display: none;"></div>
 
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>
 <script>
@@ -139,7 +139,7 @@
 
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
-        $.post('jx_get_transaction_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+limit+"/"+pg+"",{},function(rdata) {
+        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+limit+"/"+pg+"",{},function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
         });
@@ -175,44 +175,6 @@ $(document).ready(function() {
             $('#trans_list_replace_block').html(resp);
     }
 // ]]>
-$("#pick_all").live("change",function() {
-    var checkBoxes=$(".pick_list_trans_ready");
-    if($(this).is(":checked")) {
-        checkBoxes.attr("checked", !checkBoxes.attr("checked"));
-    }
-    else {
-        checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
-    }
-    
-});
-
-    $("#show_picklist_block").dialog({
-        autoOpen: false,
-        open:function() {
-          $("form",this).submit();  
-        },
-        height: 650,
-        width:900,
-        modal: true
-    });
-
-$("#btn_generate_pick_list").live("click",function(){
-    var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
-    var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
-    var total=(pick_list_trans_ready+pick_list_trans_partial);
-    if(total==0) { alert("Please select any of transaction to generate pick list"); return false;}
-    var p_invoice_ids=[];
-    $.each($("input.pick_list_trans_ready:checked"),function() {
-        p_invoice_ids.push($(this).val());
-    });
-    $.each($("input.pick_list_trans_partial:checked"),function() {
-        p_invoice_ids.push($(this).val());
-    });
-    p_invoice_ids_str = p_invoice_ids.join(",");
-    
-    $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
-    $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
-});
 </script>
 
 <?php

@@ -681,3 +681,101 @@ select u.name as user,t.*,a.name as assignedto from support_tickets t
 left outer join king_admin a on a.id=t.assigned_to 
 left outer join king_users u on u.userid=t.user_id
  order by t.created_on desc
+
+#Nov_21_2013
+select in.invoice_no,in.invoice_no, brand.name as brandname, in.mrp,in.tax as tax, in.discount, in.phc,in.nlc, in.service_tax,ordert.quantity 
+,item.nlc,item.phc,ordert.*, item.service_tax_cod,item.name,if(length(item.print_name),item.print_name,item.name) as print_name, item.pnh_id,f.offer_text,f.immediate_payment
+from king_orders as ordert join king_dealitems as item on item.id=ordert.itemid 
+join king_deals as deal on deal.dealid=item.dealid 
+left join king_brands as brand on brand.id=deal.brandid 
+left join pnh_m_offers f on f.id= ordert.offer_refid 
+join king_invoice `in` on in.transid=ordert.transid and in.order_id=ordert.id 
+where in.invoice_no='20141010400' or split_inv_grpno = '20141010400';
+
+select * from king_invoice;
+desc king_invoice;
+desc king_orders;
+desc king_deals;
+
+######
+select * from (
+select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
+		,sum(o.status) as is_pending,o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+		,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+        from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+        WHERE tr.actiontime between 1380565800 and 1385058599 and o.status in (0,1) and tr.batch_enabled=1 and i.id is null 
+        group by o.transid) as g where  g.is_pending = g.total_trans  group by transid order by g.init desc
+#=> 51rows/1778ms
+
+select * from (
+select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
+		,sum(o.status) as is_pending,o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+		,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+        from king_transactions tr
+		left join king_orders o on o.transid=tr.transid
+		
+		join king_dealitems di on di.id=o.itemid
+	
+		join king_deals dl on dl.dealid=di.dealid
+
+	#join m_product_info pi on pi.tmp_dealid=dl.dealid
+
+		left join pnh_menu m on m.id = dl.menuid
+		left join king_brands bs on bs.id = o.brandid
+        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        left join pnh_m_territory_info ter on ter.id = f.territory_id 
+        left join pnh_towns twn on twn.id=f.town_id
+                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no
+	
+        WHERE tr.actiontime between 1380565800 and 1385058599 and o.status in (0,1) and tr.batch_enabled=1 and i.id is null 
+        group by o.transid) as g where  g.is_pending = g.total_trans  group by transid order by g.init desc
+
+select * from king_orders
+select * from m_product_info;
+select * from king_dealitems
+
+select * from t_stock_info;
+
+select c.courier_name as courier,bi.shipped,bi.shipped_on,bi.awb,bi.courier_id,bi.batch_id,bi.packed,bi.shipped,i.createdon,i.invoice_status,i.invoice_no,bi.p_invoice_no 
+from king_invoice i 
+left outer join shipment_batch_process_invoice_link bi on bi.invoice_no=i.invoice_no and bi.shipped
+left outer join m_courier_info c on c.courier_id=bi.courier_id
+where i.transid='PNHDJL51773' 
+group by i.invoice_no;
+
+select i.p_invoice_no,c.courier_name as courier,bi.shipped,bi.shipped_on,bi.awb,bi.courier_id,bi.batch_id,bi.packed,bi.shipped,i.createdon,i.invoice_status,bi.p_invoice_no 
+from proforma_invoices i 
+left outer join shipment_batch_process_invoice_link bi on bi.p_invoice_no=i.p_invoice_no 
+left outer join m_courier_info c on c.courier_id=bi.courier_id 
+where i.transid='PNHDJL51773'  group by i.p_invoice_no;
+
+select i.p_invoice_no,c.courier_name as courier,bi.shipped,bi.shipped_on,bi.awb,bi.courier_id,bi.batch_id,bi.packed,bi.shipped,i.createdon,i.invoice_status,bi.p_invoice_no 
+from proforma_invoices i 
+left outer join shipment_batch_process_invoice_link bi on bi.p_invoice_no=i.p_invoice_no 
+left outer join m_courier_info c on c.courier_id=bi.courier_id 
+where i.transid='PNHDJL51773'  group by i.p_invoice_no;
+
+
+
+select * from shipment_batch_process_invoice_link
+
+select * from king_deals d join m_product_info p on d.dealid=p.tmp_dealid

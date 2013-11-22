@@ -9,13 +9,13 @@ if( $batch_type == "ready")
 {
     #$pg_trans_description='Following transactions are ready for shipping.';
     $cond_2 = ' g.is_pending = g.total_trans ';
-    $inner_loop_cond = ' and sd.shipped=0 ';
+    $inner_loop_cond = '  and sd.packed=0 ';//' and sd.shipped=0 ';
 }
 if( $batch_type == "partial") 
 {
     #$pg_trans_description='Following transactions are partial ready.';
     $cond_2 = ' g.`is_pending` < g.`total_trans` and g.`is_pending` <> 0 ';
-    $inner_loop_cond = ' and sd.shipped=0 ';
+    $inner_loop_cond = '  and sd.packed=0 ';//' and sd.shipped=0 ';
 }
 if( $batch_type == "pending") 
 {
@@ -140,10 +140,20 @@ else
                                                                         left join proforma_invoices c on c.order_id = a.id and c.invoice_status = 1
                                                                         left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = c.p_invoice_no
                                                                         left join king_invoice e on e.invoice_no = sd.invoice_no
-                                                                where a.transid = ? and a.status in (0,1) $inner_loop_cond
+                                                                where a.transid = ? $inner_loop_cond
                                                                 order by c.p_invoice_no desc";
+                        
+                        //$b['packed']&&$b['shipped']?
+                        //      "SHIPPED"
+                        //      :
+                        //      ($b['packed']?
+                        //              "INVOICED"
+                        //           :
+                        //              "PENDING");
+
+                        //where a.transid = ? and a.status in (0,1) and e.id is null $inner_loop_cond
                         $trans_orders = $this->db->query($sql,$trans_arr['transid'])->result_array();
-                        //echo '<pre>';die($this->db->last_query());
+                        // echo '<pre>';die($this->db->last_query());
                         $trans_ttl_shipped = 0;
                         $trans_pending=0; 
                         $k=0;
@@ -200,7 +210,7 @@ else
                                 if($p_invoice_id != '') {
                                     $trans_action_msg .= '<div>
                                                         <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
-                                                        <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$pg.')" class="">De-Allot</a>
+                                                        <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$user['userid'].','.$pg.')" class="">De-Allot</a>
                                                     </div>';
                                     $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_ready" title="Select this for picklist" />';
                                 }
@@ -221,7 +231,7 @@ else
                                  if($p_invoice_id != '') {
                                         $trans_action_msg .= '<div>
                                                          <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
-                                                         <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$pg.')" class="">De-Allot</a>
+                                                         <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$user['userid'].','.$pg.')" class="">De-Allot</a>
                                                      </div>';
                                      
                                         $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_partial" title="Select this for picklist" />';
