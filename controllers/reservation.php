@@ -6,6 +6,24 @@
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     /**
+     * Suggest menu id under batch groupid
+     * @param type $batchgroupid
+     */
+    function jx_suggest_menus_groupid($batchgroupid) {
+        $this->erpm->auth();$output=array();
+        $rslt = $this->db->query("select assigned_menuid,batch_size,assigned_uid from m_batch_config where id=?",$batchgroupid)->row_array();
+//        if(count($rslt)>0) {
+//            $output['assigned_menuid'] = explode(",",$rslt['assigned_menuid']);
+//        }
+        echo json_encode($rslt);
+    }
+    function manage_reservation_create_batch_form() {
+        $data['batch_conf']=  $this->reservations->getBatchGroupConfig();
+        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+        $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+        $this->load->view("admin/body/jx_manage_reservation_create_batch_form",$data);
+    }
+    /**
      * Process proforma ids selected 
      */
     function p_invoice_for_picklist() {

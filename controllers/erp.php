@@ -5621,7 +5621,7 @@ group by g.product_id ");
 		$fran_crdet = $this->erpm->get_fran_availcreditlimit($fid);
 		$fran['balance'] = $fran_crdet[3];
 		
-        $fran_courier = $this->erpm->get_fran_courier_details($fid);
+                $fran_courier = $this->erpm->get_fran_courier_details($fid);
 		$fran['courier'] = $fran_courier;
 		
 		$fran['total_ord'] = $this->db->query("select count(transid) as t from king_transactions where franchise_id = ? ",$_POST['id'])->row()->t;

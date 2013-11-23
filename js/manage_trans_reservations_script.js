@@ -1,5 +1,84 @@
 //var GM_TIMING_END_CHUNK1=(new Date).getTime();
-//*************/
+/**** CREATE BATCH PROCESS **/
+$("#btn_cteate_group_batch").live("click",function(){
+    var hmtldata ='--';
+    $.post(site_url+"admin/manage_reservation_create_batch_form",{},function(rdata) {
+        
+         hmtldata = rdata;
+         $("#dlg_create_group_batch_block").html(hmtldata);
+    });
+    
+    $("#dlg_create_group_batch_block").dialog({
+        autoOpen: false,
+        //open:function() {        },
+        height: 350,
+        width:340,
+        modal: true
+    });
+    
+    $("#dlg_create_group_batch_block").dialog("open").dialog('option', 'title', "Create Batch");
+});
+
+$("#dlg_sel_town").live("change",function() { 
+    var townid=$(this).find(":selected").val();
+    var terrid=$("#dlg_sel_territory").find(":selected").val();
+    $.post(site_url+"admin/jx_suggest_fran/"+terrid+"/"+townid,function(resp) {
+            if(resp.status=='success') {
+                 var obj = jQuery.parseJSON(resp.franchise);
+                $("#dlg_sel_franchise").html(objToOptions_franchise(obj));
+            }
+            else {
+                $("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
+            }
+        },'json').done(done).fail(fail);
+
+    return false;
+});
+
+
+//ONCHANGE Territory
+$("#dlg_sel_territory").live("change",function() {
+    var terrid=$(this).find(":selected").val();
+//        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
+    $.post(site_url+"admin/jx_suggest_townbyterrid/"+terrid,function(resp) {
+        if(resp.status=='success') {
+             //print(resp.towns);
+             var obj = jQuery.parseJSON(resp.towns);
+            $("#dlg_sel_town").html(objToOptions_terr(obj));
+        }
+        else {
+            $("#dlg_sel_town").val($("#dlg_sel_town option:nth-child(0)").val());
+            $("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
+                        //$(".sel_status").html(resp.message);
+        }
+    },'json').done(done).fail(fail);
+    return false;
+});
+
+//ONCHANGE batch_group_name
+$("#batch_group_name").live("change",function() {
+    var batch_group_id=$(this).find(":selected").val();
+//        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
+    $.post(site_url+"admin/jx_suggest_menus_groupid/"+batch_group_id,function(resp) { 
+        if(resp !== undefined) {
+             //print(resp.towns);
+             //var obj = jQuery.parseJSON(resp.towns);
+            $("#assigned_menuids").val(resp.assigned_menuid);
+            $("#batch_size").val(resp.batch_size);
+            $("#assigned_uid").val(resp.assigned_uid);
+        }
+        else {
+            //$("#dlg_sel_town").val($("#dlg_sel_town option:nth-child(0)").val());
+            //$("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
+            console.log(resp);
+        }
+    },'json').done(done).fail(fail);
+    return false;
+});
+
+/*** END BATCH PROCESS  **/
+
+//****PICKLIST*****/
 $("#show_picklist_block").dialog({
     autoOpen: false,
     open:function() {
@@ -20,21 +99,21 @@ $("#pick_all").live("change",function() {
 });
 
 $("#btn_generate_pick_list").live("click",function(){
-    var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
-    var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
-    var total=(pick_list_trans_ready+pick_list_trans_partial);
-    if(total==0) { alert("Please select any of transaction to generate pick list"); return false;}
-    var p_invoice_ids=[];
-    $.each($("input.pick_list_trans_ready:checked"),function() {
-        p_invoice_ids.push($(this).val());
-    });
-    $.each($("input.pick_list_trans_partial:checked"),function() {
-        p_invoice_ids.push($(this).val());
-    });
-    var p_invoice_ids_str = p_invoice_ids.join(",");
-    
-    $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
-    $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+        var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
+        var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
+        var total=(pick_list_trans_ready+pick_list_trans_partial);
+        if(total==0) { alert("Please select any of transaction to generate pick list"); return false;}
+        var p_invoice_ids=[];
+        $.each($("input.pick_list_trans_ready:checked"),function() {
+            p_invoice_ids.push($(this).val());
+        });
+        $.each($("input.pick_list_trans_partial:checked"),function() {
+            p_invoice_ids.push($(this).val());
+        });
+        var p_invoice_ids_str = p_invoice_ids.join(",");
+
+        $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
+        $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
 });
 /* end picklist code*/
 
@@ -150,7 +229,7 @@ $(".trans_pagination a").live("click",function(e) {
 });
 
 $("#sel_menu").live("change",function() {
-        var menuid=$(this).find(":selected").val();//text();
+        var menuid=$(this).find(":selected").val();
 
         $.post(site_url+"admin/jx_get_brandsbymenuid/"+menuid,{},function(resp) {
                 if(resp.status=='success') {
@@ -194,8 +273,8 @@ $("#sel_franchise").live("change",function() {
 
 //ENTRY 6
 $("#sel_town").live("change",function() { 
-    var townid=$(this).find(":selected").val();//text();
-    var terrid=$("#sel_territory").find(":selected").val();//text();
+    var townid=$(this).find(":selected").val();
+    var terrid=$("#sel_territory").find(":selected").val();
     $.post(site_url+"admin/jx_suggest_fran/"+terrid+"/"+townid,function(resp) {
             if(resp.status=='success') {
                  var obj = jQuery.parseJSON(resp.franchise);
@@ -214,7 +293,7 @@ $("#sel_town").live("change",function() {
 
 //ONCHANGE Territory
 $("#sel_territory").live("change",function() {
-    var terrid=$(this).find(":selected").val();//text();
+    var terrid=$(this).find(":selected").val();
 //        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
 
    // $("table").data("sdata", {terrid:terrid});
@@ -280,14 +359,9 @@ function batch_enable_disable(transid,flag,pg) {
         }).done(done).fail(fail);
     }
 }
-*/
 function f1(){
-    //21/12/2013
-    
-    var re= /[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}/;
-    var el= document.getElementById('temp_date');
-    var M;
-        if (M= el.value.match(re));
-        return false;
-    return true;
+var data = '21/12/2013';
+var pat= /[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}/;
+if (data.match(re));
 }
+*/

@@ -8,11 +8,13 @@
 class reservation_model extends Model
 {
 	
-    function __construct()
-    {
+    function __construct() {
             parent::__construct();
     }
-    
+    function getBatchGroupConfig() {
+        $arr_rslt = $this->db->query("select * from m_batch_config")->result_array();
+        return $arr_rslt;
+    }
     function product_proc_list_for_invoice($p_invoiceid) {
         //$data['prods']=$this->erpm->getprodproclist($bid);
         $arr_rslt = $this->db->query("select product_id,product,location,sum(rqty) as qty from ( 
@@ -91,7 +93,7 @@ class reservation_model extends Model
             $output='';
 
             if(empty($num)) {
-                    $output.=("Enter no of orders to process"); 
+                    $output.=("Enter no of orders to process"); return $output;
             }
             
             $i_transid=$transid;//$this->input->post("transid");
@@ -141,7 +143,7 @@ class reservation_model extends Model
                     $v_transids[]=$t['transid'];
             }
             if(empty($trans)) {
-                    $output = ("No orders to process");
+                    $output .= ("No orders to process"); return $output;
             }
 
             $itemids=array_unique($itemids);
@@ -185,7 +187,6 @@ class reservation_model extends Model
                     $pid=$s['product_id'];
                     $stock[$pid]=$s['stock'];
             }
-
 
             $total_orders_process=0;
             foreach($trans as $transid=>$orders)
@@ -314,8 +315,8 @@ class reservation_model extends Model
                             $s = $b*$num;
                             $ttl_inbatch = ((($s+$num) > $ttl_invoices)?$ttl_invoices-$s:$num);
 
-                            $this->db->query("insert into shipment_batch_process(num_orders,batch_remarks,created_on) values(?,?,?)",array($ttl_inbatch,$batch_remarks,date('Y-m-d H:i:s')));
-                            $batch_id=$this->db->insert_id();
+                            //$this->db->query("insert into shipment_batch_process(num_orders,batch_remarks,created_on) values(?,?,?)",array($ttl_inbatch,$batch_remarks,date('Y-m-d H:i:s')));
+                            $batch_id='5000';//$this->db->insert_id();
                             for($k=$s;$k<$s+$ttl_inbatch;$k++)
                             {
                                     $inv = $p_invoices[$k];

@@ -1,29 +1,28 @@
 <?php
-$output = $cond = $cond_2 = $inner_loop_cond = $re_allot_all_block='';
+$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block='';
 $from=strtotime($s);
 $to=strtotime("23:59:59 $e");
 
 $chk_box_global = '<input type="checkbox" value="" name="pick_all" id="pick_all" title="Select all transactions" />';
-$generate_btn_link = '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
+
+$generate_btn_link = '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
+$generate_btn_link .= '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
+
 if( $batch_type == "ready") 
 {
-    #$pg_trans_description='Following transactions are ready for shipping.';
-    $cond_2 = ' g.is_pending = g.total_trans ';
-    $inner_loop_cond = '  and sd.packed=0 ';//' and sd.shipped=0 ';
+    $cond_batch = ' g.is_pending = g.total_trans ';
+    //$inner_loop_cond = ' and sd.packed in (0,1) ';//' and sd.shipped=0 ';
 }
 if( $batch_type == "partial") 
 {
-    #$pg_trans_description='Following transactions are partial ready.';
-    $cond_2 = ' g.`is_pending` < g.`total_trans` and g.`is_pending` <> 0 ';
-    $inner_loop_cond = '  and sd.packed=0 ';//' and sd.shipped=0 ';
+    $cond_batch = ' g.`is_pending` < g.`total_trans` and g.`is_pending` <> 0 ';
+   // $inner_loop_cond = ' and sd.packed in (0,1) ';//' and sd.shipped=0 ';
 }
 if( $batch_type == "pending") 
 {
-    #$pg_trans_description='Following transactions are not ready or pending.';
-    $cond_2 = ' g.`is_pending` = 0 ';
+    $cond_batch = ' g.`is_pending` = 0 ';
     //$inner_loop_cond = ' and sd.shipped=0 ';
-    //cant generate pick list
-    $chk_box_global = ''; $generate_btn_link='';
+    $chk_box_global = $generate_btn_link='';
 }
 
 if($menuid!=0) {
@@ -61,11 +60,11 @@ select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.i
         left join pnh_towns twn on twn.id=f.town_id
                 left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
                 left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
-        WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond
-        group by o.transid) as g where $cond_2 group by transid order by g.init desc";
+        WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond $inner_loop_cond
+        group by o.transid) as g where $cond_batch group by transid order by g.init desc";
 
 // and i.invoice_status=1 and sd.shipped=1 
-//echo "<p><pre>".$sql.'</pre></p>';die(); 
+// echo "<p><pre>".$sql.'</pre></p>';die(); 
 $transactions_src=$this->db->query($sql);
 
 if(!$transactions_src->num_rows()) 

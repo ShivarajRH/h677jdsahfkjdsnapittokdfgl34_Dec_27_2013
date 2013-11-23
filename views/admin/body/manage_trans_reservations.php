@@ -103,6 +103,7 @@
     </form>
     <iframe id="hndl_picklist_print" name="hndl_picklist_print" style="width: 100%;height: 100%; border: none;"></iframe>
 </div>
+<div id="dlg_create_group_batch_block" style="display: none;" ></div>
 <div class="reservation_action_status" style="display: none;"></div>
 
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>

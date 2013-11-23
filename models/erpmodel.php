@@ -7438,7 +7438,7 @@ order by p.product_name asc
 		foreach(array("fid","pid","qty","mid","redeem","redeem_points","mid_entrytype") as $i)
 			$$i=$this->input->post($i);
 		
-        $updated_by=$admin["userid"];
+                $updated_by=$admin["userid"];
 
 		if($redeem)
 			$redeem_points = 150;
@@ -7647,7 +7647,7 @@ order by p.product_name asc
                         
                         //do packing process
                         $ttl_num_orders=count($items);
-                        $batch_remarks='Created by pnh offline order system';
+                        $batch_remarks='By pnh offline order system';
                         //echo ("===TESTING====");
                         //continue;
                         

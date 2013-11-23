@@ -774,8 +774,37 @@ left outer join shipment_batch_process_invoice_link bi on bi.p_invoice_no=i.p_in
 left outer join m_courier_info c on c.courier_id=bi.courier_id 
 where i.transid='PNHDJL51773'  group by i.p_invoice_no;
 
-
+# NOV_22_2013
 
 select * from shipment_batch_process_invoice_link
 
-select * from king_deals d join m_product_info p on d.dealid=p.tmp_dealid
+select * from king_deals d join m_product_info p on d.dealid=p.tmp_dealid;
+
+select * from king_transactions;
+
+#########################################
+create table `m_batch_config` ( `id` bigint (20) NOT NULL AUTO_INCREMENT , `batch_grp_name` varchar (150) 
+, `assigned_menuid` int (11) DEFAULT '0', `batch_size` int (11) DEFAULT '0', `assigned_uid` int (10) , PRIMARY KEY ( `id`));
+#########################################
+
+select * from pnh_menu; #=>27r 100-126
+
+electronics
+	=> 112 - Mobiles & Tablets
+	=> 118 - Computers & Peripherals
+
+Beauty
+	=> 100 - Beauty & Cosmetics
+
+
+
+select * from m_batch_config;
+
+select * from proforma_invoices;
+
+#Nov_23_2013
+select * from shipment_batch_process_invoice_link where batch_id=5000 limit 0,5; =>6
+
+
+
+update shipment_batch_process_invoice_link set batch_id = where 
