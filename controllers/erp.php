@@ -1821,7 +1821,7 @@ class Erp extends Stream
                 $output['message'] = 'No towns for territory';
             }
             echo json_encode($output);
-        }
+        } 
         /**
          * Function to fetch all franchise under territory and town
          * @param type $terrid
