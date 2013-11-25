@@ -11,9 +11,61 @@ class reservation_model extends Model
     function __construct() {
             parent::__construct();
     }
+    function do_create_batch_by_group_config () {
+        $output = '';
+        
+        foreach(array("batch_group_name","assigned_menuids","batch_size","assigned_uid") as $i) {
+            $$i=$this->input->post($i);
+            //echo "$batch_group_name, $assigned_menuids, $batch_size,$assigned_uid <br>";
+           // 112,118, 2,37
+        }
+        //die();
+        $rslt = $this->db->query("select d.menuid,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) from king_transactions tr
+                                join king_orders as o on o.transid=tr.transid
+                                join proforma_invoices as `pi` on pi.order_id = o.id
+                                join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
+                                join king_dealitems dl on dl.id = o.itemid
+                                join king_deals d on d.dealid = dl.dealid  and d.menuid in (?)
+                                where sd.batch_id=5000
+                                order by tr.init asc
+                                limit 0,$batch_size",array($assigned_menuids))->result_array();
+        $output.= "1.".  $this->db->last_query().'<br>';
+        $batch_remarks = 'By Transaction Reservation System';
+        $ttl_inbatch = count($rslt);
+        
+        if($ttl_inbatch>0) {
+            
+            //$this->db->query("insert into shipment_batch_process(num_orders,batch_remarks,created_on) values(?,?,?)",array($ttl_inbatch,$batch_remarks,date('Y-m-d H:i:s')));
+            
+            //$batch_id = $this->db->insert_id();
+            
+            //$output.= "2.".  $this->db->last_query().'<br>'.$batch_id;
+            
+            $batch_id = 5015;
+            foreach ($rslt as $row) {
+                
+                $arr_set = array("batch_id"=>$batch_id,"assigned_userid"=>$assigned_uid);
+                $arr_where =array("id"=>$row['id']);
+                $output.= ''.implode(",",$arr_set).'<br>'.implode(",",$arr_where);
+               /*     
+                
+                $this->db->update("update `shipment_batch_process_invoice_link` set `batch_id` = $batch_id and `assigned_userid` = $assigned_uid where `id`= ".$row['id']."");
+                
+                $output.= "3.".  $this->db->last_query().'<br>';
+               
+                $output.= 'Batch '.$batch_id." is updated to ".$row['id'].'<br>';
+                */
+            }
+            $output.= 'Batch created'.'<br>';
+        }
+        else {
+            $output.= 'No transactions found.'.'<br>';
+        }
+        return '<pre>'.$output.'</pre>';
+    }
+    
     function getBatchGroupConfig() {
-        $arr_rslt = $this->db->query("select * from m_batch_config")->result_array();
-        return $arr_rslt;
+        return $this->db->query("select * from m_batch_config")->result_array();
     }
     function product_proc_list_for_invoice($p_invoiceid) {
         //$data['prods']=$this->erpm->getprodproclist($bid);

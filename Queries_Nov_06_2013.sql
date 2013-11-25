@@ -783,8 +783,10 @@ select * from king_deals d join m_product_info p on d.dealid=p.tmp_dealid;
 select * from king_transactions;
 
 #########################################
-create table `m_batch_config` ( `id` bigint (20) NOT NULL AUTO_INCREMENT , `batch_grp_name` varchar (150) 
-, `assigned_menuid` int (11) DEFAULT '0', `batch_size` int (11) DEFAULT '0', `assigned_uid` int (10) , PRIMARY KEY ( `id`));
+create table `m_batch_config` ( `id` bigint (20) NOT NULL AUTO_INCREMENT , `batch_grp_name` varchar (150) , `assigned_menuid` int (11) DEFAULT '0', `batch_size` int (11) DEFAULT '0', `assigned_uid` int (10) , PRIMARY KEY ( `id`));
+
+alter table `shipment_batch_process_invoice_link` add column `assigned_userid` int (11) DEFAULT '1' NOT NULL  after `delivered_by`;
+
 #########################################
 
 select * from pnh_menu; #=>27r 100-126
@@ -805,6 +807,70 @@ select * from proforma_invoices;
 #Nov_23_2013
 select * from shipment_batch_process_invoice_link where batch_id=5000 limit 0,5; =>6
 
+insert into shipment_batch_process(num_orders,batch_remarks,created_on) values(?,?,?),array($ttl_inbatch,$batch_remarks,date('Y-m-d H:i:s'));
+insert_id();
+
+update shipment_batch_process_invoice_link set batch_id = '' where id='';
+
+select * from (
+select *,count(p_invoice_no) as s from shipment_batch_process_invoice_link
+group by p_invoice_no) as g
+ where g.s>1;
 
 
-update shipment_batch_process_invoice_link set batch_id = where 
+select sd.*,from_unixtime(tr.init) from king_transactions tr
+join king_orders as o on o.transid=tr.transid
+join proforma_invoices as `pi` on pi.order_id = o.id
+join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
+join king_dealitems dl on dl.id = o.itemid
+join king_deals d on d.dealid = dl.dealid  and menuid in (112,118)
+where batch_id=5000 
+order by tr.init asc
+limit 0,5
+
+select * from proforma_invoices
+select * from king_orders;
+desc king_orders;
+desc king_transactions
+desc proforma_invoices
+desc shipment_batch_process_invoice_link
+desc king_dealitems
+desc king_deals;
+
+
+select * from m_batch_config;
+
+select username from king_admin where id=1;
+
+# =============================
+alter table `shipment_batch_process_invoice_link` add column `assigned_userid` int (11) DEFAULT '0' NOT NULL  after `delivered_by`;
+# =============================
+select *,from_unixtime(createdon) from proforma_invoices order by id desc;
+
+
+select * from shipment_batch_process order by batch_id desc
+
+select * from shipment_batch_process_invoice_link order by batch_id desc
+
+update `shipment_batch_process_invoice_link` set batch_id = 5010 and assigned_userid = '38' where id='361710'
+update `shipment_batch_process_invoice_link` set batch_id = 5010 and assigned_userid = '38' where id='361711'
+
+select d.menuid,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) from king_transactions tr join king_orders as o on o.transid=tr.transid join proforma_invoices as `pi` on pi.order_id = o.id 
+join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no join king_dealitems dl on dl.id = o.itemid join king_deals d on d.dealid = dl.dealid and d.menuid in ('112,118') 
+where sd.batch_id=5000 order by tr.init asc limit 0,5;
+
+# Nov_25_2013
+
+select d.menuid,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) from king_transactions tr
+		join king_orders as o on o.transid=tr.transid
+		join proforma_invoices as `pi` on pi.order_id = o.id
+		join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
+		join king_dealitems dl on dl.id = o.itemid
+		join king_deals d on d.dealid = dl.dealid  and d.menuid in ('112,118')
+		where sd.batch_id=5000
+		order by tr.init asc
+		limit 0,2;
+
+select * from shipment_batch_process order by batch_id desc
+
+select *,from_unixtime() from shipment_batch_process_invoice_link order by batch_id desc

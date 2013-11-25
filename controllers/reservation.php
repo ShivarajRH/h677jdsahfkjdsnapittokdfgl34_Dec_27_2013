@@ -6,18 +6,39 @@
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     /**
+     * creates a new batch by select menuids,batch_size
+     */
+    function create_batch_by_group_config() {
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE); $output=array();
+        echo $this->reservations->do_create_batch_by_group_config();
+    }
+    /**
      * Suggest menu id under batch groupid
      * @param type $batchgroupid
      */
     function jx_suggest_menus_groupid($batchgroupid) {
-        $this->erpm->auth();$output=array();
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);$output=array();
         $rslt = $this->db->query("select assigned_menuid,batch_size,assigned_uid from m_batch_config where id=?",$batchgroupid)->row_array();
-//        if(count($rslt)>0) {
-//            $output['assigned_menuid'] = explode(",",$rslt['assigned_menuid']);
-//        }
-        echo json_encode($rslt);
+        if(count($rslt)>0) {
+            $output['status'] = 'success';
+            $output['assigned_menuid'] = $rslt['assigned_menuid'];
+            $output['batch_size'] = $rslt['batch_size'];
+                $arr =array();
+                $arr_uids = explode(",",$rslt['assigned_uid']);
+                foreach($arr_uids as $i=>$userid) {
+                    $arr[$i]["userid"] = $userid;
+                    $arr[$i]["username"] = $this->db->query("select username from king_admin where id=?",$userid)->row()->username;
+                }
+            $output['assigned_uid'] = json_encode($arr);
+        }
+        else {
+            $output['status'] = 'fail';
+            $output['response'] = 'No data found.';
+        }
+        echo json_encode($output);
     }
     function manage_reservation_create_batch_form() {
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);$output=array();
         $data['batch_conf']=  $this->reservations->getBatchGroupConfig();
         $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
         $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();

@@ -3,22 +3,57 @@
 $("#btn_cteate_group_batch").live("click",function(){
     var hmtldata ='--';
     $.post(site_url+"admin/manage_reservation_create_batch_form",{},function(rdata) {
-        
-         hmtldata = rdata;
-         $("#dlg_create_group_batch_block").html(hmtldata);
-    });
+            hmtldata = rdata;
+            $("#dlg_create_group_batch_block").html(hmtldata);
+    }).fail(fail);
     
     $("#dlg_create_group_batch_block").dialog({
         autoOpen: false,
         //open:function() {        },
         height: 350,
         width:340,
-        modal: true
+        open:function() {
+            
+        },
+        modal: true,
+        buttons: {
+            "Create Batch":function() {
+                    //$("form",this).submit();
+                    var batch_group_name = $("#batch_group_name").find(":selected").val();
+                    var assigned_menuids = $("#assigned_menuids").val();
+                    var batch_size = $("#batch_size").val();
+                    var assigned_uid = $("#assigned_uid").find(":selected").val();
+                    
+                    if(batch_group_name == '00') { show_output("Error: Please select a group"); return false; }
+                    if(assigned_uid == '00') { 
+                        if(!confirm("Are you sure you don't want to assign user for this batch?")) {
+                            assigned_uid = 0;
+                            show_output("Warning: Batch is not assigned to a specific user");
+                            return false;
+                        }
+                    }
+                    
+                    var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid};
+                    $.post(site_url+"admin/create_batch_by_group_config",postData,function(rdata) {
+                            show_output(rdata);
+                            $("#batch_group_name").val($("#batch_group_name option:nth-child(0)").val());
+                            
+                    }).fail(fail);
+            },
+            Cancel: function() {
+              $( this ).dialog( "close" );
+            }
+        }
     });
     
     $("#dlg_create_group_batch_block").dialog("open").dialog('option', 'title', "Create Batch");
 });
-
+function show_output(rdata) {
+    $(".create_batch_msg_block").slideDown().html(rdata);//.delay("6500").slideUp("slow");
+}
+function fail(rdata) {
+    console.log(rdata);
+}
 $("#dlg_sel_town").live("change",function() { 
     var townid=$(this).find(":selected").val();
     var terrid=$("#dlg_sel_territory").find(":selected").val();
@@ -43,7 +78,7 @@ $("#dlg_sel_territory").live("change",function() {
     $.post(site_url+"admin/jx_suggest_townbyterrid/"+terrid,function(resp) {
         if(resp.status=='success') {
              //print(resp.towns);
-             var obj = jQuery.parseJSON(resp.towns);
+            var obj = jQuery.parseJSON(resp.towns);
             $("#dlg_sel_town").html(objToOptions_terr(obj));
         }
         else {
@@ -60,17 +95,24 @@ $("#batch_group_name").live("change",function() {
     var batch_group_id=$(this).find(":selected").val();
 //        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
     $.post(site_url+"admin/jx_suggest_menus_groupid/"+batch_group_id,function(resp) { 
-        if(resp !== undefined) {
+        if(resp.status == "success") {
              //print(resp.towns);
              //var obj = jQuery.parseJSON(resp.towns);
             $("#assigned_menuids").val(resp.assigned_menuid);
             $("#batch_size").val(resp.batch_size);
-            $("#assigned_uid").val(resp.assigned_uid);
+            //$("#assigned_uid").val(resp.assigned_uid);
+            //var getlist = getlist(resp.assigned_uid);
+            
+            var parse_assigned_uid = jQuery.parseJSON(resp.assigned_uid);
+            console.log(parse_assigned_uid);
+            
+                $("#assigned_uid").html(objToOptions_users(parse_assigned_uid));
+              
         }
         else {
             //$("#dlg_sel_town").val($("#dlg_sel_town option:nth-child(0)").val());
             //$("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
-            console.log(resp);
+            //console.log(resp);
         }
     },'json').done(done).fail(fail);
     return false;
@@ -115,7 +157,7 @@ $("#btn_generate_pick_list").live("click",function(){
         $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
         $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
 });
-/* end picklist code*/
+/* end picklist code ========================================================================== */
 
 $(".reservation_action_status").dialog({
     autoOpen: false,
@@ -260,12 +302,8 @@ $("#sel_franchise").live("change",function() {
             if(franchiseid==00) {
                 $(".sel_status").html("");
             }   $.post("<?php echo site_url("admin/jx_franchise_creditnote"); ?>"+"/"+franchiseid,{},function(resp) {
-                if(resp.status=='success') {
-                     $(".sel_status").html(resp);
-                }
-                else {
-                    $(".sel_status").html(resp);
-                }
+                if(resp.status=='success') {$(".sel_status").html(resp);}
+                else {$(".sel_status").html(resp);}
             }).done(done).fail(fail);*/
     loadTransactionList(0);
     return false;
@@ -346,6 +384,16 @@ function objToOptions_franchise(obj) {
     $.each(obj,function(key,elt){
         if(obj.hasOwnProperty(key)) {
             output += "<option value='"+elt.franchise_id+"'>"+elt.franchise_name+"</option>\n";
+        }
+    });
+    return(output);
+}
+function objToOptions_users(obj) {
+    var output='';
+        output += "<option value='00' selected>Assigned to</option>\n";
+    $.each(obj,function(key,elt){
+        if(obj.hasOwnProperty(key)) {
+            output += "<option value='"+elt.userid+"'>"+elt.username+"</option>\n";
         }
     });
     return(output);
