@@ -5,6 +5,84 @@
  */
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
+    function pack_invoice_by_fran() {
+        $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+        
+        foreach(array("p_invoice_ids","franchise_id") as $i) 
+            $$i=$this->input->post($i);
+            
+            //$result = $this->reservations->do_pack_invoice_by_fran();
+            $result = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
+        
+        
+        $data['batch']=$this->erpm->getbatch($bid);
+        
+        $data['invoices']=$this->erpm->getbatchinvoices($bid);
+        $data['bid']=$bid;
+        $data['page']="process_batch_by_fran";
+        $this->load->view("admin",$data);
+    }
+    
+    function process_batch_by_fran($bid)
+    {
+        
+        $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+        $data['batch']=$this->erpm->getbatch($bid);
+        $data['invoices']=$this->erpm->getbatchinvoices($bid);
+        $data['bid']=$bid;
+        $data['page']="process_batch_by_fran";
+        $this->load->view("admin",$data);
+    }
+    
+    function get_franchise_orders($franchise_id,$from,$to,$batch_type) {
+        $output = '';
+        $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,$franchise_id);
+        
+        foreach ($arr_trans_set as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
+        $str_all_trans = implode(",",$all_trans);
+        
+        $rslt = $this->db->query("select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity
+                                from king_orders o
+                                join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
+                                join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                                left join proforma_invoices `pi` on pi.order_id = o.id
+                                join king_dealitems di on di.id = o.itemid 
+                                where f.franchise_id = ? and tr.actiontime between ? and ?  and i.id is null and tr.transid in ($str_all_trans)
+                                order by tr.init,di.name ",array($franchise_id,$from,$to))->result_array();
+        
+        $output = '<table width="100" class="subdatagrid">
+                            <thead>
+                            <tr>
+                                <th></th>
+                                <th>Trans</th>
+                                <th>Order ID</th>
+                                <th>Order Name</th>
+                                <th>Qty</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                            </thead>
+                            <tbody>';
+        
+        foreach ($rslt as $row) {
+                $output .= '<tr>
+                                <td><input type="checkbox" value="" name="chk_order"/></td>
+                                <td>'.$row['transid'].'</td>
+                                <td>'.$row['id'].'</td>
+                                <td>'.$row['name'].'</td>
+                                <td>'.$row['quantity'].'</td>
+                                <td>0</td>
+                                <td>'.$row['status'].'</td>
+                                <td><a class="proceed_link clear" href="pack_invoice/'.$row['p_invoice_no'].'" target="_blank">Generate invoice</a></td>
+                                
+                            </tr>';
+        } 
+        $output .= '</tbody></table>';
+        echo $output;
+        
+    }
     /**
      * creates a new batch by select menuids,batch_size
      */
@@ -109,7 +187,7 @@ class Reservation extends Voucher {
      * @param type $pg
      * @param type $limit
      */
-    function jx_manage_trans_reservations_list($batch_type,$from,$to,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$limit=1,$pg=0) {
+    function jx_manage_trans_reservations_list($batch_type,$from,$to,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$showbygrp=0,$limit=1,$pg=0) {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         $this->load->model("reservation_model");
         if($from != '') {
@@ -133,8 +211,13 @@ class Reservation extends Voucher {
         $data['franchiseid']=$franchiseid;
         $data['menuid']=$menuid;
         $data['brandid']=$brandid;
-
-        $this->load->view("admin/body/jx_manage_trans_reservations_list",$data);
+        $data['showbygrp']=$showbygrp;
+        
+        if(!$showbygrp)
+            $this->load->view("admin/body/jx_manage_trans_reservations_list",$data);
+        else 
+            $this->load->view("admin/body/jx_manage_trans_reservations_by_fran",$data);
+        
     }
 
     

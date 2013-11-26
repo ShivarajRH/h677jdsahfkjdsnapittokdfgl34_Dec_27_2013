@@ -1,5 +1,27 @@
 //var GM_TIMING_END_CHUNK1=(new Date).getTime();
 /**** CREATE BATCH PROCESS **/
+
+$("#show_by_group").live("click",function() {
+        loadTransactionList(0);
+});
+function process_pinvoices_by_fran(elt,franchise_id) {
+    $("#pinvoices_form_"+franchise_id).submit();
+}
+
+function show_orders_list(franid,from,to,batch_type) {
+        
+        if($(".orders_info_block_"+franid).is(":visible")) {
+            $(".orders_info_block_"+franid).html("").toggle("slow");
+        }
+        else {
+            $.post(site_url+"admin/get_franchise_orders/"+franid+"/"+from+"/"+to+"/"+batch_type, {}, function(rdata){
+                $(".orders_info_block_"+franid).html(rdata).toggle("slow");
+            }).fail(fail);
+        }
+        
+        return true;
+}
+
 $("#btn_cteate_group_batch").live("click",function(){
     var hmtldata ='--';
     $.post(site_url+"admin/manage_reservation_create_batch_form",{},function(rdata) {
@@ -24,13 +46,13 @@ $("#btn_cteate_group_batch").live("click",function(){
                     var batch_size = $("#batch_size").val();
                     var assigned_uid = $("#assigned_uid").find(":selected").val();
                     
-                    if(batch_group_name == '00') { show_output("Error: Please select a group"); return false; }
+                    if(batch_group_name == '00') { show_output("Error: Please select Batch type"); return false; }
                     if(assigned_uid == '00') { 
                         if(!confirm("Are you sure you don't want to assign user for this batch?")) {
-                            assigned_uid = 0;
                             show_output("Warning: Batch is not assigned to a specific user");
                             return false;
                         }
+                        assigned_uid = '0';
                     }
                     
                     var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid};

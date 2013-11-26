@@ -5,7 +5,8 @@ $to=strtotime("23:59:59 $e");
 
 $chk_box_global = '<input type="checkbox" value="" name="pick_all" id="pick_all" title="Select all transactions" />';
 
-$generate_btn_link = '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
+$generate_btn_link = '<div class="show_by_group_block">Process by franchise: <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
+$generate_btn_link .= '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
 $generate_btn_link .= '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
 
 if( $batch_type == "ready") 
@@ -142,15 +143,7 @@ else
                                                                 where a.transid = ? $inner_loop_cond
                                                                 order by c.p_invoice_no desc";
                         
-                        //$b['packed']&&$b['shipped']?
-                        //      "SHIPPED"
-                        //      :
-                        //      ($b['packed']?
-                        //              "INVOICED"
-                        //           :
-                        //              "PENDING");
-
-                        //where a.transid = ? and a.status in (0,1) and e.id is null $inner_loop_cond
+                        
                         $trans_orders = $this->db->query($sql,$trans_arr['transid'])->result_array();
                         // echo '<pre>';die($this->db->last_query());
                         $trans_ttl_shipped = 0;
@@ -251,10 +244,10 @@ else
             
 //   PAGINATION
             $this->load->library('pagination');
-            $config['base_url'] = site_url("admin/jx_get_transaction_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$limit); 
+            $config['base_url'] = site_url("admin/jx_get_transaction_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$limit); 
             $config['total_rows'] = $total_trans_rows;
             $config['per_page'] = $limit;
-            $config['uri_segment'] = 12; 
+            $config['uri_segment'] = 13; 
             $config['num_links'] = 5;
             $config['cur_tag_open'] = '<span class="curr_pg_link">';
             $config['cur_tag_close'] = '</span>';
@@ -274,6 +267,7 @@ else
                     $(".pagination_top").html(\''.($trans_pagination).'\');
                     $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
                     $(".btn_picklist_block").html(\''.($generate_btn_link).'\');
+
                     $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
                 </script>';
 }

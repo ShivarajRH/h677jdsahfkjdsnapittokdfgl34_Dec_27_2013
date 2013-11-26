@@ -203,3 +203,10 @@ h3.filter_heading { margin-bottom: 0px; margin-top: 0;width: 788px;}
     background-color: #8A8AA8;
     color: #fff;
 }
+.show_by_group_block {padding: 5px 33px; float: left;}
+.view_all_orders a {
+    margin-top: 5px; font-size: 11px;
+}
+.view_all_link {
+    
+}

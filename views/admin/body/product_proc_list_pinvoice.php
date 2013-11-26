@@ -1,8 +1,6 @@
 <?php
 	$user = $this->erpm->auth();
 ?>
-<!--<html>-->
-<!--<head>-->
 <title>Product procurement list</title>
 <style>
 	body{font-family:arial;font-size:14px;}
@@ -63,5 +61,4 @@
 	</div> 
 
 </body>
-<!--</html>-->
 <?php

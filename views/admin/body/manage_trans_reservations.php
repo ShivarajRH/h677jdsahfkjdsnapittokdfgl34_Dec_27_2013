@@ -32,7 +32,7 @@
                             <form id="trans_date_form" method="post">
                                     <b>Show transactions : </b>
                                     <label for="date_from">From :</label><input type="text" id="date_from"
-                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4)?>" />
+                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4*4)?>" />
                                     <label for="date_to">To :</label><input type="text" id="date_to"
                                             name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
                                     <input type="submit" value="Submit">
@@ -137,16 +137,18 @@
             $(".page_num").val=pg;
         }
         pg = (typeof pg== 'undefined') ? $(".page_num").val() : $(".page_num").val();
-
+        
+        var showbygrp = ($("#show_by_group").is(":checked"))? 1:0;
+        
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
-        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+limit+"/"+pg+"",{},function(rdata) {
+        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbygrp+"/"+limit+"/"+pg+"",{},function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
         });
-   }
+    }
     
-$(document).ready(function() {
+    $(document).ready(function() {
         //FIRST RUN
         $( "#date_from").datepicker({
              changeMonth: true,
@@ -167,7 +169,6 @@ $(document).ready(function() {
                $( "#date_from" ).datepicker( "option", "maxDate", selectedDate );
              }
         });
-        //prepare_daterange('date_from','date_to');
     });
     
     function done(data) { }
