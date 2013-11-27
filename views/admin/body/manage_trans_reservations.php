@@ -68,6 +68,13 @@
                             <select id="sel_franchise" name="sel_franchise" style="width: 204px;">
                                 <option value="00">All Franchise</option>
                             </select>
+                            <span>Batch Group Status:
+                                <select id="sel_batch_group_type" name="sel_batch_group_type" style="width: 204px;">
+                                    <option value="00">Any</option>
+                                    <option value="1">Grouped</option>
+                                    <option value="2">Un-Grouped</option>
+                                </select>
+                            </span>
                         </div>
                         <div class="clear"></div>
                         <div>
@@ -119,7 +126,7 @@
         $(".ttl_trans_listed").html("");
         $(".re_allot_all_block").css({"padding":"0"});
         
-
+        
         var batch_type = $('.tab_list .selected').attr('id');
 //        var batch_type= ($("#batch_type").val() == "00")?0: $("#batch_type").val();
         var terrid= ($("#sel_territory").val()=='00')?0:$("#sel_territory").val();
@@ -140,9 +147,11 @@
         
         var showbygrp = ($("#show_by_group").is(":checked"))? 1:0;
         
+        var batch_group_type=($("#sel_batch_group_type").val()=='00')? 0:$("#sel_batch_group_type").val();
+        
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
-        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbygrp+"/"+limit+"/"+pg+"",{},function(rdata) {
+        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbygrp+"/"+batch_group_type+"/"+limit+"/"+pg+"",{},function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
         });

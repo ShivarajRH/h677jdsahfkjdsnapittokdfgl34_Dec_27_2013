@@ -1,6 +1,18 @@
 //var GM_TIMING_END_CHUNK1=(new Date).getTime();
 /**** CREATE BATCH PROCESS **/
 
+
+$("#sel_terr_id").live("change",function() {
+    var sel_terr_id = $(this).val();
+    if(sel_terr_id !='00') {
+        $(".filter_terr").hide();
+        $('.filter_terr_'+sel_terr_id).show();
+    }
+    else {
+        $(".filter_terr").show();
+    }
+});
+
 $("#show_by_group").live("click",function() {
         loadTransactionList(0);
 });
@@ -11,7 +23,7 @@ function process_pinvoices_by_fran(elt,franchise_id) {
 function show_orders_list(franid,from,to,batch_type) {
         
         if($(".orders_info_block_"+franid).is(":visible")) {
-            $(".orders_info_block_"+franid).html("").toggle("slow");
+            $(".orders_info_block_"+franid).toggle("slow").html("");
         }
         else {
             $.post(site_url+"admin/get_franchise_orders/"+franid+"/"+from+"/"+to+"/"+batch_type, {}, function(rdata){
@@ -222,8 +234,9 @@ function reserve_stock_for_trans(userid,transid,pg) {
             if(rdata == '') {
                 rdata=("No transaction processed for allotment.");
             }else {
-                loadTransactionList(pg);
+                
             }
+            loadTransactionList(pg);
             $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
 
     });
@@ -292,6 +305,11 @@ $(".trans_pagination a").live("click",function(e) {
     return false;
 });
 
+$("#sel_batch_group_type").live("change",function() {
+
+    loadTransactionList(0);
+    return false;
+});
 $("#sel_menu").live("change",function() {
         var menuid=$(this).find(":selected").val();
 

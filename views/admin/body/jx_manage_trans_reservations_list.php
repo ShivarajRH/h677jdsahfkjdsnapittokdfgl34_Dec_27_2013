@@ -12,18 +12,30 @@ $generate_btn_link .= '<input type="submit" value="Generate Pick List" name="btn
 if( $batch_type == "ready") 
 {
     $cond_batch = ' g.is_pending = g.total_trans ';
-    //$inner_loop_cond = ' and sd.packed in (0,1) ';//' and sd.shipped=0 ';
+    
+    if($batch_group_type == 1) 
+        $cond_batch .= ' and g.batch_id <> 5000 ';
+    elseif($batch_group_type == 2)
+        $cond_batch .= ' and g.batch_id = 5000 ';
+    else
+        $cond_batch .= ' and g.batch_id > 0 ';
 }
 if( $batch_type == "partial") 
 {
     $cond_batch = ' g.`is_pending` < g.`total_trans` and g.`is_pending` <> 0 ';
-   // $inner_loop_cond = ' and sd.packed in (0,1) ';//' and sd.shipped=0 ';
+        
+    if($batch_group_type == 1) 
+        $cond_batch .= ' and g.batch_id <> 5000 ';
+    elseif($batch_group_type == 2)
+        $cond_batch .= ' and g.batch_id = 5000 ';
+    else
+        $cond_batch .= ' and g.batch_id > 0 ';
 }
 if( $batch_type == "pending") 
 {
     $cond_batch = ' g.`is_pending` = 0 ';
-    //$inner_loop_cond = ' and sd.shipped=0 ';
     $chk_box_global = $generate_btn_link='';
+    
 }
 
 if($menuid!=0) {
@@ -41,6 +53,7 @@ if($terrid!=0) {
  if($franchiseid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
  }
+
 //echo $batch_type."<br>".$cond_2."<br>".$cond; die();
 $sql="select * from (
 select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
@@ -50,23 +63,25 @@ select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.i
 		,ter.territory_name
 		,twn.town_name
 		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                ,sd.batch_id
         from king_transactions tr
-		left join king_orders o on o.transid=tr.transid
+		join king_orders o on o.transid=tr.transid
 		join king_dealitems di on di.id=o.itemid
 		join king_deals dl on dl.dealid=di.dealid
 		join pnh_menu m on m.id = dl.menuid
 		join king_brands bs on bs.id = o.brandid
-        left join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
-        left join pnh_m_territory_info ter on ter.id = f.territory_id 
-        left join pnh_towns twn on twn.id=f.town_id
+        join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        join pnh_m_territory_info ter on ter.id = f.territory_id 
+        join pnh_towns twn on twn.id=f.town_id
                 left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
-                left join shipment_batch_process_invoice_link sd on sd.invoice_no = i.invoice_no 
+                left join proforma_invoices pi on pi.order_id = o.id and pi.invoice_status = 1 
+                left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no 
         WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond $inner_loop_cond
         group by o.transid) as g where $cond_batch group by transid order by g.init desc";
 
-// and i.invoice_status=1 and sd.shipped=1 
-// echo "<p><pre>".$sql.'</pre></p>';die(); 
-$transactions_src=$this->db->query($sql);
+ //echo "<p><pre>".$sql.'</pre></p>';die(); 
+
+ $transactions_src=$this->db->query($sql);
 
 if(!$transactions_src->num_rows()) 
 {
@@ -244,10 +259,10 @@ else
             
 //   PAGINATION
             $this->load->library('pagination');
-            $config['base_url'] = site_url("admin/jx_get_transaction_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$limit); 
+            $config['base_url'] = site_url("admin/jx_get_transaction_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$limit); 
             $config['total_rows'] = $total_trans_rows;
             $config['per_page'] = $limit;
-            $config['uri_segment'] = 13; 
+            $config['uri_segment'] = 14; 
             $config['num_links'] = 5;
             $config['cur_tag_open'] = '<span class="curr_pg_link">';
             $config['cur_tag_close'] = '</span>';

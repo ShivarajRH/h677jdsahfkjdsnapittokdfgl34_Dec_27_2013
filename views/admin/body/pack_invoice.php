@@ -51,18 +51,18 @@
 	
 	$t_order_det = $this->db->query("select a.init,a.franchise_id,a.is_pnh,a.partner_id,a.transid,b.ship_person,b.ship_city from king_transactions a join king_orders b on a.transid = b.transid where b.id = ? ",$invoice[0]['order_id'])->row_array();  
 	if($t_order_det['partner_id'])
-		{
-			$order_placed_by = $this->db->query("select name from partner_info where id = ? ",$t_order_det['partner_id'])->row()->name;
-		}else
-		{
-			if($t_order_det['is_pnh'])
-				{
-					$order_placed_by = 'Paynearhome';
-				}else
-				{
-					$order_placed_by = 'Snapittoday';
-				}
-		}
+        {
+                $order_placed_by = $this->db->query("select name from partner_info where id = ? ",$t_order_det['partner_id'])->row()->name;
+        }else
+        {
+                if($t_order_det['is_pnh'])
+                        {
+                                $order_placed_by = 'Paynearhome';
+                        }else
+                        {
+                                $order_placed_by = 'Snapittoday';
+                        }
+        }
 ?>
 
 <span style="float: right">
@@ -75,11 +75,7 @@
 												join pnh_towns c on c.id = a.town_id
 												where franchise_id = ?  ",$t_order_det['franchise_id'])->row_array();
 			echo '<b>Franchise : </b> '.$fr_det['franchise_name'].' <b>Territory : </b> '.$fr_det['territory_name'].' <b>Town : </b> '.$fr_det['town_name'];
-	?>
-			<b>Trans#</b> : <?php echo $t_order_det['transid']; ?> &nbsp;
-			<b>OrderedOn</b> : <?php echo format_datetime(date('Y-m-d H:i:s',$t_order_det['init'])); ?> &nbsp;
 	
-	<?php
 		}else 
 		{
 	?>
@@ -90,7 +86,7 @@
 	 
 	
 </span>
-	<?php if($mlt){?>
+	<?php if($t_order_det['is_pnh']){ ?>
 			<h2>Scan &amp; Pack </h2>
 	<?php }else {?>
 			<h2>Scan &amp; pack proforma invoice : <?=$invoice[0]['p_invoice_no']?></h2>
@@ -107,6 +103,7 @@
 	<thead>
 		<tr>
 			<th>No</th>
+                        <th>Trans ID</th>
 			<th>Deal Picture</th>
 			<?php echo ($mlt)?'<th width="5%">Transactions details</th>':'';?>
 			<th>Product name</th>
@@ -134,7 +131,6 @@
 					<td style="background: #fcfcfc !important; vertical-align: middle; width: 30px !important; color: #000" width="10">
 					<div style="width: 30px; text-align: center;">Scan</div>
 					</td>
-
 				</tr>
 			</table>
 
@@ -169,7 +165,11 @@
 				<input type="hidden" name="p_invno[]" value="<?php echo $i['p_invoice_no']?>" >
 				<b><?php echo $sindx++; ?></b>
 			</td>
-			
+                        <td><a href="<?=site_url("admin/trans/".$i['transid']);?>" target="_blank"><?=$i['transid'];?></a>
+                            
+                            <div><br><b>Ordered On:</b></div>
+                            <div><?=date("d/m/Y",$i['time']);?></div>
+                        </td>
 			<td>
 				<div style="width:100px;height: 100px;float: left">
 					<a target="_blank" href="<?php echo IMAGES_URL.'/items/big/'.$i['pic'].'.jpg'?>"><img width="100%" src="<?php echo IMAGES_URL.'/items/small/'.$i['pic'].'.jpg'?>" /></a>
@@ -687,6 +687,7 @@
 				if($(".imeis",p).length<1)
 					return;
 				var imeis=[];
+
 				$(".imeis",p).each(function(){
 					if($.inArray($(this).val(),imeis)!=-1)
 					{

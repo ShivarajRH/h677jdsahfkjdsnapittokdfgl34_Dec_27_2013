@@ -543,8 +543,287 @@ class Erpmodel extends Model
 			$this->erpm->do_trans_changelog($tran['transid'],$tran['c']." order(s) processed in Proforma Invoice: {$tran['invoice_no']}");
 		return $invoices;
 	}
-	
 	function do_invoice($list)
+	{
+		$invoices=array();
+		if(empty($list))
+			return $invoices;
+		
+		$user = $this->erpm->auth();
+
+		$orders=$this->db->query("select d.catid,d.menuid,d.brandid,t.is_pnh,i_discount,i_coup_discount,i.tax,t.is_pnh,o.transid,o.id,o.itemid,i_orgprice,i_price,t.cod,t.ship,o.quantity,sum(i.orgprice*o.quantity) as mrp_amt,sum(i.price*o.quantity) as price_amt 
+										from king_orders o 
+										join king_dealitems i on i.id=o.itemid 
+										join king_transactions t on t.transid = o.transid
+										join king_deals d on d.dealid = i.dealid 
+										where o.id in ('".implode("','",$list)."')
+										group by o.id order by o.sno asc")->result_array();
+
+		$trans_ord_invnos = array();
+		foreach($orders as $o)
+		{
+			 $transid=$o['transid'];
+			 $oid=$o['id'];
+			 $cod=$ship=0;
+			 
+			 if(!isset($trans_ord_invnos[$transid]))
+			 {
+			 	$trans_ord_invnos[$transid] = array();
+
+				$trans_ord_invnos[$transid]['trans'] = $this->db->query("select t.cod,t.ship,sum(i.orgprice*o.quantity) as ttl_mrp,sum(i.price*o.quantity) as ttl_price from king_orders o join king_dealitems i on i.id=o.itemid join king_transactions t on t.transid=o.transid where o.transid=?",$transid)->row_array();
+			 	
+			 	
+				if($this->db->query("select count(*) as tt from king_invoice where transid=?",$transid)->row()->tt==0){
+					$cod=$trans_ord_invnos[$transid]['trans']['cod'];
+					$ship=$trans_ord_invnos[$transid]['trans']['ship'];	
+				}
+
+				$trans_ord_invnos[$transid]['invno'] = $this->_get_uniq_invoiceno($transid,$o['is_pnh']);;
+				array_push($invoices,$trans_ord_invnos[$transid]['invno']);
+			 }
+			 
+			 
+			 $mrp_amount = $trans_ord_invnos[$transid]['trans']['ttl_mrp'];
+			 $price_amount = $trans_ord_invnos[$transid]['trans']['ttl_price'];
+			 
+			 $invno = $trans_ord_invnos[$transid]['invno'];
+			 
+			 $discount = $mrp_amount-$price_amount;
+			
+			 $orgprice = $o['i_orgprice'];
+			 $o_discount=$orgprice*$discount/$mrp_amount;
+				
+			// check if product menu brand considered for MAP[minimum adverstise price] price config
+			
+			$is_dealconsidered_for_map = $this->erpm->check_dealformap_price($o['menuid'],$o['brandid'],$o['catid'],$o['itemid']);
+			if($is_dealconsidered_for_map)
+			{
+				$p_discount = $o['i_discount'];
+				$credit_note_amt = $o['i_coup_discount'];
+			}else
+			{
+				$p_discount = $o['i_discount']+$o['i_coup_discount'];
+				$credit_note_amt = 0;
+			}
+			
+			$offer_price = ($o['i_orgprice'])-$p_discount;
+			$nlc = round(($offer_price*100/((1+PHC_PERCENT/100)*100)),2);
+			$phc = $offer_price-$nlc;
+			$tax = $o['tax'];
+
+			$is_b2b = $o['is_pnh']?1:0;	
+
+
+			$p_invoice_no = $this->db->query("select p_invoice_no from proforma_invoices where order_id = ? and invoice_status = 1 order by id desc limit 1 ",$oid)->row()->p_invoice_no;
+			
+			$is_normal_deal = 1;
+			if($this->db->query("select sum(qty) as t from m_product_deal_link where itemid = ? ",$o['itemid'])->row()->t > 1)
+				$is_normal_deal = 0;
+			
+			$p_pack_combo_allot = array();
+			
+			$dl = $this->db->query("select a.menuid,a.brandid,a.catid,b.id from king_deals a join king_dealitems b on a.dealid = b.dealid where b.id = ? ",$o['itemid'])->row_array();
+			
+			$is_dealconsidered_for_map = $this->erpm->check_dealformap_price($dl['menuid'],$dl['brandid'],$dl['catid'],$dl['id']);
+			
+			if(!$is_dealconsidered_for_map)
+			{
+			if($is_normal_deal )
+			{	
+			// Check for mrp wise reservations to consider actual product mrps sent
+				$sql_reserv = "select order_id,mrp,inv_qty,round(mrp*a_disc_perc,2) as disc from (
+									select a.id,order_id,a.product_id,mrp,((qty+extra_qty)-release_qty) as inv_qty,(i_discount+i_coup_discount) as a_disc,((i_discount+i_coup_discount)/i_orgprice) as a_disc_perc 
+										from t_reserved_batch_stock a
+										join t_stock_info b on a.stock_info_id = b.stock_id
+										join king_orders c on c.id = a.order_id 
+										where p_invoice_no = ? and a.status = 1 and a.order_id = ? 
+									) as g 
+									" ;
+				$res_reserv_res = $this->db->query($sql_reserv,array($p_invoice_no,$oid));
+				
+				foreach($res_reserv_res->result_array() as $reserv)
+				{
+					
+					$inv_qty = $reserv['inv_qty']; 
+
+					$p_discount_1 = ($p_discount/$orgprice)*$reserv['mrp'];
+					$credit_note_amt_1 = ($credit_note_amt/$orgprice)*$reserv['mrp'];
+
+					$offer_price = $reserv['mrp']-$p_discount_1;
+
+					$nlc = round(($offer_price*100/((1+PHC_PERCENT/100)*100)),2);
+					$phc = $offer_price-$nlc;
+
+					$this->db->query("insert into king_invoice(transid,order_id,invoice_qty,invoice_no,phc,nlc,tax,service_tax,mrp,discount,credit_note_amt,cod,ship,invoice_status,createdon,is_b2b) values(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)",array($transid,$oid,$inv_qty,$invno,$phc,$nlc,$tax,PRODUCT_SERVICE_TAX*100,$reserv['mrp'],$p_discount_1,$credit_note_amt_1,$cod,$ship,time(),$is_b2b));
+	 
+				}
+				
+				
+				
+			}else
+			{
+				$oid = $o['id'];
+				$itemid = $o['itemid'];
+				$p_resv_det = array();	
+				$sql_reserv = "	select a.id,order_id,a.product_id,mrp,sum((qty+extra_qty)-release_qty) as inv_qty,(i_discount+i_coup_discount) as a_disc,((i_discount+i_coup_discount)/i_orgprice) as a_disc_perc 
+							from t_reserved_batch_stock a
+							join t_stock_info b on a.stock_info_id = b.stock_id
+							join king_orders c on c.id = a.order_id 
+							where p_invoice_no = ? and a.status = 1 and order_id = ?  
+						group by a.product_id,b.mrp 
+							" ;
+				$res_reserv_res = $this->db->query($sql_reserv,array($p_invoice_no,$oid));
+				
+				foreach($res_reserv_res->result_array() as $reserv)
+				{
+					$reserv['mrp'] = $reserv['mrp']*1;
+					if(!isset($p_resv_det[$reserv['product_id']]))
+						$p_resv_det[$reserv['product_id']] = array(); 
+					if(!isset($p_resv_det[$reserv['product_id']][$reserv['mrp']]))
+						$p_resv_det[$reserv['product_id']][$reserv['mrp']] = $reserv['inv_qty'];
+				}
+						
+				 
+				
+				$prod_dl_link_res = $this->db->query("select itemid,product_id,product_mrp,qty from m_product_deal_link where itemid = ? and is_active = 1 ",array($itemid))->result_array();
+				
+				$p_deal_link_mrp = array();
+				for($k1=0;$k1<$o['quantity'];$k1++)
+				{
+					$p_deal_link = array();
+					foreach($prod_dl_link_res as $prod_dl_link)
+					{
+						
+						
+						$prd_id = $prod_dl_link['product_id'];
+						$prd_mrp = $prod_dl_link['product_mrp'];
+						$prd_qty = $prod_dl_link['qty'];
+						$p_itemid = $prod_dl_link['itemid'];
+						
+						 
+						if(!isset($p_deal_link[$prd_id]))
+							$p_deal_link[$prd_id] = array(); 
+						if(!isset($p_deal_link[$prd_id][$prd_mrp]))
+							$p_deal_link[$prd_id][$prd_mrp] = 0;
+						
+						foreach($p_resv_det[$prd_id] as $rp_mrp=>$rp_det)
+						{
+							
+							if(!$prd_qty)
+								continue ;
+							
+							$by_lmrp = 0;
+							if(isset($p_resv_det[$prd_id][$prd_mrp]))
+							{
+								if($p_resv_det[$prd_id][$prd_mrp])
+									$by_lmrp = 1;
+							}
+							
+							if(!$by_lmrp)
+							{
+								if($p_resv_det[$prd_id][$rp_mrp])
+									$by_lmrp = 0;
+								else
+									continue ;
+							}
+								
+							
+							if($by_lmrp)
+							{
+								if($p_resv_det[$prd_id][$prd_mrp] >= $prd_qty)
+								{
+									$p_deal_link[$prd_id][$prd_mrp] = $prd_qty;	
+									$p_resv_det[$prd_id][$prd_mrp] -= $prd_qty;
+									$prd_qty = 0;
+									break;
+								}else
+								{
+									$p_deal_link[$prd_id][$prd_mrp] = $p_resv_det[$prd_id][$prd_mrp];	
+									$p_resv_det[$prd_id][$prd_mrp] = 0;
+									$prd_qty -= $p_resv_det[$prd_id][$prd_mrp];
+								}
+							}else
+							{
+								
+								if($p_resv_det[$prd_id][$rp_mrp] >= $prd_qty)
+								{
+									$p_deal_link[$prd_id][$rp_mrp] = $prd_qty;	
+									$p_resv_det[$prd_id][$rp_mrp] -= $prd_qty;
+									$prd_qty = 0;
+								}else
+								{
+									$p_deal_link[$prd_id][$rp_mrp] = $p_resv_det[$prd_id][$rp_mrp];	
+									$p_resv_det[$prd_id][$rp_mrp] = 0;
+									$prd_qty -= $p_resv_det[$prd_id][$rp_mrp];
+								}
+							}
+						}
+						
+					}
+					
+					array_push($p_deal_link_mrp,$p_deal_link);
+				}
+		
+				$inv_mrp_det = array();
+				foreach($p_deal_link_mrp as $pid=>$pdl)
+				{
+					$p_nmrp = 0;
+					foreach($pdl as $pid=>$pdet)
+					foreach($pdet as $pmrp=>$p_qty)
+					{
+						$p_nmrp += $pmrp*$p_qty;
+					}
+					if(!isset($inv_mrp_det[$p_nmrp]))
+						$inv_mrp_det[$p_nmrp] = 0;
+					
+					$inv_mrp_det[$p_nmrp]++;
+					
+				}
+				
+				 
+				foreach($inv_mrp_det as $invmrp => $inv_qty)
+				{
+					$p_discount_1 = ($p_discount/$orgprice)*$invmrp;
+					$credit_note_amt_1 = ($credit_note_amt/$orgprice)*$invmrp;
+
+					$offer_price = $invmrp-$p_discount_1;
+
+					$nlc = round(($offer_price*100/((1+PHC_PERCENT/100)*100)),2);
+					$phc = $offer_price-$nlc;
+
+					$this->db->query("insert into king_invoice(transid,order_id,invoice_qty,invoice_no,phc,nlc,tax,service_tax,mrp,discount,credit_note_amt,cod,ship,invoice_status,createdon,is_b2b) values(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)",array($transid,$oid,$inv_qty,$invno,$phc,$nlc,$tax,PRODUCT_SERVICE_TAX*100,$invmrp,$p_discount_1,$credit_note_amt_1,$cod,$ship,time(),$is_b2b));
+					
+				}
+								
+			}
+			}else
+			{
+				
+				$offer_price = $orgprice-$p_discount;
+				$nlc = round(($offer_price*100/((1+PHC_PERCENT/100)*100)),2);
+				$phc = $offer_price-$nlc;
+				$this->db->query("insert into king_invoice(transid,order_id,invoice_qty,invoice_no,phc,nlc,tax,service_tax,mrp,discount,credit_note_amt,cod,ship,invoice_status,createdon,is_b2b) values(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)",array($transid,$oid,$o['quantity'],$invno,$phc,$nlc,$tax,PRODUCT_SERVICE_TAX*100,$orgprice,$p_discount,$credit_note_amt,$cod,$ship,time(),$is_b2b));
+			}
+			$this->db->query("update king_orders set status=1,actiontime=? where id=? limit 1",array(time(),$o['id']));	
+		}
+		
+		$trans_det=$this->db->query("select is_pnh,franchise_id,a.invoice_no,a.transid,c.quantity,sum((mrp-discount)*c.quantity) as inv_amt,count(order_id) as c 
+										from king_invoice a 
+										join king_transactions b on a.transid = b.transid 
+										join king_orders c on c.id = a.order_id 
+										where a.invoice_no in ('".implode("','",$invoices)."') group by a.transid")->result_array();
+		
+		
+		
+		foreach($trans_det as $tran)
+		{
+			$this->erpm->do_trans_changelog($tran['transid'],"Invoice ({$tran['invoice_no']}) created for ".$tran['c']." order(s)");
+		}
+			
+		return $invoices;
+	}
+        
+	function do_invoice_old($list)
 	{
 		$invoices=array();
 		if(empty($list))
@@ -1696,542 +1975,391 @@ courier disable ends
 	
 	function do_pack()
 	{
-		
-		$p_invoice_list=explode(',',$this->input->post("invoice"));
-		
-		$pid_list=$this->input->post("pids");
-		$pbcodes=$this->input->post("pbc");
-		$fs_ids=$this->input->post('fs_ids');
+             error_reporting(E_ALL);
+                ini_set('display_errors',true);
+                
+                echo '<pre>'; print_r($_POST);
+		//exit();
+                $fs_ids=$this->input->post('fs_ids');
 		$lgn_user = $this->auth();
 		$user = $this->erpm->auth();
-		
-		if(!$pbcodes)
-		{
-			show_error("Sorry No Stock Selected");
-			die();
-		}
-		
-		$pinv_pids = array();
-		$pinv_pids_arr = explode(',',$pid_list);
-		foreach($pinv_pids_arr as $pinv_pid)
-		{
-			list($pinv,$pid) = explode('_',$pinv_pid);
-			if(!isset($pinv_pids[$pinv]))
-				$pinv_pids[$pinv] = array();
-			
-			array_push($pinv_pids[$pinv],$pid);
-		}
-		
-		$last_dispatch_id = @$this->db->query("select max(dispatch_id) as id from proforma_invoices ")->row()->id;
-		if(!$last_dispatch_id)
-			$last_dispatch_id = 500000;
-		
-		foreach($p_invoice_list as $p_invoice)
-		{
-			$oids = array();
-			$c_oids = array();
-			$pids = $pinv_pids[$p_invoice];
-			$imeis = array();
-			
-			$p_invoice_no = $p_invoice;
-			
-			$batch_id = $this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? ",$p_invoice)->row()->batch_id;
-			
-			if(!isset($pinv_pids[$p_invoice]))
-			{
-				$pinv_orders=$this->db->query("select a.transid,a.quantity as qty,a.itemid,a.id from king_orders a join proforma_invoices b on a.id = b.order_id and a.transid = b.transid where b.p_invoice_no  = ? ",$p_invoice_no)->result_array();
-				
-				// revert cancelled orders stock  
-				foreach($pinv_orders as $o)
-				{
-					$pls=$this->db->query("select qty,pl.product_id,p.mrp from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
-					foreach($pls as $p)
-					{
-						
-						// get resered qty for product from stock and revert back to stock master
-						$p_reserv_qty = 0;
-						$reserv_stk_res = $this->db->query('select id,stock_info_id,qty from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and order_id = ? and product_id = ? ',array($batch_id,$p_invoice,$o['id'],$p['product_id']));
-						if($reserv_stk_res->num_rows())
-						{
-							foreach($reserv_stk_res->result_array() as $reserv_stk_det)
-							{
-								$p_reserv_qty += $reserv_stk_det['qty'];
-								$sql="update t_stock_info set available_qty=available_qty+? where product_id=? and stock_id = ? limit 1";
-								$this->db->query($sql,array($reserv_stk_det['qty'],$p['product_id'],$reserv_stk_det['stock_info_id']));
-								
-								$this->db->query("update t_reserved_batch_stock set release_qty=? ,released_on = ?,status = 2 where id = ? and p_invoice_no = ?  ",array($reserv_stk_det['qty'],time(),$reserv_stk_det['id'],$p_invoice));
-							}
-						}
-						
-						// revert back cancelled orders alloted stock to log 
-						$this->erpm->do_stock_log(1,$p_reserv_qty,$p['product_id'],$this->db->query("select id from proforma_invoices where order_id=? order by id desc limit 1",$o['id'])->row()->id,false,true,true);
-						
-						
-						$this->db->query("update king_orders set status=0 where id = ? and status = 1 ",$o['id']);
-						
-					}
-				}
+                $pid_list=explode(",",$this->input->post("pids"));
+                $pbcodes_list=$this->input->post("pbc");
+                $p_invoice_list = explode(',',$this->input->post("invoice"));
+                
+                $pid_list_arr = array();
+                
+                
+                foreach($pid_list as $pid_det)
+                {
+                    list($p_invno,$prod_id) = explode('_',$pid_det);
+                    if(!isset($pid_list_arr[$p_invno]))
+                           $pid_list_arr[$p_invno] = array();
+                    
+                    $pid_list_arr[$p_invno][] = $prod_id;
+                }
+                
+                $pbcodes_list_arr = array();
+                
+                foreach($pbcodes_list as $k=>$pbcode_det)
+                {
+                    list($p_invno) = explode('_',$k);
+                    
+                    if(!isset($pbcodes_list_arr[$p_invno]))
+                           $pbcodes_list_arr[$p_invno] = array();
+                    
+                    $pbcodes_list_arr[$p_invno][$k] = $pbcode_det;
+                }
+                
+                $new_dispatch_id = 0; 
+                
+                foreach($p_invoice_list as $p_invoice)
+                {    
+                    $pids = $pid_list_arr[$p_invoice];
+                    $pbcodes = $pbcodes_list_arr[$p_invoice];
+                     
 
-				$this->db->query("update proforma_invoices set invoice_status=0 where p_invoice_no=?  ",array($p_invoice_no));
-				$this->erpm->do_trans_changelog($pinv_orders[0]['transid'],"Proforma Invoice no $p_invoice_no cancelled");
-				continue; 
-			}
+                    if(!$pbcodes)
+                    {
+                            show_error("Sorry No Stock Selected");
+                            die();
+                    }
+
+                    foreach($pids as $pid)
+                    {
+                            $imeis[$pid]=array();
+                            if($this->input->post("imei$pid"))
+                                    $imeis[$pid]=$this->input->post("imei$pid");
+                    }
+
+                    $batch_id = $this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? ",$p_invoice)->row()->batch_id;
+                    $ord_item_ids = array();
+                    $r_need_pids=$this->db->query("select l.product_id,l.itemid,o.id,o.is_ordqty_splitd from proforma_invoices i join king_orders o on o.id=i.order_id join m_product_deal_link l on l.itemid=o.itemid where i.p_invoice_no=?",$p_invoice)->result_array();
+                    $ret2=$this->db->query("select p.product_id,o.id,o.itemid,o.is_ordqty_splitd from proforma_invoices i join king_orders o on o.id=i.order_id join products_group_orders pgo on pgo.order_id=o.id join m_product_group_deal_link pl on pl.itemid=o.itemid join m_product_info p on p.product_id=pgo.product_id join king_dealitems d on d.id=o.itemid where i.p_invoice_no=?",$p_invoice)->result_array();
+                    $r_need_pids=array_merge($r_need_pids,$ret2);
+
+                    $need_pids = array();
+                    foreach($r_need_pids as $r)
+                    {
+
+                            $oids[$r['id']]=$r['id'];
+                            if(!isset($need_pids[$r['id']]))
+                                    $need_pids[$r['id']]=array();
+                            $need_pids[$r['id']][]=$r['product_id'];
+
+                            $ord_item_ids[$r['itemid']] = $r['id'];
+                            $is_order_splitted[$r['id']]=$r['is_ordqty_splitd'];
+                    }
+
+
+
+                    $p_oids=array();
+                    foreach($need_pids as $oid=>$p)
+                    {
+                            $f=true;
+                            foreach($p as $pp)
+                                    if(!in_array($pp,$pids))
+                                            $f=false;
+                            if($f)
+                                    $p_oids[]=$oid;
+                    }
+
+                    $p_oids_stacked = array();
+                    $p_oids_stacked[0] = array();//unsplitted orders
+                    $p_oids_stacked[1] = array();//splitted orders
+
+                    //print_r($pids);
+                   // exit;
+
+                    foreach($p_oids as $oid)
+                    {
+                            // check if this order is splitted
+                            array_push($p_oids_stacked[$is_order_splitted[$oid]],$oid);
+                    }
+                    
+
+                    $processed_ord_ids = array();
+                    $order_list = array();
+                    $order_list[0] = $p_oids_stacked[0];
+                    foreach($p_oids_stacked[1] as $psoid)
+                    {
+                            array_push($order_list,array($psoid));
+                    }
+
+
+                    // check if the profoma has atleast one splited order for generating invoice group 
+                    $split_inv_grpno = 0;
+                    $split_inv_grplist = array();
+                    $credit_note_grpno = 0;
+                    if(count($p_oids_stacked[1]) )
+                    {
+                            $split_inv_grpno = @$this->db->query("select max(split_inv_grpno) as no from king_invoice where split_inv_grpno > 0 ")->row()->no;
+                            if(!$split_inv_grpno)
+                                    $split_inv_grpno = 900000;
+                            $credit_note_grpno = @$this->db->query("select max(grp_no) as no from t_invoice_credit_notes where grp_no > 0 ")->row()->no;
+                            if(!$credit_note_grpno)
+                                    $credit_note_grpno = 0;
+
+                            $split_inv_grpno++;
+                            $credit_note_grpno++;
+
+                    }
+
+
+
+                    $proforma_inv_id = $this->db->query("select a.id as id from proforma_invoices a 
+                                                                                                                            join king_orders b on a.order_id = b.id 
+                                                                                                                            where a.p_invoice_no = ?  ",array($p_invoice))->row()->id;
+														
+		//print_r($order_list);
+		 
+		foreach($order_list as $p_oids)
+		{
+			if(count($p_oids) == 0)
+				continue;
+			
+			foreach($p_oids as $p_oid)
+				array_push($processed_ord_ids,$p_oid);
+			
+			
+			$transid = $this->db->query("select transid from king_orders where id in (".implode(',',$p_oids).") ")->row()->transid;
+		 
+			$orders=$this->db->query("select quantity as qty,itemid,id,is_ordqty_splitd from king_orders where id in ('".implode("','",$p_oids)."') and transid = ? ",$transid)->result_array();
+		 	foreach($orders as $o)
+			{
+				$pls=$this->db->query("select qty,pl.product_id,p.mrp from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
 				
-			
-			foreach($pids as $pid)
-			{
-				$imeis[$pid]=array();
-				if($this->input->post("imei_{$p_invoice}_$pid"))
-					$imeis[$pid]=$this->input->post("imei_{$p_invoice}_$pid");
-				$imeis[$pid] = array_unique($imeis[$pid]);
-			}
-			
-			
-			//print_r($imeis);
-			
-			//continue;
-		
-			
-			$ord_item_ids = array();
-			$r_need_pids=$this->db->query("select l.product_id,l.itemid,o.id,o.is_ordqty_splitd,o.transid from proforma_invoices i join king_orders o on o.id=i.order_id join m_product_deal_link l on l.itemid=o.itemid where i.p_invoice_no=?",$p_invoice)->result_array();
-			$ret2=$this->db->query("select p.product_id,o.id,o.itemid,o.is_ordqty_splitd,o.transid from proforma_invoices i join king_orders o on o.id=i.order_id join products_group_orders pgo on pgo.order_id=o.id join m_product_group_deal_link pl on pl.itemid=o.itemid join m_product_info p on p.product_id=pgo.product_id join king_dealitems d on d.id=o.itemid where i.p_invoice_no=?",$p_invoice)->result_array();
-			$r_need_pids=array_merge($r_need_pids,$ret2);
-			$need_pids = array();
-			$is_order_splitted = array();
-			foreach($r_need_pids as $r)
-			{
-				$oids[$r['id']]=$r['id'];
-				if(!isset($need_pids[$r['id']]))
-					$need_pids[$r['id']]=array();
-				$need_pids[$r['id']][]=$r['product_id'];
-				
-				$ord_item_ids[$r['itemid']] = $r['id'];
-				$is_order_splitted[$r['id']]=$r['is_ordqty_splitd'];
-			}
-			$p_oids=array();
-			foreach($need_pids as $oid=>$p)
-			{
-				$f=true;
-				foreach($p as $pp)
-					if(!in_array($pp,$pids))
-						$f=false;
-				if($f)
-					$p_oids[]=$oid;
-			}
-		
-			$p_oids_stacked = array();
-			$p_oids_stacked[0] = array();//unsplitted orders
-			$p_oids_stacked[1] = array();//splitted orders
-			
-			
-			foreach($p_oids as $oid)
-			{
-				// check if this order is splitted
-				array_push($p_oids_stacked[$is_order_splitted[$oid]],$oid);
-			}
-		
-			$processed_ord_ids = array();
-			$order_list = array();
-			$order_list[0] = $p_oids_stacked[0];
-			foreach($p_oids_stacked[1] as $psoid)
-			{
-				array_push($order_list,array($psoid));
-			}
-		
-		
-			// check if the profoma has atleast one splited order for generating invoice group 
-			$split_inv_grpno = 0;
-			$split_inv_grplist = array();
-			$credit_note_grpno = 0;
-			if(count($p_oids_stacked[1]))
-			{
-				$split_inv_grpno = @$this->db->query("select max(split_inv_grpno) as no from king_invoice where split_inv_grpno > 0 ")->row()->no;
-				if(!$split_inv_grpno)
-					$split_inv_grpno = 900000;
-				$credit_note_grpno = @$this->db->query("select max(grp_no) as no from t_invoice_credit_notes where grp_no > 0 ")->row()->no;
-				if(!$credit_note_grpno)
-					$credit_note_grpno = 0;
-				
-				$split_inv_grpno++;
-				$credit_note_grpno++;
-				
-			}
-		
-			foreach($order_list as $p_oids)
-			{
-				if(count($p_oids) == 0)
-					continue;
-				$inv=$this->erpm->do_invoice($p_oids);
-				$invoice_no=$inv[0];
-				
-				foreach($p_oids as $p_oid)
-					array_push($processed_ord_ids,$p_oid);
-			 
-				$orders=$this->db->query("select transid,quantity as qty,itemid,id,is_ordqty_splitd from king_orders where id in ('".implode("','",$p_oids)."')")->result_array();
-			 	foreach($orders as $o)
+				foreach($pls as $p)
 				{
-					$pls=$this->db->query("select qty,pl.product_id,p.mrp from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
-					
-					foreach($pls as $p)
+					$imeis[$p['product_id']] = array_unique($imeis[$p['product_id']]);
+					foreach($imeis[$p['product_id']] as $il=>$imei)
 					{
-						foreach($imeis[$p['product_id']] as $il=>$imei)
-						{
-							if($imei===0)
-								continue;
-							
-							$this->db->query("update t_imei_no set order_id=0,status=0 where order_id=? and status = 0 ",array($o['id']));
-							
-							$imeino_id = $this->db->query("select id from t_imei_no where imei_no = ? and status = 0 ",$imei)->row()->id; 
-							
-							$ins_data = array();
-							$ins_data['imeino_id'] = $imeino_id;
-							$ins_data['product_id'] = $p['product_id'];
-							$ins_data['imei_no'] = $imei;
-							$ins_data['transid'] = $o['transid'];
-							$ins_data['order_id'] = $o['id'];
-							$ins_data['invoice_no'] = $invoice_no;
-							$ins_data['alloted_on'] = cur_datetime();
-							$ins_data['alloted_by'] = $user['userid'];
-							$this->db->insert('t_imeino_allotment_track',$ins_data);
-							
-							
-							$this->db->query("update t_imei_no set order_id=?,is_returned=0,status=1 where id = ?  limit 1",array($o['id'],$imeino_id));
-							
-							//t_imeino_allotment_track
-							if($this->db->affected_rows() > 0 && $o['is_ordqty_splitd'] == 1)
-								break;
-							
-						}
+						if($imei===0)
+							continue;
+						$this->db->query("update t_imei_no set order_id=?,is_returned=0,status=1 where imei_no=? and status = 0 limit 1",array($o['id'],$imei));
+						
+						if($this->db->affected_rows() > 0 && $o['is_ordqty_splitd'] == 1)
+							break;
 					}
 				}
+			}
+			
+			
+			//----allocateing the book---
+			
+			$orders_det=$this->db->query("select a.quantity as qty,a.itemid,a.id,b.franchise_id,b.is_pnh,a.i_discount,a.i_coup_discount,a.i_orgprice from king_orders a join king_transactions b on b.transid=a.transid where a.id in ('".implode("','",$p_oids)."') and a.transid = ? ",$transid)->result_array();
+			
+			$allotment_id=0;
+			//get the prev allotment id
+			$allotment_id=$this->db->query("select ifnull(max(allotment_id),0) as allotment_id from pnh_t_book_allotment")->row()->allotment_id;
+			
+			if($allotment_id)
+				$allotment_id+=1;
+			else
+				$allotment_id=1;
+			 
+			foreach($orders_det as $o)
+			{
 				
-				
-				
-				if($split_inv_grpno)
+				$pls=$this->db->query("select qty,pl.product_id,p.mrp from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
+				foreach($pls as $p)
 				{
-					array_push($split_inv_grplist,$invoice_no);
-					$this->db->query("update king_invoice set split_inv_grpno = ? where invoice_no = ? ",array($split_inv_grpno,$invoice_no));
-				}
-				
-				$this->db->query("update king_invoice set  ref_dispatch_id=? where invoice_no = ? ",array($last_dispatch_id+1,$invoice_no));
-				
-				//----allocateing the book---
-				
-				$orders_det=$this->db->query("select a.quantity as qty,a.itemid,a.id,b.franchise_id,b.is_pnh,a.i_discount,a.i_coup_discount,a.i_orgprice from king_orders a join king_transactions b on b.transid=a.transid where a.id in ('".implode("','",$p_oids)."')")->result_array();
-				
-				$allotment_id=0;
-				//get the prev allotment id
-				$allotment_id=$this->db->query("select ifnull(max(allotment_id),0) as allotment_id from pnh_t_book_allotment")->row()->allotment_id;
-				
-				if($allotment_id)
-					$allotment_id+=1;
-				else
-					$allotment_id=1;
-				
-				foreach($orders_det as $o)
-				{
-					$pls=$this->db->query("select qty,pl.product_id,p.mrp from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
-					foreach($pls as $p)
+					foreach($imeis[$p['product_id']] as $il=>$imei)
 					{
-						foreach($imeis[$p['product_id']] as $il=>$imei)
+						if($imei===0)
+							continue;
+						
+						if($o['is_pnh'])
 						{
-							if($imei===0)
-								continue;
+							$is_voucher_book_deal=0;
 							
-							if($o['is_pnh'])
+							//cheack if is voucher book deal
+							$is_voucher_book_deal=$this->db->query("select count(*) as ttl from pnh_t_book_details where book_slno=?",$imei)->row()->ttl;
+							$book_details=$this->db->query("select * from pnh_t_book_details where book_slno=?",$imei)->row_array();
+							if($is_voucher_book_deal)
 							{
-								$is_voucher_book_deal=0;
+								// query to get book margin from deal mrp and offer price 
+								//$book_margin = $this->db->query("select 100-(price/orgprice)*100 as discount from king_dealitems a join m_product_deal_link b on a.id = b.itemid where product_id = ? ",$p['product_id'])->row()->discount;
+								$book_mrp=$o['i_orgprice'];
+								$book_discount_price=$o['i_orgprice']-($o['i_discount']+$o['i_coup_discount']);
+								$book_margin=($book_mrp-$book_discount_price)/$book_mrp*100; //compute the book margin based book sold price
 								
-								//cheack if is voucher book deal
-								$is_voucher_book_deal=$this->db->query("select count(*) as ttl from pnh_t_book_details where book_slno=?",$imei)->row()->ttl;
-								$book_details=$this->db->query("select * from pnh_t_book_details where book_slno=?",$imei)->row_array();
-								if($is_voucher_book_deal)
+								$ins=array();
+								$ins['allotment_id']=$allotment_id;
+								$ins['book_id']=$book_details['book_id'];
+								$ins['franchise_id']=$o['franchise_id'];
+								$ins['margin']= $book_margin;
+								$ins['created_on']=cur_datetime();
+								$ins['status']=1;
+								$ins['order_id']=$o['id'];
+								$ins['created_by']=$user['userid'];
+								$this->db->insert('pnh_t_book_allotment',$ins);
+								
+								//get book vouchers
+								$book_vouchers_res=$this->db->query("select a.*,c.denomination as value from  pnh_t_book_voucher_link a join pnh_t_voucher_details b on b.id= a.voucher_slno_id join pnh_m_voucher c on c.voucher_id= b.voucher_id where book_id=? and b.status=1",$book_details['book_id']);
+								if($book_vouchers_res->num_rows())
 								{
-									// query to get book margin from deal mrp and offer price 
-									//$book_margin = $this->db->query("select 100-(price/orgprice)*100 as discount from king_dealitems a join m_product_deal_link b on a.id = b.itemid where product_id = ? ",$p['product_id'])->row()->discount;
-									$book_mrp=$o['i_orgprice'];
-									$book_discount_price=$o['i_orgprice']-($o['i_discount']+$o['i_coup_discount']);
-									$book_margin=($book_mrp-$book_discount_price)/$book_mrp*100; //compute the book margin based book sold price
-									
-									$ins=array();
-									$ins['allotment_id']=$allotment_id;
-									$ins['book_id']=$book_details['book_id'];
-									$ins['franchise_id']=$o['franchise_id'];
-									$ins['margin']= $book_margin;
-									$ins['created_on']=cur_datetime();
-									$ins['status']=1;
-									$ins['order_id']=$o['id'];
-									$ins['created_by']=$user['userid'];
-									$this->db->insert('pnh_t_book_allotment',$ins);
-									
-									//get book vouchers
-									$book_vouchers_res=$this->db->query("select a.*,c.denomination as value from  pnh_t_book_voucher_link a join pnh_t_voucher_details b on b.id= a.voucher_slno_id join pnh_m_voucher c on c.voucher_id= b.voucher_id where book_id=? and b.status=1",$book_details['book_id']);
-									if($book_vouchers_res->num_rows())
-									{
-										foreach($book_vouchers_res->result_array() as $voucher)
-										{	
-											$franchise_value=((100-$book_margin)/100)*$voucher['value'];
-											$this->db->query("update pnh_t_voucher_details set franchise_id=?,is_alloted=1,alloted_on=?,voucher_margin=?,customer_value=?,franchise_value=? where id=? and status=1",array($o['franchise_id'],cur_datetime(),$book_margin,$voucher['value'],$franchise_value,$voucher['voucher_slno_id']));
-										}
+									foreach($book_vouchers_res->result_array() as $voucher)
+									{	
+										$franchise_value=((100-$book_margin)/100)*$voucher['value'];
+										$this->db->query("update pnh_t_voucher_details set franchise_id=?,is_alloted=1,alloted_on=?,voucher_margin=?,customer_value=?,franchise_value=? where id=? and status=1",array($o['franchise_id'],cur_datetime(),$book_margin,$voucher['value'],$franchise_value,$voucher['voucher_slno_id']));
 									}
 								}
 							}
+							 
 						}
 					}
+
 				}
-				//}
-				
-				//----allocateing the book end---
-			
-				$proforma_inv_id = $this->db->query("select a.id as id from proforma_invoices a 
-																join king_orders b on a.order_id = b.id 
-																where a.p_invoice_no = ?  ",array($p_invoice))->row()->id;
-				
-				$stk_allot_det = array();
-				foreach($pbcodes as $stk_prod_sel => $stk_mrp_det)
-				{
-					list($itemid,$pid,$pbcode,$sid_tmp,$order_id) = explode('_',$stk_prod_sel);
-					
-					if($p_invoice != $p_invno)
-						continue;
-					
-					list($stk_cnt,$pmrp,$stk_id) = explode('_',$stk_mrp_det);
-		
-					$pbcode = (($pbcode == 'BLANK')?'':$pbcode);
-					
-					if(!$order_id)
-						$order_id = $ord_item_ids[$itemid];  
-					
-					$check_stock_rerv_res = $this->db->query("select id,qty,released_on,status,ifnull(released_on,0) as is_released,release_qty  from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and order_id = ? and stock_info_id = ? ",array($batch_id,$p_invoice,$order_id,$stk_id));
-					
-					
-					if(!$check_stock_rerv_res->num_rows())
-					{
-						if($this->db->query("select count(*) as t from t_reserved_batch_stock where p_invoice_no = ? and order_id = ? ",array($p_invoice,$order_id))->row()->t)
-						{
-							$sql="update t_stock_info set available_qty=available_qty-? where product_id=? and stock_id = ? limit 1";
-							$this->db->query($sql,array($stk_cnt,$pid,$stk_id));
-							
-							$allot_stk = array();
-							$allot_stk['stock_info_id'] = $stk_id;
-							$allot_stk['product_id'] = $pid;
-							$allot_stk['p_invoice_no'] = $p_invoice;
-							$allot_stk['batch_id'] = $batch_id;
-							$allot_stk['order_id'] = $order_id;
-							$allot_stk['qty'] = $stk_cnt;
-							$allot_stk['status'] = 1;
-							$allot_stk['reserved_on'] = time();
-							$this->db->insert("t_reserved_batch_stock",$allot_stk);
-						}
-						
-					}else
-					{
-						
-						$stock_rerv_det = $check_stock_rerv_res->row_array();
-						
-						if($stock_rerv_det['is_released'] == 0 && $stock_rerv_det['status'] != 2)
-						{
-						 
-							if($stock_rerv_det['qty'] > $stk_cnt)
-							{
-								$release_qty = $stock_rerv_det['qty']-$stk_cnt;
-								$sql="update t_stock_info set available_qty=available_qty+? where product_id=? and stock_id = ? limit 1";
-								$this->db->query($sql,array($release_qty,$pid,$stk_id));
-								
-								$this->db->query("update t_reserved_batch_stock set release_qty=?,released_on = ?,status = 1 where id = ? ",array($release_qty,time(),$stock_rerv_det['id']));
-								
-								//$this->erpm->do_stock_log(0,$release_qty,$pid,$proforma_inv_id,false,true,true);
-							}
-							else if($stock_rerv_det['qty'] < $stk_cnt)
-							{
-								$reallot_qty = $stk_cnt-$stock_rerv_det['qty'];
-								$sql="update t_stock_info set available_qty=available_qty-? where product_id=? and stock_id = ? limit 1";
-								$this->db->query($sql,array($reallot_qty,$pid,$stk_id));
-								
-								$this->db->query("update t_reserved_batch_stock set release_qty=?,extra_qty=?,released_on = ?,status = 1 where id = ? ",array(0,$reallot_qty,time(),$stock_rerv_det['id']));
-								
-								//$this->erpm->do_stock_log(1,$reallot_qty,$pid,$proforma_inv_id,false,true,true);
-							}
-							else
-							{
-								$this->db->query("update t_reserved_batch_stock set status = 1 where id = ? ",array($stock_rerv_det['id']));	
-							}
-						}		
-					}
-					
-				}
-				
-				// check for pending unreleased qty from stock reservation table  
-				if($batch_id)
-				{
-					$reserv_stk_res = $this->db->query('select id,stock_info_id,product_id,qty from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and status = 0 and release_qty = 0 and released_on is null ',array($batch_id,$p_invoice));
-					if($reserv_stk_res->num_rows())
-					{
-						foreach($reserv_stk_res->result_array() as $reserv_stk_det)
-						{
-							$sql="update t_stock_info set available_qty=available_qty+? where product_id=? and stock_id = ? limit 1";
-							$this->db->query($sql,array($reserv_stk_det['qty'],$reserv_stk_det['product_id'],$reserv_stk_det['stock_info_id']));
-							$this->db->query("update t_reserved_batch_stock set release_qty=? ,released_on = ?,status=2 where id = ? ",array($reserv_stk_det['qty'],time(),$reserv_stk_det['id']));
-						}
-					}
-				}
+				 
+			}
 			 
-					
-				// process refund for invoiced deals
-				$refund_res = $this->db->query('select a.p_invoice_no,c.quantity,di.is_combo,di.is_pnh,c.itemid,d.menuid,c.transid,a.order_id,a.product_id,i_orgprice as ordmrp,i_orgprice-(i_price-i_coup_discount) as disc,b.mrp,(a.qty-ifnull(a.release_qty,0)+ifnull(a.extra_qty,0)) as allot_qty 
-															from t_reserved_batch_stock a 
-															join t_stock_info b on a.stock_info_id = b.stock_id 
-															join king_orders c on c.id = a.order_id 
-															join king_dealitems di on c.itemid = di.id 
-															join king_deals d on d.dealid = di.dealid
-														where batch_id = ? and a.p_invoice_no = ? and a.status = 1  and c.id in ('.implode(',',$p_oids).')
-														order by a.order_id 
-												',array($batch_id,$p_invoice));
-				if($refund_res->num_rows())
-				{
-					
-					$refund_arr = array();
-					foreach($refund_res->result_array() as $rd)
-					{
-						// Check if valid for refund by menu  
-						$consider_for_refund = 0;
-						if($rd['is_pnh'])
-						{
-							$consider_for_refund = $this->db->query("select consider_mrp_chng from pnh_menu where id = ? ",$rd['menuid'])->row()->consider_mrp_chng;
-						}
-						
-						if($consider_for_refund==0)
-							continue;
-						
-						$transid = $rd['transid'];
-						$oid = $rd['order_id'];
-						$ordmrp = $rd['ordmrp'];
-						$disc = $rd['disc'];
-						$qty = $rd['quantity'];
-						
-						if(!isset($refund_arr[$transid]))
-							$refund_arr[$transid] = array('orders'=>array(),'total_refund'=>0);
+			//}
+			
+
+			 	
+
+			//----allocateing the book end---
 		
-						if(!isset($refund_arr[$transid]['orders'][$oid]))
-						{
-							$refund_arr[$transid]['orders'][$oid] = array();
-							$refund_arr[$transid]['orders'][$oid]['ordmrp'] = $ordmrp;
-							$refund_arr[$transid]['orders'][$oid]['disc'] = $disc;
-							$refund_arr[$transid]['orders'][$oid]['qty'] = $qty;
-							$refund_arr[$transid]['orders'][$oid]['prod_mrp'] = 0;
-							$refund_arr[$transid]['orders'][$oid]['prod_mrp_sum'] = 0;
-							$refund_arr[$transid]['orders'][$oid]['new_disc'] = 0;
-						}
-						$refund_arr[$transid]['orders'][$oid]['prod_mrp_sum'] += $rd['mrp'];
-						$refund_arr[$transid]['orders'][$oid]['prod_mrp'] += $rd['mrp']*$rd['allot_qty'];
-						
-					}
-					
-					 
-					foreach($refund_arr as $tid=>$r_ord_list)
-					{
-						$ttl_refund = 0;  
-						foreach($r_ord_list['orders'] as $oid=>$r_ord_det)
-						{
-							$t_ord_mrp = $r_ord_det['ordmrp']*$r_ord_det['qty'];
-							$t_ord_disc = $r_ord_det['disc']*$r_ord_det['qty'];
-							$t_prod_mrp = $r_ord_det['prod_mrp'];
-							$t_amt_after_disc = round($t_ord_mrp-$t_ord_disc,2);
-							
-							$new_disc_amt = round($t_amt_after_disc*$t_prod_mrp/$t_ord_mrp,2);
-							$rfd_amt = $t_amt_after_disc - $new_disc_amt;
-							$refund_arr[$tid]['orders'][$oid]['new_disc'] = $new_disc_amt; 
-							$ttl_refund+=$rfd_amt;
-						}
-						$refund_arr[$tid]['total_refund'] = $ttl_refund; 
-					}
-					
-					foreach($refund_arr as $tid=>$r_ord_list)
-					{
-						if($r_ord_list['total_refund']*1 > 0)
-						{
-							$total_refund_amout = $r_ord_list['total_refund'];
-							$this->db->query("insert into t_refund_info(transid,amount,invoice_no,refund_for,status,created_on,created_by) values(?,?,?,?,?,?,?)",array($tid,$total_refund_amout,$invoice_no,'mrpdiff',0,time(),$lgn_user['userid']));
-							$rid=$this->db->insert_id();
-							
-							foreach($r_ord_list['orders'] as $oid=>$r_ord_det)
-							{
-								$this->db->query("insert into t_refund_order_item_link(refund_id,order_id,invoice_no,qty) values(?,?,?,?)",array($rid,$oid,$invoice_no,$r_ord_det['qty']));
-								
-								$this->db->query("update king_invoice set mrp = ?,discount=?,nlc=? where invoice_no = ? and order_id = ? ",array($r_ord_det['prod_mrp']/$r_ord_det['qty'],($r_ord_det['prod_mrp']-$r_ord_det['new_disc'])/$r_ord_det['qty'],$r_ord_det['new_disc']/$r_ord_det['qty'],$invoice_no,$oid));
-							}
-									
-							if($tid && $total_refund_amout)
-								$this->erpm->do_trans_changelog($tid," Rs ".$total_refund_amout." refund process initiated towards MRP Change in Invoice No:".$invoice_no);
-						}
-					}
-					
-				}
-					
-				$inv_trans_det = $this->db->query("select franchise_id,a.transid,b.invoice_no,is_pnh,sum((mrp-discount)*quantity) as inv_amt
-														from king_transactions a 
-														join king_invoice b on a.transid = b.transid 
-														join king_orders c on c.id = b.order_id 
-														where b.invoice_no = ? ",$invoice_no)->row_array();
-				$user = $this->erpm->auth();
-				if($inv_trans_det['is_pnh'])
-				{
-					$arr = array($inv_trans_det['franchise_id'],1,$inv_trans_det['invoice_no'],$inv_trans_det['inv_amt'],'',1,date('Y-m-d H:i:s'),$user['userid']);
-					$this->db->query("insert into pnh_franchise_account_summary (franchise_id,action_type,invoice_no,debit_amt,remarks,status,created_on,created_by) values(?,?,?,?,?,?,?,?)",$arr);
-					
-					//check if invoice has credit note amount
-					$invoice_credit_note_amt = $this->db->query("select sum(credit_note_amt*quantity) as amt 
-																		from king_invoice a 
-																		join king_orders b on b.id = a.order_id 
-																		where a.invoice_no = ? 
-	 															",$invoice_no)->row()->amt;
-					if($invoice_credit_note_amt)
-					{
-						// create creditnote document entry  
-						$arr = array($inv_trans_det['franchise_id'],$credit_note_grpno,$inv_trans_det['invoice_no'],$invoice_credit_note_amt,date('Y-m-d H:i:s'),$user['userid']);
-						$this->db->query("insert into t_invoice_credit_notes (franchise_id,grp_no,invoice_no,amount,created_on,created_by) values(?,?,?,?,?,?)",$arr);
-						$credit_note_id = $this->db->insert_id();
-						
-						$arr = array($inv_trans_det['franchise_id'],7,$credit_note_id,$inv_trans_det['invoice_no'],$invoice_credit_note_amt,'credit_note',1,date('Y-m-d H:i:s'),$user['userid']);
-						$this->db->query("insert into pnh_franchise_account_summary (franchise_id,action_type,credit_note_id,invoice_no,credit_amt,remarks,status,created_on,created_by) values(?,?,?,?,?,?,?,?,?)",$arr);
-						
-						$this->db->query("update king_invoice set credit_note_id = ? where invoice_no = ? ",array($credit_note_id,$invoice_no));
-					}
-					
-				}
+			
+			$sel_oids = array();
+			$stk_allot_det = array();
+			foreach($pbcodes as $stk_prod_sel => $stk_mrp_det)
+			{
+				list($p_invoice_no,$itemid,$pid,$pbcode,$sid_tmp,$order_id) = explode('_',$stk_prod_sel);
+				list($stk_cnt,$pmrp,$stk_id) = explode('_',$stk_mrp_det);
 				
 				
-				if($inv_trans_det['is_pnh'])
+				if(!in_array($order_id, $p_oids))
+					continue;
+	
+				$pbcode = (($pbcode == 'BLANK')?'':$pbcode);
+				
+				//$ord_item_ids[$r['id']] = $r['itemid'];
+				
+				if(!$order_id)
+					$order_id = $ord_item_ids[$itemid];
+					
+				$sel_oids[] = $order_id; 	 
+				
+				$check_stock_rerv_res = $this->db->query("select id,qty,released_on,status,ifnull(released_on,0) as is_released,release_qty  from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and order_id = ? and stock_info_id = ? ",array($batch_id,$p_invoice,$order_id,$stk_id));
+				
+				
+				if(!$check_stock_rerv_res->num_rows())
 				{
-					$this->db->query("update shipment_batch_process_invoice_link set invoice_no=$invoice_no,invoiced_on=now(),invoiced_by={$user['userid']} where p_invoice_no=? and invoice_no = 0 limit 1",$p_invoice);
+					if($this->db->query("select count(*) as t from t_reserved_batch_stock where p_invoice_no = ? and order_id = ? ",array($p_invoice,$order_id))->row()->t)
+					{
+						$sql="update t_stock_info set available_qty=available_qty-? where product_id=? and stock_id = ? limit 1";
+						$this->db->query($sql,array($stk_cnt,$pid,$stk_id));
+						
+						$allot_stk = array();
+						$allot_stk['stock_info_id'] = $stk_id;
+						$allot_stk['product_id'] = $pid;
+						$allot_stk['p_invoice_no'] = $p_invoice;
+						$allot_stk['batch_id'] = $batch_id;
+						$allot_stk['order_id'] = $order_id;
+						$allot_stk['qty'] = $stk_cnt;
+						$allot_stk['status'] = 1;
+						$allot_stk['reserved_on'] = time();
+						$this->db->insert("t_reserved_batch_stock",$allot_stk);
+					}
+					
 				}else
 				{
-					$this->db->query("update shipment_batch_process_invoice_link set invoice_no=$invoice_no,packed=1,packed_on=now(),packed_by={$user['userid']} where p_invoice_no=? and invoice_no = 0 limit 1 ",$p_invoice);
+					
+					$stock_rerv_det = $check_stock_rerv_res->row_array();
+					
+					if($stock_rerv_det['is_released'] == 0 && $stock_rerv_det['status'] != 2)
+					{
+					 
+						if($stock_rerv_det['qty'] > $stk_cnt)
+						{
+							$release_qty = $stock_rerv_det['qty']-$stk_cnt;
+							$sql="update t_stock_info set available_qty=available_qty+? where product_id=? and stock_id = ? limit 1";
+							$this->db->query($sql,array($release_qty,$pid,$stk_id));
+							
+							$this->db->query("update t_reserved_batch_stock set release_qty=?,released_on = ?,status = 1 where id = ? ",array($release_qty,time(),$stock_rerv_det['id']));
+							
+							//$this->erpm->do_stock_log(0,$release_qty,$pid,$proforma_inv_id,false,true,true);
+						}
+						else if($stock_rerv_det['qty'] < $stk_cnt)
+						{
+							$reallot_qty = $stk_cnt-$stock_rerv_det['qty'];
+							$sql="update t_stock_info set available_qty=available_qty-? where product_id=? and stock_id = ? limit 1";
+							$this->db->query($sql,array($reallot_qty,$pid,$stk_id));
+							
+							$this->db->query("update t_reserved_batch_stock set release_qty=?,extra_qty=?,released_on = ?,status = 1 where id = ? ",array(0,$reallot_qty,time(),$stock_rerv_det['id']));
+							
+							//$this->erpm->do_stock_log(1,$reallot_qty,$pid,$proforma_inv_id,false,true,true);
+						}
+						else
+						{
+							$this->db->query("update t_reserved_batch_stock set status = 1 where id = ? ",array($stock_rerv_det['id']));	
+						}
+					}		
+				}
+				
+			}
+			
+			// check for pending unreleased qty from stock reservation table  
+			if($batch_id)
+			{
+				$reserv_stk_res = $this->db->query('select a.id,a.stock_info_id,a.product_id,a.qty,a.order_id  
+															from t_reserved_batch_stock a
+															join king_orders b on a.order_id = b.id 
+															where a.batch_id = ? and a.p_invoice_no = ? 
+															and a.status = 0 and a.release_qty = 0 and a.released_on is null 
+															and a.order_id in ('.implode(',',$sel_oids).') and transid = ? 
+													',array($batch_id,$p_invoice,$transid));
+				if($reserv_stk_res->num_rows())
+				{
+					 
+					foreach($reserv_stk_res->result_array() as $reserv_stk_det)
+					{
+					 
+						$sql="update t_stock_info set available_qty=available_qty+? where product_id=? and stock_id = ? limit 1";
+						$this->db->query($sql,array($reserv_stk_det['qty'],$reserv_stk_det['product_id'],$reserv_stk_det['stock_info_id']));
+						$this->db->query("update t_reserved_batch_stock set release_qty=? ,released_on = ?,status=2 where id = ? ",array($reserv_stk_det['qty'],time(),$reserv_stk_det['id']));
+
+						// revert back alloted stocks to products stock log 
+						//$this->erpm->do_stock_log(1,$reserv_stk_det['qty'],$reserv_stk_det['product_id'],$this->db->query("select id from proforma_invoices where order_id=? order by id desc limit 1",$reserv_stk_det['order_id'])->row()->id,false,true,true);
+
+					}
 				}
 			}
-		
+
+			// get all orders in transaction in proforma 
+			$proforma_trans_orders = $this->db->query("select distinct order_id as order_id from proforma_invoices where transid = ? and p_invoice_no = ? and invoice_status = 1 ",array($transid,$p_invoice))->result_array();
+			
 			$c_oids=array();
-			foreach($oids as $oid)
+			foreach($proforma_trans_orders as $prt_o)
 			{
-				if(!in_array($oid,$processed_ord_ids))
-					$c_oids[]=$oid;
-			}		
+				if(!in_array($prt_o['order_id'],$processed_ord_ids))
+					$c_oids[]=$prt_o['order_id'];
+			}
+			
+			$c_oids = array_unique($c_oids);
+					
 			if(!empty($c_oids))
-				$orders=$this->db->query("select quantity as qty,itemid,id from king_orders where id in ('".implode("','",$c_oids)."')")->result_array();
+				$orders=$this->db->query("select quantity as qty,itemid,id from king_orders where id in ('".implode("','",$c_oids)."') and transid = ? and is_ordqty_splitd = 0 ",$transid)->result_array();
 			else $orders=array();
-		
+			
 			// revert cancelled orders stock  
 			foreach($orders as $o)
 			{
+				
 				$pls=$this->db->query("select qty,pl.product_id,p.mrp from m_product_deal_link pl join m_product_info p on p.product_id=pl.product_id where itemid=?",$o['itemid'])->result_array();
 				foreach($pls as $p)
 				{
 					
 					// get resered qty for product from stock and revert back to stock master
 					$p_reserv_qty = 0;
-					$reserv_stk_res = $this->db->query('select id,stock_info_id,qty from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and order_id = ? and product_id = ? ',array($batch_id,$p_invoice,$o['id'],$p['product_id']));
+					$reserv_stk_res = $this->db->query('select id,stock_info_id,qty,order_id from t_reserved_batch_stock where batch_id = ? and p_invoice_no = ? and order_id = ? and product_id = ? and status = 0 ',array($batch_id,$p_invoice,$o['id'],$p['product_id']));
+					
+					 
 					if($reserv_stk_res->num_rows())
 					{
+					 
 						foreach($reserv_stk_res->result_array() as $reserv_stk_det)
 						{
 							$p_reserv_qty += $reserv_stk_det['qty'];
@@ -2239,58 +2367,230 @@ courier disable ends
 							$this->db->query($sql,array($reserv_stk_det['qty'],$p['product_id'],$reserv_stk_det['stock_info_id']));
 							
 							$this->db->query("update t_reserved_batch_stock set release_qty=? ,released_on = ?,status = 2 where id = ? and p_invoice_no = ?  ",array($reserv_stk_det['qty'],time(),$reserv_stk_det['id'],$p_invoice));
+							
+							$this->db->query("update king_orders set status = 0 where id = ? and status = 1 ",$reserv_stk_det['order_id']);
+							 
 						}
 					}
 					
-					// revert back cancelled orders alloted stock to log 
-					$this->erpm->do_stock_log(1,$p_reserv_qty,$p['product_id'],$this->db->query("select id from proforma_invoices where order_id=? order by id desc limit 1",$o['id'])->row()->id,false,true,true);
-					
+					// revert back cancelled orders alloted stock to log
+					if($p_reserv_qty)
+					{
+						$this->erpm->do_stock_log(1,$p_reserv_qty,$p['product_id'],$this->db->query("select id from proforma_invoices where order_id=? order by id desc limit 1",$o['id'])->row()->id,false,true,true);	
+					}
 				}
 			}
-			
-			
-			if($fs_ids)
+
+			 
+			/*
+			if(!empty($c_oids))
+				$this->db->query("update king_orders set status=0 where id in ('".implode("','",$c_oids)."')");
+			 */
+                        
+                       
+
+			$inv=$this->erpm->do_invoice($p_oids);
+			$invoice_no=$inv[0];
+			 
+			if($split_inv_grpno)
 			{
-				$sql="update king_freesamples_order set invoice_no=? where invoice_no=0 and id in (".$fs_ids.")";
-				$this->db->query($sql,array($invoice_no));
+				array_push($split_inv_grplist,$invoice_no);
+				$this->db->query("update king_invoice set split_inv_grpno = ? where invoice_no = ? ",array($split_inv_grpno,$invoice_no));
 			}
-			$this->db->query("update king_orders set status=0 where id in ('".implode("','",$c_oids)."')");
-			
-			
-			$user=$this->erpm->getadminuser();
-			$bid=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no=?",$p_invoice)->row()->batch_id;
-			
-			// Status is marked only invoiced in this stage for pnh invoices
+
+				
+			// process refund for invoiced deals
+			$refund_res = $this->db->query('select a.p_invoice_no,c.quantity,di.is_combo,di.is_pnh,c.itemid,d.menuid,c.transid,a.order_id,a.product_id,i_orgprice as ordmrp,i_orgprice-(i_price-i_coup_discount) as disc,b.mrp,(a.qty-ifnull(a.release_qty,0)+ifnull(a.extra_qty,0)) as allot_qty 
+														from t_reserved_batch_stock a 
+														join t_stock_info b on a.stock_info_id = b.stock_id 
+														join king_orders c on c.id = a.order_id 
+														join king_dealitems di on c.itemid = di.id 
+														join king_deals d on d.dealid = di.dealid
+													where batch_id = ? and a.p_invoice_no = ? and a.status = 1  and c.id in ('.implode(',',$p_oids).')
+													order by a.order_id 
+											',array($batch_id,$p_invoice));
+			if($refund_res->num_rows())
+			{
+				
+				$refund_arr = array();
+				foreach($refund_res->result_array() as $rd)
+				{
+					// Check if valid for refund by menu  
+					$consider_for_refund = 0;
+					if($rd['is_pnh'])
+					{
+						$consider_for_refund = $this->db->query("select consider_mrp_chng from pnh_menu where id = ? ",$rd['menuid'])->row()->consider_mrp_chng;
+					}
+					
+					if($consider_for_refund==0)
+						continue;
+					
+					$transid = $rd['transid'];
+					$oid = $rd['order_id'];
+					$ordmrp = $rd['ordmrp'];
+					$disc = $rd['disc'];
+					$qty = $rd['quantity'];
+					
+					if(!isset($refund_arr[$transid]))
+						$refund_arr[$transid] = array('orders'=>array(),'total_refund'=>0);
+	
+					if(!isset($refund_arr[$transid]['orders'][$oid]))
+					{
+						$refund_arr[$transid]['orders'][$oid] = array();
+						$refund_arr[$transid]['orders'][$oid]['ordmrp'] = $ordmrp;
+						$refund_arr[$transid]['orders'][$oid]['disc'] = $disc;
+						$refund_arr[$transid]['orders'][$oid]['qty'] = $qty;
+						$refund_arr[$transid]['orders'][$oid]['prod_mrp'] = 0;
+						$refund_arr[$transid]['orders'][$oid]['prod_mrp_sum'] = 0;
+						$refund_arr[$transid]['orders'][$oid]['new_disc'] = 0;
+					}
+					$refund_arr[$transid]['orders'][$oid]['prod_mrp_sum'] += $rd['mrp'];
+					$refund_arr[$transid]['orders'][$oid]['prod_mrp'] += $rd['mrp']*$rd['allot_qty'];
+					
+				}
+				
+				 
+				foreach($refund_arr as $tid=>$r_ord_list)
+				{
+					$ttl_refund = 0;  
+					foreach($r_ord_list['orders'] as $oid=>$r_ord_det)
+					{
+						$t_ord_mrp = $r_ord_det['ordmrp']*$r_ord_det['qty'];
+						$t_ord_disc = $r_ord_det['disc']*$r_ord_det['qty'];
+						$t_prod_mrp = $r_ord_det['prod_mrp'];
+						$t_amt_after_disc = round($t_ord_mrp-$t_ord_disc,2);
+						
+						$new_disc_amt = round($t_amt_after_disc*$t_prod_mrp/$t_ord_mrp,2);
+						$rfd_amt = $t_amt_after_disc - $new_disc_amt;
+						$refund_arr[$tid]['orders'][$oid]['new_disc'] = $new_disc_amt; 
+						$ttl_refund+=$rfd_amt;
+					}
+					$refund_arr[$tid]['total_refund'] = $ttl_refund; 
+				}
+				
+				foreach($refund_arr as $tid=>$r_ord_list)
+				{
+					if($r_ord_list['total_refund']*1 > 0)
+					{
+						$total_refund_amout = $r_ord_list['total_refund'];
+						$this->db->query("insert into t_refund_info(transid,amount,invoice_no,refund_for,status,created_on,created_by) values(?,?,?,?,?,?,?)",array($tid,$total_refund_amout,$invoice_no,'mrpdiff',0,time(),$lgn_user['userid']));
+						$rid=$this->db->insert_id();
+						
+						foreach($r_ord_list['orders'] as $oid=>$r_ord_det)
+						{
+							$this->db->query("insert into t_refund_order_item_link(refund_id,order_id,invoice_no,qty) values(?,?,?,?)",array($rid,$oid,$invoice_no,$r_ord_det['qty']));
+							
+							//$this->db->query("update king_invoice set mrp = ?,discount=?,nlc=? where invoice_no = ? and order_id = ? ",array($r_ord_det['prod_mrp']/$r_ord_det['qty'],($r_ord_det['prod_mrp']-$r_ord_det['new_disc'])/$r_ord_det['qty'],$r_ord_det['new_disc']/$r_ord_det['qty'],$invoice_no,$oid));
+
+						}
+								
+						if($tid && $total_refund_amout)
+							$this->erpm->do_trans_changelog($tid," Rs ".$total_refund_amout." refund process initiated towards MRP Change in Invoice No:".$invoice_no);
+					}
+				}
+				
+			}
+				
+			$inv_trans_det = $this->db->query("select franchise_id,a.transid,b.invoice_no,is_pnh,sum((mrp-discount)*invoice_qty) as inv_amt
+													from king_transactions a 
+													join king_invoice b on a.transid = b.transid 
+													join king_orders c on c.id = b.order_id 
+													where b.invoice_no = ? ",$invoice_no)->row_array();
+			$user = $this->erpm->auth();
 			if($inv_trans_det['is_pnh'])
 			{
-			
+				$arr = array($inv_trans_det['franchise_id'],1,$inv_trans_det['invoice_no'],$inv_trans_det['inv_amt'],'',1,date('Y-m-d H:i:s'),$user['userid']);
+				$this->db->query("insert into pnh_franchise_account_summary (franchise_id,action_type,invoice_no,debit_amt,remarks,status,created_on,created_by) values(?,?,?,?,?,?,?,?)",$arr);
 				
-			
-				$this->db->query("update proforma_invoices set dispatch_id = ? where p_invoice_no = ? ",array($last_dispatch_id+1,$p_invoice));
-			
-				if($this->db->query("select count(1) as l from shipment_batch_process_invoice_link where batch_id=?",$bid)->row()->l<=$this->db->query("select count(1) as l from shipment_batch_process_invoice_link where invoice_no!=0 and batch_id=$bid")->row()->l)
-					$this->db->query("update shipment_batch_process set status=2 where batch_id=? limit 1",$bid);
-				else
-					$this->db->query("update shipment_batch_process set status=1 where batch_id=? limit 1",$bid);
-				$this->session->set_flashdata("erp_pop_info","Invoice status Updated");
-			}else
-			{
-			
-				if($this->db->query("select count(1) as l from shipment_batch_process_invoice_link where batch_id=?",$bid)->row()->l<=$this->db->query("select count(1) as l from shipment_batch_process_invoice_link where packed=1 and batch_id=$bid")->row()->l+$this->db->query("select count(1) as l from shipment_batch_process_invoice_link bi join proforma_invoices i on i.p_invoice_no=bi.p_invoice_no where bi.batch_id=$bid and bi.packed=0 and i.invoice_status=0")->row()->l)
-					$this->db->query("update shipment_batch_process set status=2 where batch_id=? limit 1",$bid);
-				else
-					$this->db->query("update shipment_batch_process set status=1 where batch_id=? limit 1",$bid);
-			
-				$this->session->set_flashdata("erp_pop_info","Packed status updated");
+				//check if invoice has credit note amount
+				$invoice_credit_note_amt = $this->db->query("select sum(credit_note_amt*invoice_qty) as amt 
+																	from king_invoice a 
+																	join king_orders b on b.id = a.order_id 
+																	where a.invoice_no = ? 
+ 															",$invoice_no)->row()->amt;
+				if($invoice_credit_note_amt)
+				{
+					// create creditnote document entry  
+					$arr = array($inv_trans_det['franchise_id'],$credit_note_grpno,$inv_trans_det['invoice_no'],$invoice_credit_note_amt,date('Y-m-d H:i:s'),$user['userid']);
+					$this->db->query("insert into t_invoice_credit_notes (franchise_id,grp_no,invoice_no,amount,created_on,created_by) values(?,?,?,?,?,?)",$arr);
+					$credit_note_id = $this->db->insert_id();
+					
+					$arr = array($inv_trans_det['franchise_id'],7,$credit_note_id,$inv_trans_det['invoice_no'],$invoice_credit_note_amt,'credit_note',1,date('Y-m-d H:i:s'),$user['userid']);
+					$this->db->query("insert into pnh_franchise_account_summary (franchise_id,action_type,credit_note_id,invoice_no,credit_amt,remarks,status,created_on,created_by) values(?,?,?,?,?,?,?,?,?)",$arr);
+					
+					$this->db->query("update king_invoice set credit_note_id = ? where invoice_no = ? ",array($credit_note_id,$invoice_no));
+				}
+				
 			}
 			
+			
+			if($inv_trans_det['is_pnh'])
+			{
+				$this->db->query("update shipment_batch_process_invoice_link set invoice_no=$invoice_no,invoiced_on=now(),invoiced_by={$user['userid']} where p_invoice_no=? and invoice_no = 0 limit 1",$p_invoice);
+			}else
+			{
+				$this->db->query("update shipment_batch_process_invoice_link set invoice_no=$invoice_no,packed=1,packed_on=now(),packed_by={$user['userid']} where p_invoice_no=? and invoice_no = 0 limit 1 ",$p_invoice);
+			}
 		}
 		
-		if($split_inv_grpno)
-			redirect("admin/invoice/".($last_dispatch_id+1));
+		
+		
+                    if($fs_ids)
+                    {
+                            $sql="update king_freesamples_order set invoice_no=? where invoice_no=0 and id in (".$fs_ids.")";
+                            $this->db->query($sql,array($invoice_no));
+                    }
+
+
+
+                    $user=$this->erpm->getadminuser();
+                    $bid=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no=?",$p_invoice)->row()->batch_id;
+
+                    // Status is marked only invoiced in this stage for pnh invoices    
+                    if($inv_trans_det['is_pnh'])
+                    {
+
+                            $last_dispatch_id = @$this->db->query("select max(dispatch_id) as id from proforma_invoices ")->row()->id;
+                            if(!$last_dispatch_id)
+                                    $last_dispatch_id = 500000;
+                            
+                            
+                            if(!$new_dispatch_id)        
+                                $new_dispatch_id = $last_dispatch_id+1;		
+                            
+                            $this->db->query("update proforma_invoices set dispatch_id = ? where p_invoice_no = ? ",array($new_dispatch_id,$p_invoice));
+
+                            $inv_nos_res = $this->db->query("select distinct invoice_no from shipment_batch_process_invoice_link where p_invoice_no = ? ",$p_invoice);
+                            if($inv_nos_res->num_rows())
+                                    foreach($inv_nos_res->result_array() as $inv_det)
+                                            $this->db->query("update king_invoice set ref_dispatch_id = ?,split_inv_grpno=? where invoice_no = ? ",array($new_dispatch_id,$new_dispatch_id,$inv_det['invoice_no']));
+
+                            if($this->db->query("select count(1) as l from shipment_batch_process_invoice_link where batch_id=?",$bid)->row()->l<=$this->db->query("select count(1) as l from shipment_batch_process_invoice_link where invoice_no!=0 and batch_id=$bid")->row()->l)
+                                    $this->db->query("update shipment_batch_process set status=2 where batch_id=? limit 1",$bid);
+                            else
+                                    $this->db->query("update shipment_batch_process set status=1 where batch_id=? limit 1",$bid);
+
+                            
+                            $this->session->set_flashdata("erp_pop_info","Invoice status Updated");
+
+                    }else
+                    {
+
+                            if($this->db->query("select count(1) as l from shipment_batch_process_invoice_link where batch_id=?",$bid)->row()->l<=$this->db->query("select count(1) as l from shipment_batch_process_invoice_link where packed=1 and batch_id=$bid")->row()->l+$this->db->query("select count(1) as l from shipment_batch_process_invoice_link bi join proforma_invoices i on i.p_invoice_no=bi.p_invoice_no where bi.batch_id=$bid and bi.packed=0 and i.invoice_status=0")->row()->l)
+                                    $this->db->query("update shipment_batch_process set status=2 where batch_id=? limit 1",$bid);
+                            else
+                                    $this->db->query("update shipment_batch_process set status=1 where batch_id=? limit 1",$bid);
+
+                            $this->session->set_flashdata("erp_pop_info","Packed status updated");
+                    }
+                }
+                 
+		
+		if($new_dispatch_id)
+			redirect("admin/invoice/$new_dispatch_id");
 		else
 			redirect("admin/invoice/$invoice_no");
-			
+                
 	}
 
 	function do_addtransmsg($transid)
@@ -3865,27 +4165,45 @@ courier disable ends
 	
 	function getinvoiceforpacking($inv_no)
 	{
-		/*
 		if($this->db->query("select 1 from shipment_batch_process_invoice_link where p_invoice_no=? and packed=0 and (invoice_no is null or invoice_no = 0) ",$inv_no)->num_rows()==0)
-			show_error("Proforma Invoice already packed");
-		*/
-		
-		$this->benchmark->mark('code_start');
-		$ret=$this->db->query("select d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.transid,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
-									from proforma_invoices i 
-									join king_orders o on o.id=i.order_id and i.transid = o.transid 
-									join m_product_deal_link pl on pl.itemid=o.itemid 
-									join m_product_info p on p.product_id=pl.product_id 
-									join king_dealitems d on d.id=o.itemid 
-									join king_deals e on e.dealid=d.dealid 
-									join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
-									where i.p_invoice_no=? and i.invoice_status=1 order by o.sno ",$inv_no)->result_array();
-		$ret2=$this->db->query("select d.pic,d.is_pnh,e.menuid,i.discount,i.discount,p.product_id,p.mrp,i.transid,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no from proforma_invoices i join king_orders o on o.id=i.order_id and i.transid = o.transid join products_group_orders pgo on pgo.order_id=o.id join m_product_group_deal_link pl on pl.itemid=o.itemid join m_product_info p on p.product_id=pgo.product_id join king_dealitems d on d.id=o.itemid join king_deals e on e.dealid=d.dealid join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  where i.p_invoice_no=? and i.invoice_status=1 order by o.sno ",$inv_no)->result_array();
-		$ret=array_merge($ret,$ret2);
-		if(empty($ret))
-			show_error("Proforma Invoice not found or Invoice is already cancelled");
-		$this->benchmark->mark('code_end');
-		return $ret;
+                show_error("Proforma Invoice already packed");
+                $this->benchmark->mark('code_start');
+                
+                $ret=$this->db->query("(
+                                    select i.p_invoice_no,i.transid,i.order_id,o.itemid,d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp, 
+                                    o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no,o.time 
+                                    from proforma_invoices i  
+                                    join king_orders o on o.id=i.order_id and i.transid = o.transid  
+                                    join m_product_deal_link pl on pl.itemid=o.itemid  
+                                    join m_product_info p on p.product_id=pl.product_id  
+                                    join king_dealitems d on d.id=o.itemid  
+                                    join king_deals e on e.dealid=d.dealid  
+                                    where i.p_invoice_no in ($inv_no) and i.invoice_status=1  
+                                    group by i.p_invoice_no,o.id,p.product_id  
+                                    order by o.sno )
+                                    union (
+                                    select i.p_invoice_no,i.transid,i.order_id,o.itemid,d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp, 
+                                    o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no,o.time 
+                                    from proforma_invoices i  
+                                    join king_orders o on o.id=i.order_id and i.transid = o.transid  
+                                    join products_group_orders pgo on pgo.order_id=o.id  
+                                    join m_product_group_deal_link pl on pl.itemid=o.itemid  
+                                    join m_product_info p on p.product_id=pgo.product_id  
+                                    join king_dealitems d on d.id=o.itemid  
+                                    join king_deals e on e.dealid=d.dealid  
+                                    where i.p_invoice_no in ($inv_no) and i.invoice_status=1  
+                                    group by i.p_invoice_no,o.id,p.product_id  
+                                    order by o.sno )")->result_array();
+                
+                
+                
+                //$ret=$this->db->query("select d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no from proforma_invoices i join king_orders o on o.id=i.order_id and i.transid = o.transid join m_product_deal_link pl on pl.itemid=o.itemid join m_product_info p on p.product_id=pl.product_id join king_dealitems d on d.id=o.itemid join king_deals e on e.dealid=d.dealid where i.p_invoice_no=? and i.invoice_status=1 order by o.sno ",$inv_no)->result_array();
+                //$ret2=$this->db->query("select d.pic,d.is_pnh,e.menuid,i.discount,i.discount,p.product_id,p.mrp,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no from proforma_invoices i join king_orders o on o.id=i.order_id and i.transid = o.transid join products_group_orders pgo on pgo.order_id=o.id join m_product_group_deal_link pl on pl.itemid=o.itemid join m_product_info p on p.product_id=pgo.product_id join king_dealitems d on d.id=o.itemid join king_deals e on e.dealid=d.dealid where i.p_invoice_no=? and i.invoice_status=1 order by o.sno ",$inv_no)->result_array();
+                //$ret=array_merge($ret,$ret2);
+                if(empty($ret))
+                        show_error("Proforma Invoice not found or Invoice is already cancelled");
+                $this->benchmark->mark('code_end');
+                return $ret;
 	}
 
 	function getbatch($bid)

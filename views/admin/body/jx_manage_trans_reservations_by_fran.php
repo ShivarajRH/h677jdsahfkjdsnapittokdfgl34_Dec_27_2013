@@ -62,9 +62,12 @@ if($terrid!=0) {
             $total_trans_rows=$transactions_src->num_rows();
             $transactions=$this->db->query($sql." limit $pg,$limit")->result_array();
 
-            $output .= '<table class="datagrid" width="100%">
+            $output .= '
+            <select name="sel_terr_id" id="sel_terr_id"></select>    
+            <table class="datagrid" width="100%">
                         <thead>
                             <tr>
+                                <th style="width:10px">#</th>
                                 <th style="width:150px">Territory Name</th>
                                 <th style="width:150px">Town Name</th>
                                 <th style="width:160px">Franchise</th>
@@ -79,66 +82,97 @@ if($terrid!=0) {
             foreach($transactions as $i=>$trans_arr) 
             {
 
-
-
-                $output .= '<tr>
+                $output .= '<tr class="filter_terr_'.$trans_arr['territory_id'].' filter_terr">
+                                <td>'.++$i.'</td>
                                 <td>'.$trans_arr['territory_name'].'</td>
                                 <td>'.$trans_arr['town_name'].'</td>
                                 <td>'.$trans_arr['franchise_name'].'</td>';
                 
 
-                if( $batch_type == "ready") 
-                {
-                                $output .= '<td>';
-                                $arr_pinv_ids =array();
-                              foreach ($arr_trans_set as $i=>$arr_trans) { 
-                                  if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
-                                    $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
-                                        
-                                  }
-                              }
-                              $str_pinv_ids = implode(",", array_unique($arr_pinv_ids));
-                              $output .= '<a class="proceed_link clear" href="javascript:void(0)" onclick="process_pinvoices_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate invoice</a>
-                                  <form action="'.site_url('admin/pack_invoice_by_fran').'" method="post" id="pinvoices_form_'.$trans_arr['franchise_id'].'" target="_blank">
-                                        <input type="hidden" value="'.$str_pinv_ids.'" name="p_invoice_ids"/>
-                                        <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
-                                   </form> ';
-                              
-                            $output .= '</td>
-                                <td>'.$trans_arr['ttl_trans'].'
-                                        <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
-                                        <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
-                                </td>';
+                        if( $batch_type == "ready") 
+                        {
+                                    $output .= '<td>';
+                                    $arr_pinv_ids =array();
+                                    foreach ($arr_trans_set as $i=>$arr_trans) { 
+                                        if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
+                                            $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
+
+                                        }
+                                    }
+                                    $str_pinv_ids = implode(",", array_unique($arr_pinv_ids));
+                                    $output .= '<a class="proceed_link clear" href="javascript:void(0)" onclick="process_pinvoices_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate invoice</a>
+                                          <form action="'.site_url('admin/pack_invoice_by_fran').'" method="post" id="pinvoices_form_'.$trans_arr['franchise_id'].'" target="_blank">
+                                                <input type="hidden" value="'.$str_pinv_ids.'" name="p_invoice_ids"/>
+                                                <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
+                                           </form> ';
+
+                                    $output .= '</td>
+                                        <td>'.$trans_arr['ttl_trans'].'
+                                                <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
+                                                <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
+                                        </td>';
 
 
 
-                }
-                elseif( $batch_type == "partial")
-                {
+                        }
+                        elseif( $batch_type == "partial")
+                        {
 
+                                    $output .= '<td>';
+                                    $arr_pinv_ids =array();
+                                    foreach ($arr_trans_set as $i=>$arr_trans) { 
+                                        if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
+                                            $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
 
-                            $output .= '<td>Generate Invoice</td>
-                                <td>'.$trans_arr['ttl_trans'].'
-                                        <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
-                                        <div class="orders_info_block_'.$trans_arr['franchise_id'].'"></div>
-                                </td>';
+                                        }
+                                    }
+                                    $str_pinv_ids = implode(",", array_unique($arr_pinv_ids));
+                                    $output .= '<a class="proceed_link clear" href="javascript:void(0)" onclick="process_pinvoices_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate invoice</a>
+                                          <form action="'.site_url('admin/pack_invoice_by_fran').'" method="post" id="pinvoices_form_'.$trans_arr['franchise_id'].'" target="_blank">
+                                                <input type="hidden" value="'.$str_pinv_ids.'" name="p_invoice_ids"/>
+                                                <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
+                                           </form> ';
 
-                }
-                elseif( $batch_type == "pending") 
-                {
-                        
-                                $output .= '<td><a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a></td>
-                                    <td>'.$trans_arr['ttl_trans'].'
-                                        <div class="view_all_orders"><a href="">View Orders</a></div>
-                                    </td>';
+                                    $output .= '</td>
+                                        <td>'.$trans_arr['ttl_trans'].'
+                                                <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
+                                                <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
+                                        </td>';
 
-                }
-                $output .= '</tr>';
+                        }
+                        elseif( $batch_type == "pending") 
+                        {
+
+                                        $output .= '<td><a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a></td>';
+                                        $output .= '</td>
+                                                 <td>'.$trans_arr['ttl_trans'].'
+                                                         <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
+                                                         <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
+                                                 </td>';
+
+                        }
+                $output .= '</tr>'; 
+                
+                $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];
             }
 
             $output .='</tbody>
                         </table>';
+            
+           
     
 }
+
     echo ''.$output;
+    
+    
+if(count($fil_territorylist) && $terrid==0) {
+    asort($fil_territorylist);
+    $territory_list = '<option value="00">All Territory</option>';
+    foreach($fil_territorylist as $fterrid=>$fterritory_name) {
+        $territory_list .= '<option value="'.$fterrid.'">'.$fterritory_name.'</option>';   
+    }
+    $resonse2.='<script>$("#sel_terr_id").html(\''.$territory_list.'\');</script>';
+}
+echo ''.$resonse2;
 ?>

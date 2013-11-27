@@ -15,7 +15,7 @@ class reservation_model extends Model
                 
     }
     
-    function get_packing_details($bid,$fid=0) 
+    function get_packing_details($fid=0,$p_invoice_ids) 
     {
         $param=array();
         $cond='';
@@ -24,17 +24,21 @@ class reservation_model extends Model
                 $cond.=" and t.franchise_id=? and pi.invoice_status = 1 and b.invoice_no = 0 "; 
                 $param[]=$fid;
         }
-        $sql="select pt.courier_name as p_courier_name,t.init as ordered_on,b.*,pi.transid as pi_transid, 
+        $sql="select pt.courier_name as p_courier_name,t.init as ordered_on,b.*,pi.transid as pi_transid,
                 pi.invoice_status as p_invoice_status,i.transid,i.invoice_status  
-                from shipment_batch_process_invoice_link b  
+                from shipment_batch_process_invoice_link b
                 left outer join proforma_invoices pi on pi.p_invoice_no=b.p_invoice_no  
                 left outer join king_invoice i on i.invoice_no=b.invoice_no  
                 left outer join king_transactions t on t.transid=pi.transid  
                 left outer join partner_transaction_details pt on pt.transid=t.transid and pt.order_no = t.partner_reference_no  
-                where 1 $cond and batch_id=?  
+                where 1 $cond and b.p_invoice_no in ($p_invoice_ids)
                 group by b.p_invoice_no";
-        $param[]=$bid;
-        return $this->db->query($sql,$param)->result_array(); 
+        //$param[]=;
+        
+        $result = $this->db->query($sql,$param)->result_array();
+        $result['last_query'] = $this->db->last_query();
+        
+        return $result;
     }
     
     function get_trans_list($batch_type,$from,$to,$franchise_id=0) {
@@ -630,8 +634,9 @@ class reservation_model extends Model
                                 
 		}else
 		{
-			if(!count($batch_inv_link))
-				$output.="<br>INSUFFICIENT STOCK - $i_transid";
+			if(!count($batch_inv_link)) {
+				//$output.="<br>INSUFFICIENT STOCK - $i_transid";
+                        }
 		}
                 echo ($output);
     }

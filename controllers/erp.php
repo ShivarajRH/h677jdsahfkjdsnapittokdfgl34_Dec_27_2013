@@ -3911,30 +3911,14 @@ class Erp extends Stream
 		$this->load->view("admin",$data);
 	}*/
 	
-	function pack_invoice($inv_no="",$mlt=0,$fid=0)
+	function pack_invoice($inv_no="")
 	{
 		$user=$this->auth(INVOICE_PRINT_ROLE);
 		
-		//multiple transaction process
-		$data['mlt']=$mlt;
-		$inv_det=array();
-		if($mlt)
-		{
-			$pinv_det=$this->erpm->getbatchinvoices($inv_no,$fid);
-			
-			foreach($pinv_det as $p)
-			{
-				foreach($this->erpm->getinvoiceforpacking($p['p_invoice_no']) as $pdet)
-					array_push($inv_det,$pdet);
-			}
-			$data['invoice']=$inv_det;
-			$data['batch_id']=$inv_no;
-		}else{
-			if(!$this->db->query("select count(*) as ttl from proforma_invoices where p_invoice_no=?",$inv_no)->row()->ttl)
-				show_error("Proforma invoice not found");
-			$data['invoice']=$this->erpm->getinvoiceforpacking($inv_no);
-			//$data['batch_id']=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? and invoice_no is null  ",$inv_no)->row()->batch_id;
-		}
+		
+		
+		$data['batch_id']=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? and invoice_no is null  ",$inv_no)->row()->batch_id;
+		$data['invoice']=$this->erpm->getinvoiceforpacking($inv_no);
 		
 		$is_fran_suspended = @$this->db->query("select ifnull(is_suspended,0) as is_suspended from king_transactions a left join pnh_m_franchise_info b on a.franchise_id = b.franchise_id where a.transid = ? ",$data['invoice']['transid'])->row()->is_suspended;
 		if($is_fran_suspended)
@@ -24358,7 +24342,7 @@ die; */
 			}
 		}else
 		{
-			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($p_invno,$orderid,$imei));	
+			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($imei));	//$p_invno,$orderid,
 		}
 		
 		$output=array();
