@@ -11,10 +11,21 @@ class reservation_model extends Model
     function __construct() {
             parent::__construct();
     }
-    function do_pack_invoice_by_fran() {
-                
+
+    function get_orders_of_trans($transid) {
+            $sql="select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity
+                    from king_orders o
+                    join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
+                    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                    left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                    left join proforma_invoices `pi` on pi.order_id = o.id and pi.invoice_status = 1 
+                    join king_dealitems di on di.id = o.itemid 
+                    where i.id is null and tr.transid = ?
+                    order by tr.init,di.name ";
+             $trans_orders = $this->db->query($sql,$transid)->result_array();
+             return $trans_orders;
     }
-    
+
     function get_packing_details($fid=0,$p_invoice_ids) 
     {
         $param=array();
@@ -41,25 +52,34 @@ class reservation_model extends Model
         return $result;
     }
     
-    function get_trans_list($batch_type,$from,$to,$franchise_id=0) {
+    function get_trans_list($batch_type,$from,$to,$franchise_id=0,$userid=0,$pg=0,$limit=0) {
         $cond = '';
         if($franchise_id) 
             $cond .=" and tr.franchise_id=$franchise_id ";
         
+        if($batch_type != 'pending') {
+            if($userid) {
+                $cond .= ' and sd.assigned_userid = '.$userid.' ';
+            }
+        }
+        
         $sql = "select * from ( 
                     select transid,group_concat(p_inv_nos) as p_inv_nos,status,count(*) as t,if(count(*)>1,'partial',(if(status,'ready','pending'))) as trans_status,franchise_id  
                     from (
-                    select o.transid,ifnull(group_concat(distinct p_invoice_no),'') as p_inv_nos,o.status,count(*) as ttl_o,tr.franchise_id
+                    select o.transid,ifnull(group_concat(distinct pi.p_invoice_no),'') as p_inv_nos,o.status,count(*) as ttl_o,tr.franchise_id
                             from king_orders o
                             join king_transactions tr on tr.transid=o.transid
                             left join king_invoice i on i.order_id = o.id and i.invoice_status = 1 
+                            
                             left join proforma_invoices pi on pi.order_id = o.id and o.transid  = pi.transid and pi.invoice_status = 1 
+                            left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no
+                            
                             where o.status in (0,1)  and i.id is null and tr.franchise_id != 0 $cond
                             group by o.transid,o.status 
                     ) as g 
                     group by g.transid )as g1 having g1.trans_status = ? ";
         
-        $rslt = $this->db->query($sql,array($batch_type))->result_array();
+        $rslt['result'] = $this->db->query($sql,array($batch_type))->result_array();
         $rslt['last_query'] = $this->db->last_query();
         
         return $rslt;
@@ -67,10 +87,6 @@ class reservation_model extends Model
     }
     function getTotalOrderDetails($trans,$franchise_id,$from,$to) {
             $arr_rslt = array();
-            /*$rslt=$this->db->query("select * 
-                            from king_orders o
-                            join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
-                            where tr.transid = ? order by tr.init asc",$trans);*/
             
             $arr_rslt['total_orders'] = $total_orders = $this->db->query("select count(distinct tr.transid) as total_trans_by_fran
                                                                         from king_orders o

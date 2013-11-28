@@ -18,16 +18,25 @@ if($terrid!=0) {
  if($franchiseid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
  }
- 
- $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to);
- 
- //echo '<pre>'.$arr_trans_set['last_query'];
- foreach ($arr_trans_set as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
- $str_all_trans = implode(",",$all_trans);
- //die();
- 
-        
-        //echo '<pre>'.$arr_trans['transid'];
+ if(!isset($arr_trans_set)) {
+        $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to);
+        $total_trans_rows=count($arr_trans_set['result']);
+ }
+if($total_trans_rows == 0 ) {
+    $output.='<script>$(".ttl_trans_listed").html("");
+                                $(".pagination_top").html("");
+                                $(".re_allot_all_block").css({"padding":"0"});
+                    </script>
+                    <h3 class="heading_no_results">No franchise found for selected criteria.</h3>';
+}
+else 
+{
+
+        //echo '<pre>'.$arr_trans_set['last_query'];
+         foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
+         $str_all_trans = implode(",",$all_trans);
+
+        //echo '<pre>'.$str_all_trans;die();
         
         $sql="select distinct o.transid,count(distinct tr.transid) as ttl_trans,
                         f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
@@ -42,8 +51,8 @@ if($terrid!=0) {
                 join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
                 join pnh_m_territory_info ter on ter.id = f.territory_id 
                 join pnh_towns twn on twn.id=f.town_id
-                WHERE o.transid in ($str_all_trans) and o.status in (0,1)
-                group by f.franchise_id order by tr.init desc";
+                WHERE o.transid in ($str_all_trans) and o.status in (0,1) $cond
+                group by f.franchise_id order by f.territory_id,f.town_id,f.franchise_id desc";
  
             
                 $transactions_src=$this->db->query($sql);
@@ -55,7 +64,7 @@ if($terrid!=0) {
                                 $(".pagination_top").html("");
                                 $(".re_allot_all_block").css({"padding":"0"});
                     </script>
-                    <h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
+                    <h3 class="heading_no_results">No franchise found for selected criteria.</h3>';
         }
         else 
         {
@@ -93,7 +102,7 @@ if($terrid!=0) {
                         {
                                     $output .= '<td>';
                                     $arr_pinv_ids =array();
-                                    foreach ($arr_trans_set as $i=>$arr_trans) { 
+                                    foreach ($arr_trans_set['result'] as $arr_trans) { 
                                         if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
                                             $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
 
@@ -103,6 +112,12 @@ if($terrid!=0) {
                                     $output .= '<a class="proceed_link clear" href="javascript:void(0)" onclick="process_pinvoices_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate invoice</a>
                                           <form action="'.site_url('admin/pack_invoice_by_fran').'" method="post" id="pinvoices_form_'.$trans_arr['franchise_id'].'" target="_blank">
                                                 <input type="hidden" value="'.$str_pinv_ids.'" name="p_invoice_ids"/>
+                                                <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
+                                           </form>';
+                                    
+                                    $output .= '<br><a class="proceed_link clear" href="javascript:void(0)" onclick="process_picklist_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate Picklist</a>
+                                          <form action="'.site_url("admin/p_invoice_for_picklist").'" method="post" id="picklist_by_fran_form_'.$trans_arr['franchise_id'].'" target="_blank">
+                                                <input type="hidden" value="'.$str_pinv_ids.'" name="pick_list_trans"/>
                                                 <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
                                            </form> ';
 
@@ -120,7 +135,7 @@ if($terrid!=0) {
 
                                     $output .= '<td>';
                                     $arr_pinv_ids =array();
-                                    foreach ($arr_trans_set as $i=>$arr_trans) { 
+                                    foreach ($arr_trans_set['result'] as $arr_trans) { 
                                         if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
                                             $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
 
@@ -161,6 +176,7 @@ if($terrid!=0) {
             
            
     
+    }
 }
 
     echo ''.$output;

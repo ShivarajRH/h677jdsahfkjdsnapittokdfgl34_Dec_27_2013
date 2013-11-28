@@ -1989,6 +1989,7 @@ courier disable ends
                 
                 $pid_list_arr = array();
                 
+                $p_invoice_list = array();
                 
                 foreach($pid_list as $pid_det)
                 {
@@ -1997,6 +1998,7 @@ courier disable ends
                            $pid_list_arr[$p_invno] = array();
                     
                     $pid_list_arr[$p_invno][] = $prod_id;
+                    $p_invoice_list[] = $p_invno;
                 }
                 
                 $pbcodes_list_arr = array();
@@ -2010,6 +2012,22 @@ courier disable ends
                     
                     $pbcodes_list_arr[$p_invno][$k] = $pbcode_det;
                 }
+                $imei_list_arr = array();
+                foreach($pid_list as $pid_det)
+                {
+                    list($p_invno,$prod_id) = explode('_',$pid_det);
+                    
+                    /*if(!is_array($this->input->post("imei_$p_invno_$prod_id") ) ) 
+                        continue;
+                    */
+                    if(!isset($imei_list_arr[$p_invno]))
+                           $imei_list_arr[$p_invno] = array();
+                    
+                    if(!isset($imei_list_arr[$p_invno][$prod_id]))
+                           $imei_list_arr[$p_invno][$prod_id] = array();
+                    
+                    $imei_list_arr[$p_invno][$prod_id] = $this->input->post("imei_{$p_invno}_{$prod_id}");
+                }
                 
                 $new_dispatch_id = 0; 
                 
@@ -2017,21 +2035,23 @@ courier disable ends
                 {    
                     $pids = $pid_list_arr[$p_invoice];
                     $pbcodes = $pbcodes_list_arr[$p_invoice];
-                     
-
+                    
+                    $imeis = $imei_list_arr[$p_invoice];
+                    
                     if(!$pbcodes)
                     {
                             show_error("Sorry No Stock Selected");
                             die();
                     }
-
-                    foreach($pids as $pid)
+                    
+                    /*foreach($pids as $pid)
                     {
                             $imeis[$pid]=array();
-                            if($this->input->post("imei$pid"))
-                                    $imeis[$pid]=$this->input->post("imei$pid");
-                    }
-
+                            if($this->input->post("imei_$p_invoice_$pid"))
+                                    $imeis[$pid]=$this->input->post("imei_$p_invoice_$pid");
+                    }*/
+                    
+                    
                     $batch_id = $this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? ",$p_invoice)->row()->batch_id;
                     $ord_item_ids = array();
                     $r_need_pids=$this->db->query("select l.product_id,l.itemid,o.id,o.is_ordqty_splitd from proforma_invoices i join king_orders o on o.id=i.order_id join m_product_deal_link l on l.itemid=o.itemid where i.p_invoice_no=?",$p_invoice)->result_array();

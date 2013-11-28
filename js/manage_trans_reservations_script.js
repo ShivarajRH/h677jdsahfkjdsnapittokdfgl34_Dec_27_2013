@@ -2,6 +2,7 @@
 /**** CREATE BATCH PROCESS **/
 
 
+
 $("#sel_terr_id").live("change",function() {
     var sel_terr_id = $(this).val();
     if(sel_terr_id !='00') {
@@ -21,7 +22,7 @@ function process_pinvoices_by_fran(elt,franchise_id) {
 }
 
 function show_orders_list(franid,from,to,batch_type) {
-        
+        //alert(franid+","+from+","+to+","+batch_type);return false;
         if($(".orders_info_block_"+franid).is(":visible")) {
             $(".orders_info_block_"+franid).toggle("slow").html("");
         }
@@ -153,8 +154,7 @@ $("#batch_group_name").live("change",function() {
 });
 
 /*** END BATCH PROCESS  **/
-
-//****PICKLIST*****/
+/****PICKLIST 2 *****/
 $("#show_picklist_block").dialog({
     autoOpen: false,
     open:function() {
@@ -164,6 +164,27 @@ $("#show_picklist_block").dialog({
     width:950,
     modal: true
 });
+
+$("#pick_all_fran").live("change",function() {
+    var checkBoxes=$(".chk_pick_list_by_fran");
+    if($(this).is(":checked")) {
+        checkBoxes.attr("checked", !checkBoxes.attr("checked"));
+    }
+    else {
+        checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
+    }
+});
+
+function process_picklist_by_fran(elt,franchise_id) {
+    $("#picklist_by_fran_form_"+franchise_id).submit();
+    
+}
+
+
+
+//****PICKLIST 1 *****/
+
+
 $("#pick_all").live("change",function() {
     var checkBoxes=$(".pick_list_trans_ready");
     if($(this).is(":checked")) {
@@ -173,6 +194,7 @@ $("#pick_all").live("change",function() {
         checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
     }
 });
+
 
 $("#btn_generate_pick_list").live("click",function(){
         var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;

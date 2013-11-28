@@ -1162,7 +1162,7 @@ select * from king_orders
 
 select * from t_imei_no where 
 ##############TO RESET THE IMEI NUMBER FOR MOBILE ##############################
-update t_imei_no set status=0 and order_id=0 where imei_no = '355945055075987';
+update t_imei_no set status=0 and order_id=0 where imei_no = '911236607179148';
 #############################################################################
 desc proforma_invoices;
 desc king_invoice;
@@ -1200,3 +1200,126 @@ select * from (
         group by o.transid
 ) as g where  g.is_pending = g.total_trans  group by transid order by g.init desc
 
+
+
+select * from ( 
+select transid,group_concat(p_inv_nos) as p_inv_nos,status,sum(ttl_o),count(*) as t,if(count(*)>1,'Partial',(if(status,'Ready','Pending'))) as trans_status  
+from (
+select o.transid,ifnull(group_concat(distinct p_invoice_no),'') as p_inv_nos,o.status,count(*) as ttl_o
+
+from king_orders o 
+join king_transactions t on t.transid = o.transid  
+left join proforma_invoices pi on pi.order_id = o.id and o.transid  = pi.transid and pi.invoice_status = 1  
+left join king_invoice i on i.order_id = o.id and i.invoice_status = 1  
+where o.status in (0,1) and o.transid like '%PNH%' and i.id is null  
+group by o.transid,o.status 
+) as g  
+group by g.transid )as g1 
+group by g1.transid
+having trans_status = 'partial' 
+
+#Nov_27_2013
+
+select * from shipment_batch_process_invoice_link order by id desc
+
+
+
+
+select * from (
+select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
+		,sum(o.status) as is_pending,o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+		,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                ,sd.batch_id,sd.assigned_userid
+        from king_transactions tr
+		join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id
+        join pnh_m_territory_info ter on ter.id = f.territory_id 
+        join pnh_towns twn on twn.id=f.town_id
+                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                left join proforma_invoices pi on pi.order_id = o.id and pi.invoice_status = 1 
+                left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no 
+        WHERE tr.actiontime between 1375295400 and 1385576999 and o.status in (0,1) and tr.batch_enabled=1 and i.id is null # and sd.assigned_userid = 1  
+        group by o.transid) as g where  g.`is_pending` = 0  group by transid order by g.init desc
+
+
+alter table `shipment_batch_process_invoice_link` add column `assigned_userid` int (11) DEFAULT '0' NOT NULL  after `delivered_by`;
+
+select * from pnh_m_franchise_info;
+
+select * from shipment_batch_process_invoice_link where p_invoice_no='111274'
+select * from shipment_batch_process_invoice_link where p_invoice_no='111282'
+
+
+select * from ( 
+                    select transid,group_concat(p_inv_nos) as p_inv_nos,status,count(*) as t,if(count(*)>1,'partial',(if(status,'ready','pending'))) as trans_status,franchise_id  
+                    from (
+                    select o.transid,ifnull(group_concat(distinct p_invoice_no),'') as p_inv_nos,o.status,count(*) as ttl_o,tr.franchise_id
+                            from king_orders o
+                            join king_transactions tr on tr.transid=o.transid
+                            left join king_invoice i on i.order_id = o.id and i.invoice_status = 1 
+                            left join proforma_invoices pi on pi.order_id = o.id and o.transid  = pi.transid and pi.invoice_status = 1 
+                            where o.status in (0,1)  and i.id is null and tr.franchise_id != 0 
+                            group by o.transid,o.status 
+                    ) as g 
+                    group by g.transid )as g1 having g1.trans_status='pending'
+
+
+select * from ( 
+                    select count(transid),group_concat(p_inv_nos) as p_inv_nos,status,count(*) as t,if(count(*)>1,'partial',(if(status,'ready','pending'))) as trans_status,franchise_id  
+                    from (
+				    select o.transid,ifnull(group_concat(distinct p_invoice_no),'') as p_inv_nos,o.status,count(*) as ttl_o,tr.franchise_id
+					    from king_orders o
+					    join king_transactions tr on tr.transid=o.transid
+					    left join king_invoice i on i.order_id = o.id and i.invoice_status = 1 
+					    left join proforma_invoices pi on pi.order_id = o.id and o.transid  = pi.transid and pi.invoice_status = 1 
+					    where o.status in (0,1)  and i.id is null and tr.franchise_id != 0 
+					    group by o.transid,o.status 
+
+                    ) as g group by trans_status 
+
+)as g1 group by g1.trans_status and g1.trans_status='ready'
+
+
+select * from (
+select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
+		,sum(o.status) as is_pending,o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+		,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+		,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+		,ter.territory_name
+		,twn.town_name
+		,dl.menuid,m.name as menu_name,bs.name as brand_name
+                ,sd.batch_id,sd.assigned_userid
+        from king_transactions tr
+		join king_orders o on o.transid=tr.transid
+		join king_dealitems di on di.id=o.itemid
+		join king_deals dl on dl.dealid=di.dealid
+		join pnh_menu m on m.id = dl.menuid
+		join king_brands bs on bs.id = o.brandid
+        join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id and f.is_suspended = 0
+        join pnh_m_territory_info ter on ter.id = f.territory_id 
+        join pnh_towns twn on twn.id=f.town_id
+                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                left join proforma_invoices pi on pi.order_id = o.id and pi.invoice_status = 1 
+                left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no
+        WHERE tr.actiontime between 1375295400 and 1385576999 and o.status in (0,1) and tr.batch_enabled=1 and i.id is null  and tr.transid='PNH57586'
+        group by o.transid) as g group by transid order by g.init desc
+
+
+##======================
+select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity
+                                from king_orders o
+                                join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
+                                join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                                left join proforma_invoices `pi` on pi.order_id = o.id and pi.invoice_status = 1 
+                                join king_dealitems di on di.id = o.itemid 
+                                where i.id is null and tr.transid ='PNH57586'
+                                order by tr.init,di.name 

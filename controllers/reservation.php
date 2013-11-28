@@ -15,17 +15,11 @@ class Reservation extends Voucher {
         
         foreach(array("p_invoice_ids","franchise_id") as $i) 
             $$i=$this->input->post($i);
-            
-        
             //$result = $this->reservations->do_pack_invoice_by_fran();
             //$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
             $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
-        //
-            
-           // echo '<pre>'; print_r($invoices);echo '</pre>'; die();
-        
+        // echo '<pre>'; print_r($invoices);echo '</pre>'; die();
         //$data['batch']=$this->erpm->getbatch($bid);
-        
         //$data['invoices']=$this->erpm->getbatchinvoices($bid);
         //$data['bid']=$bid;
         $data['page']="pack_invoice";
@@ -49,10 +43,11 @@ class Reservation extends Voucher {
         
         $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,$franchise_id);
         
-        foreach ($arr_trans_set as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
+        
+        foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
         $str_all_trans = implode(",",$all_trans);
         
-        $rslt = $this->db->query("select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity
+        $rslt = $this->db->query("select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity,f.franchise_id,pi.p_invoice_no
                                 from king_orders o
                                 join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
                                 join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
@@ -62,10 +57,11 @@ class Reservation extends Voucher {
                                 where f.franchise_id = ? and tr.actiontime between ? and ?  and i.id is null and tr.transid in ($str_all_trans)
                                 order by tr.init,di.name ",array($franchise_id,$from,$to))->result_array();
         
-        $output = '<table width="100" class="subdatagrid">
+        $output = '<form name="chk_order_for_invoice" id="chk_order_for_invoice">
+            <table width="100" class="subdatagrid">
                             <thead>
                             <tr>
-                                <th></th>
+                                <th><input type="checkbox" value="" name="pick_all_fran" id="pick_all_fran" title="Select all invoices" /></th>
                                 <th>Trans</th>
                                 <th>Order ID</th>
                                 <th>Order Name</th>
@@ -76,11 +72,22 @@ class Reservation extends Voucher {
                             </tr>
                             </thead>
                             <tbody>';
-        
+        //echo '<pre>'; print_r($rslt); exit;
         foreach ($rslt as $row) {
+            
+            
                 $output .= '<tr>
-                                <td><input type="checkbox" value="" name="chk_order"/></td>
-                                <td><a href="'.site_url('admin/trans/'.$row['transid']).'" target="_blank">'.$row['transid'].'</a></td>
+                                <td>';
+                
+            
+            //foreach ($arr_trans_set['result'] as $arr_trans) { 
+            //    if($row['franchise_id'] == $arr_trans['franchise_id']) {
+                    //$arr_pinv_ids[] = $arr_trans['p_inv_nos'];
+                        $output .= '<input type="checkbox" value="'.$row['p_inv_no'].'" name="chk_order" class="chk_pick_list_by_fran"/>';
+             //   }
+           // }
+                
+                $output .= '</td><td><a href="'.site_url('admin/trans/'.$row['transid']).'" target="_blank">'.$row['transid'].'</a></td>
                                 <td>'.$row['id'].'</td>
                                 <td>'.$row['name'].'</td>
                                 <td>'.$row['quantity'].'</td>
@@ -98,7 +105,8 @@ class Reservation extends Voucher {
                 $output .='<td>'.$invoice_action.'</td>
                          </tr>';
         } 
-        $output .= '</tbody></table>';
+        $output .= '</tbody></table>
+            </form>';
         echo $output;
         
     }
