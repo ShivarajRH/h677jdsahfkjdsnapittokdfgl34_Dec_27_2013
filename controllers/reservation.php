@@ -47,7 +47,7 @@ class Reservation extends Voucher {
         foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
         $str_all_trans = implode(",",$all_trans);
         
-        $rslt = $this->db->query("select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity,f.franchise_id,pi.p_invoice_no
+        $rslt = $this->db->query("select o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id,di.name,o.status,pi.p_invoice_no,o.quantity,f.franchise_id,pi.p_invoice_no
                                 from king_orders o
                                 join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
                                 join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
@@ -57,56 +57,60 @@ class Reservation extends Voucher {
                                 where f.franchise_id = ? and tr.actiontime between ? and ?  and i.id is null and tr.transid in ($str_all_trans)
                                 order by tr.init,di.name ",array($franchise_id,$from,$to))->result_array();
         
-        $output = '<form name="chk_order_for_invoice" id="chk_order_for_invoice">
-            <table width="100" class="subdatagrid">
+        $output = '<table width="100" class="subdatagrid">
                             <thead>
                             <tr>
-                                <th><input type="checkbox" value="" name="pick_all_fran" id="pick_all_fran" title="Select all invoices" /></th>
+                                <th>#</th>
                                 <th>Trans</th>
                                 <th>Order ID</th>
                                 <th>Order Name</th>
                                 <th>Qty</th>
                                 <th>Stock</th>
                                 <th>Status</th>
+                                <th><input type="checkbox" value="" name="pick_all_fran" id="pick_all_fran_'.$franchise_id.'" class="pick_list_trans_grp_fran" title="Select all invoices" onclick="chkall_fran_orders('.$franchise_id.')" />PickList</th>
                                 <th>Action</th>
                             </tr>
                             </thead>
                             <tbody>';
-        //echo '<pre>'; print_r($rslt); exit;
-        foreach ($rslt as $row) {
-            
-            
+        //echo '<pre>'; print_r($this->db->last_query()); exit;
+        
+        $arr_tmp=array();
+        foreach ($rslt as $i=>$row) {
+                $invoice_action = '--';
+                $stockinfo = $this->reservations->get_stock_from_orderid($row['id']);
+                
+                if(!in_array($row['transid'],$arr_tmp)) {
+                    $arr_tmp[]=$row['transid'];
+                    $transid_msg='<a href="'.site_url('admin/trans/'.$row['transid']).'" target="_blank">'.$row['transid'].'</a>';
+                    
+                    if($batch_type == 'pending') {
+                            $invoice_action = '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($row['transid']).'\',0);">Re-Allot</a>';
+                    }
+                    else {
+                            $invoice_action = '<a class="proceed_link clear" href="pack_invoice/'.$row['p_invoice_no'].'" target="_blank">Generate invoice</a>
+                                <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$row['p_invoice_no'].'\','.$user['userid'].',0)" class="">De-Allot</a>';
+                    }
+                }
+                else {
+                    
+                    $transid_msg=' --||--';//'<a href="'.site_url('admin/trans/'.$row['transid']).'" target="_blank">'.$row['transid'].'-second</a>';
+                }
+                
                 $output .= '<tr>
-                                <td>';
-                
-            
-            //foreach ($arr_trans_set['result'] as $arr_trans) { 
-            //    if($row['franchise_id'] == $arr_trans['franchise_id']) {
-                    //$arr_pinv_ids[] = $arr_trans['p_inv_nos'];
-                        $output .= '<input type="checkbox" value="'.$row['p_inv_no'].'" name="chk_order" class="chk_pick_list_by_fran"/>';
-             //   }
-           // }
-                
-                $output .= '</td><td><a href="'.site_url('admin/trans/'.$row['transid']).'" target="_blank">'.$row['transid'].'</a></td>
+                                <td>'.++$i.'</td>
+                                <td>'.$transid_msg.'</td>
                                 <td>'.$row['id'].'</td>
                                 <td>'.$row['name'].'</td>
                                 <td>'.$row['quantity'].'</td>
-                                <td>0</td>
-                                <td>'.$row['status'].'</td>';
-                
-                $invoice_action = '';
-                if($batch_type == 'pending') {
-                        $invoice_action .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($row['transid']).'\',0);">Re-Allot</a>';
-                }
-                else {
-                        $invoice_action .= '<a class="proceed_link clear" href="pack_invoice/'.$row['p_invoice_no'].'" target="_blank">Generate invoice</a>';
-                }
-                
-                $output .='<td>'.$invoice_action.'</td>
+                                <td><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>
+                                <td>'.$row['status'].'</td>
+                                <td>
+                                    <input type="checkbox" value="'.$row['p_invoice_no'].'" name="chk_pick_list_by_fran[]" id="chk_pick_list_by_fran" class="chk_pick_list_by_fran_'.$franchise_id.'" title="Select this for picklist" />
+                                </td>
+                                <td align="center">'.$invoice_action.'</td>
                          </tr>';
-        } 
-        $output .= '</tbody></table>
-            </form>';
+        }
+        $output .= '</tbody></table>';
         echo $output;
         
     }
@@ -167,7 +171,39 @@ class Reservation extends Voucher {
      * @param string $batch_remarks
      * @param type $updated_by
      */
-    function reserve_avail_stock_all_transaction($updated_by,$batch_remarks='By transaction reservation system') {
+    function jx_reallot_frans_all_trans($updated_by,$batch_remarks='By transaction reservation system') {
+        
+        $user= $this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        
+        $all_trans = $_POST['all_trans'];
+        //die($all_trans);
+        if($user) {
+            $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
+                    from king_orders a
+                    join king_transactions tr on tr.transid = a.transid
+                    where a.status in (0,1) and tr.batch_enabled=1 and a.transid in ".$all_trans."
+                    group by a.transid) as ddd
+                    where ddd.orders_status=0")->result_array() or die("Error");
+            foreach($rslt_for_trans as $rslt) {
+                $transid = $rslt['transid'];
+                $ttl_num_orders = $rslt['num_order_ids'];
+
+                //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
+                // Process to batch this transaction
+                $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+            }
+        }
+        else {
+            echo 'You dodn\'t have access permission to do this acation';
+        }
+        //$this->output->set_output($output);
+    }
+    /**
+     * Check and reserve available stock for all transactions
+     * @param string $batch_remarks
+     * @param type $updated_by
+     */
+    function jx_reserve_avail_stock_all_transaction($updated_by,$batch_remarks='By transaction reservation system') {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         if($user) {
             $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status

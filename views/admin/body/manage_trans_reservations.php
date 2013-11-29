@@ -140,9 +140,9 @@
         
         
         var limit= $("#limit_filter").val();
-        if(typeof pg != 'undefined') { 
+        
+        if(typeof pg != 'undefined')
             $(".page_num").val=pg;
-        }
         pg = (typeof pg== 'undefined') ? $(".page_num").val() : $(".page_num").val();
         
         var showbygrp = ($("#show_by_group").is(":checked"))? 1:0;

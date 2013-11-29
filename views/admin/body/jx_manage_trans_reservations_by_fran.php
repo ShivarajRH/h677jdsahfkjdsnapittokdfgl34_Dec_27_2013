@@ -3,6 +3,11 @@ $output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block='';
 $from=strtotime($s);
 $to=strtotime("23:59:59 $e");
 
+//$generate_btn_link = '<div class="show_by_group_block"><label for="show_by_group">Process by franchise:</label> <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
+$generate_btn_link .= '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
+$generate_btn_link .= '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
+
+
 if($menuid!=0) {
      $cond .= ' and dl.menuid='.$menuid; 
  }
@@ -39,7 +44,7 @@ else
         //echo '<pre>'.$str_all_trans;die();
         
         $sql="select distinct o.transid,count(distinct tr.transid) as ttl_trans,
-                        f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
+                        f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on,o.ship_phone
                         ,ter.territory_name
                         ,twn.town_name
                 from king_transactions tr
@@ -85,20 +90,37 @@ else
                             <tr>
                         </thead>
                         <tbody>';
- 
-        
-    
+            $all_trans=array();$str_all_trans='';
             foreach($transactions as $i=>$trans_arr) 
             {
-
+                $all_trans[$i] = "'".$arr_trans['transid']."'";
+            }
+            $str_all_trans = implode(",",$all_trans);
+            
+            foreach($transactions as $i=>$trans_arr) 
+            {
+                $arr_fran = $this->reservations->fran_experience_info($trans_arr['f_created_on']);
                 $output .= '<tr class="filter_terr_'.$trans_arr['territory_id'].' filter_terr">
                                 <td>'.++$i.'</td>
                                 <td>'.$trans_arr['territory_name'].'</td>
                                 <td>'.$trans_arr['town_name'].'</td>
-                                <td>'.$trans_arr['franchise_name'].'</td>';
-                
+                                <td><span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['franchise_name'].'</a><br></span>
+                                    <span>'.$trans_arr['ship_phone'].'<br></span><span class="fran_experience" style="background-color:'.$arr_fran['f_color'].';color: #ffffff;">'.$arr_fran['f_level'].'</span>
+                                
+                                </td>';
+                        
+                        if( $batch_type == "pending") 
+                        {
+                                                
+                                $output .= '<td><a href="javascript:void(0);" class="retry_link" all_trans="'.$str_all_trans.'" onclick="return reallot_frans_all_trans(this,'.$user['userid'].',\''.trim($trans_arr['franchise_id']).'\','.$pg.');">Re-Allot all trans</a></td>';
+                                $output .= '</td>
+                                         <td>'.$trans_arr['ttl_trans'].'
+                                                 <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
+                                                 <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
+                                         </td>';
 
-                        if( $batch_type == "ready") 
+                        }
+                        else
                         {
                                     $output .= '<td>';
                                     $arr_pinv_ids =array();
@@ -115,7 +137,7 @@ else
                                                 <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
                                            </form>';
                                     
-                                    $output .= '<br><a class="proceed_link clear" href="javascript:void(0)" onclick="process_picklist_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate Picklist</a>
+                                    $output .= '<br><a class="btn_picklist proceed_link clear" href="javascript:void(0)" onclick="process_picklist_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate Picklist</a>
                                           <form action="'.site_url("admin/p_invoice_for_picklist").'" method="post" id="picklist_by_fran_form_'.$trans_arr['franchise_id'].'" target="_blank">
                                                 <input type="hidden" value="'.$str_pinv_ids.'" name="pick_list_trans"/>
                                                 <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
@@ -130,49 +152,28 @@ else
 
 
                         }
-                        elseif( $batch_type == "partial")
-                        {
+                       
+                    $output .= '</tr>'; 
 
-                                    $output .= '<td>';
-                                    $arr_pinv_ids =array();
-                                    foreach ($arr_trans_set['result'] as $arr_trans) { 
-                                        if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
-                                            $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
-
-                                        }
-                                    }
-                                    $str_pinv_ids = implode(",", array_unique($arr_pinv_ids));
-                                    $output .= '<a class="proceed_link clear" href="javascript:void(0)" onclick="process_pinvoices_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate invoice</a>
-                                          <form action="'.site_url('admin/pack_invoice_by_fran').'" method="post" id="pinvoices_form_'.$trans_arr['franchise_id'].'" target="_blank">
-                                                <input type="hidden" value="'.$str_pinv_ids.'" name="p_invoice_ids"/>
-                                                <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
-                                           </form> ';
-
-                                    $output .= '</td>
-                                        <td>'.$trans_arr['ttl_trans'].'
-                                                <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
-                                                <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
-                                        </td>';
-
-                        }
-                        elseif( $batch_type == "pending") 
-                        {
-
-                                        $output .= '<td><a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a></td>';
-                                        $output .= '</td>
-                                                 <td>'.$trans_arr['ttl_trans'].'
-                                                         <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
-                                                         <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
-                                                 </td>';
-
-                        }
-                $output .= '</tr>'; 
-                
-                $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];
+                    $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];
             }
-
+            
+            
+            
+            
+            if( $batch_type == "pending") {
+                $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');" style="padding:4px 10px;">Re-Allot all pending transactions</a>';
+                $generate_btn_link='';
+            }
+            
+            
             $output .='</tbody>
-                        </table>';
+                        </table>
+                    <script>
+                        $(".ttl_trans_listed").html("Showing <strong>'.$total_trans_rows.'</strong> franchises from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
+                        $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
+                    </script>    
+                    ';
             
            
     

@@ -4,7 +4,7 @@
             <tr>
                 <td>Batch Type: <span class="req">*</span></td>
                 <td>
-                    <select name="batch_group_name" id="batch_group_name">
+                    <select name="batch_group_name" id="batch_group_name" style="width: 204px;">
                         <option value="00">Choose</option>
                         <?php
                         foreach ($batch_conf as $conf) {?>
@@ -17,7 +17,7 @@
                 <td>Number of orders:</td>
                 <td>
                     <input type="hidden" name="assigned_menuids" id="assigned_menuids" value="" />
-                    <input type="text" name="batch_size" id="batch_size" value="" />
+                    <input type="text" name="batch_size" id="batch_size" value="" style="width: 204px;margin:10px 0 5px 5px" />
                     <!--<input type="hidden" name="assigned_uid" id="assigned_uid" value="" />-->
                 </td>
             </tr>

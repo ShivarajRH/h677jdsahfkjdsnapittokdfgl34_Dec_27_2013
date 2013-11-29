@@ -1323,3 +1323,28 @@ select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity
                                 join king_dealitems di on di.id = o.itemid 
                                 where i.id is null and tr.transid ='PNH57586'
                                 order by tr.init,di.name 
+
+
+
+## NOV_28_2013
+
+select o.itemid from  king_orders o 
+where o.id='8896996428'; ==>1415651433
+#o.transid='PNH89454'
+
+select qty,product_id from m_product_deal_link where itemid = '1415651433';
+
+select sum(available_qty) as stock from t_stock_info where product_id = '8364' and available_qty > 0 and mrp > 0 group by product_id
+
+select * from king_transactions
+
+select o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id
+,di.name,o.status,pi.p_invoice_no,o.quantity,f.franchise_id,pi.p_invoice_no
+                                from king_orders o
+                                join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
+                                join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
+                                left join proforma_invoices `pi` on pi.order_id = o.id and pi.invoice_status = 1 
+                                join king_dealitems di on di.id = o.itemid 
+                                where f.franchise_id = '59' and tr.actiontime between '1375295400' and '1385663399'  and i.id is null and tr.transid in ('PNH15738','PNH15823','PNH16782','PNH19782','PNH19853','PNH26592','PNH29531','PNH36986','PNH39332','PNH39793','PNH48698','PNH49463','PNH51412','PNH51721','PNH52341','PNH53357','PNH55354','PNH58263','PNH58455','PNH58537','PNH59839','PNH61216','PNH62146','PNH62621','PNH63981','PNH66269','PNH68579','PNH73961','PNH76274','PNH76511','PNH78821','PNH82149','PNH82916','PNH83211','PNH83586','PNH83626','PNH83834','PNH89454')
+                                order by tr.init,di.name;

@@ -47,11 +47,9 @@ if($terrid!=0) {
  if($franchiseid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
  }
-//if(!isset($arr_trans_set)) {
-    $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,0,$pg,$limit); //$user['userid']
-    $total_trans_rows=count($arr_trans_set['result']);
-//}
 
+$arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid'],$pg,$limit); //
+$total_trans_rows=count($arr_trans_set['result']);
 
 if($total_trans_rows == 0 ) {
     $output.='<script>$(".ttl_trans_listed").html("");
@@ -63,17 +61,13 @@ if($total_trans_rows == 0 ) {
 else 
 {
         
-                        foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
-                         $str_all_trans = implode(",",$all_trans);
-
-
-            
-            
+            foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
+            $str_all_trans = implode(",",$all_trans);
 
             $transid = $trans_array['transid'];
             $sql="select * from (
             select distinct from_unixtime(tr.init,'%D %M %Y') as str_date,from_unixtime(tr.init,'%h:%i:%s %p') as str_time, count(tr.transid) as total_trans,tr.transid
-                    ,sum(o.status) as is_pending,o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+                    ,o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
                     ,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
                     ,f.franchise_id,f.franchise_name,f.territory_id,f.town_id,f.created_on as f_created_on
                     ,ter.territory_name
@@ -100,16 +94,8 @@ else
              $transactions_src=$this->db->query($sql)->result_array();
              //$trans_arr=$this->db->query($sql);
              
-                /*          
-             if($transactions_src->num_rows() == 0) {
-                 
-                 $output .= '.';
-                 
-             }
-             else
-             {*/
-             
-              $output .= '
+            
+            $output .= '
             <form name="p_invoice_for_picklist" id="p_invoice_for_picklist">
             <table class="datagrid" width="100%">
             <thead>
@@ -125,8 +111,8 @@ else
             </thead>
             <tbody>';
             
-              $c = $pg;
-             foreach($transactions_src as $trans_arr) {
+            $c = $pg;
+            foreach($transactions_src as $trans_arr) {
                  
                     $batch_ids = array();
                     $invoice_infos=array();
@@ -139,7 +125,7 @@ else
                     if($trans_created_by) 
                             $trans_created_by = '<div class="trans_created_by"> by '.($trans_created_by).'';
 
-                    $arr_fran = $this->reservations->fran_experience_info($f['f_created_on']);
+                    $arr_fran = $this->reservations->fran_experience_info($trans_arr['f_created_on']);
 
                     if($trans_arr['batch_id'] != '') $batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
 
@@ -166,17 +152,17 @@ else
                             <th>MRP</th>
                             <th>Amount</th>
                             <th>Alloted/Status?</th>
+                            <th>Stock</th>
                         </tr>';
             
                     
                     $trans_orders = $this->reservations->get_orders_of_trans($trans_arr['transid']);
-                
-                
-                    foreach($trans_orders as $j=>$order_i) 
-                    {
-
+                    foreach($trans_orders as $j=>$order_i)  {
+                        
+                        $stockinfo = $this->reservations->get_stock_from_orderid($order_i['id']);
+                        
                         $output .='<input type="hidden" size="2" class="'.$trans_arr['transid'].'_total_orders" value="'.count($trans_orders).'" />';
-
+                        
                         $status=array("Confirmed","Processed","Shipped","Cancelled","Returned");
                                     $amount=round($order_i['i_orgprice']-($order_i['i_coup_discount']+$order_i['i_discount']),2);
                                     $output .= '<tr class="'.$ord_stat_txt.'_ord">
@@ -187,35 +173,24 @@ else
                                         <td style="width:50px">'.$order_i['i_orgprice'].'</td>
                                         <td style="width:50px">'.$amount.'</td>
                                         <td style="width:20px">'.($order_i['status']?"Yes":"No").' | '.$status[$trans_arr['shipped']].' </td>
+                                        <td style="width:20px"><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>
                                     </tr>';
                     }
                 
                     $output .= '</table></td>';
                 
                 
-                    if( $batch_type == "ready") 
+                   if( $batch_type == "pending") 
                     {
-                        $arr_pinv_ids =array();
-                        foreach ($arr_trans_set['result'] as $i=>$arr_trans) { 
-                            if($trans_arr['transid'] == $arr_trans['transid']) {
-                                $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
+                            $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
+                            $pick_list_msg .= '--';
 
-                            }
-                        }
+                            $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a>';
+                            $output .= '<script>$(".re_allot_all_block").css({"padding":"4px 10px"});</script>';
 
-                        foreach ($arr_pinv_ids as $p_invoice_id ) {
-                            if($p_invoice_id != '') {
-                                $trans_action_msg .= '<div>
-                                                    <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
-                                                    <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$user['userid'].','.$pg.')" class="">De-Allot</a>
-                                                </div>';
-                                $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_ready" title="Select this for picklist" />';
-                            }
-                        }
+
                     }
-                    elseif( $batch_type == "partial") 
-                    {
-
+                    else {
                             $arr_pinv_ids =array();
                             foreach ($arr_trans_set['result'] as $i=>$arr_trans) { 
                                 if($trans_arr['transid'] == $arr_trans['transid']) {
@@ -223,7 +198,6 @@ else
 
                                 }
                             }
-
 
                             foreach ($arr_pinv_ids as $p_invoice_id ) {
                                 if($p_invoice_id != '') {
@@ -234,17 +208,6 @@ else
                                     $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_ready" title="Select this for picklist" />';
                                 }
                             }
-
-                    }
-                    elseif( $batch_type == "pending") 
-                    {
-                            $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
-                            $pick_list_msg .= '--';
-
-                            $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a>';
-                            $output .= '<script>$(".re_allot_all_block").css({"padding":"4px 10px"});</script>';
-
-
                     }
 
                     $output .= '<td style="width:70px">'.$pick_list_msg.'</td>';
@@ -258,21 +221,21 @@ else
                     $fil_franchiselist[$trans_arr['franchise_id']] = $trans_arr['franchise_name'];
             
         }
-    }
+    
         
     //   PAGINATION
-                $this->load->library('pagination');
-                $config['base_url'] = site_url("admin/jx_manage_trans_reservations_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$limit); 
-                $config['total_rows'] = $total_trans_rows;
-                $config['per_page'] = $limit;
-                $config['uri_segment'] = 14; 
-                $config['num_links'] = 5;
-                $config['cur_tag_open'] = '<span class="curr_pg_link">';
-                $config['cur_tag_close'] = '</span>';
-                $this->config->set_item('enable_query_strings',false); 
-                $this->pagination->initialize($config); 
-                $trans_pagination = $this->pagination->create_links();
-                $this->config->set_item('enable_query_strings',TRUE);
+            $this->load->library('pagination');
+            $config['base_url'] = site_url("admin/jx_manage_trans_reservations_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$limit); 
+            $config['total_rows'] = $total_trans_rows;
+            $config['per_page'] = $limit;
+            $config['uri_segment'] = 14;
+            $config['num_links'] = 5;
+            $config['cur_tag_open'] = '<span class="curr_pg_link">';
+            $config['cur_tag_close'] = '</span>';
+            $this->config->set_item('enable_query_strings',false); 
+            $this->pagination->initialize($config); 
+            $trans_pagination = $this->pagination->create_links();
+            $this->config->set_item('enable_query_strings',TRUE);
     //   PAGINATION ENDS
             $endlimit=($pg+1*$limit);
             $endlimit=($endlimit>$total_trans_rows)?$total_trans_rows : $endlimit;
@@ -288,8 +251,7 @@ else
 
             $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
         </script>';
- //}
-        
+}
 echo $output;
 //===========
 #Other functions

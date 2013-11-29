@@ -11,9 +11,47 @@ class reservation_model extends Model
     function __construct() {
             parent::__construct();
     }
+    function get_stock_from_orderid($orderid) {
+   
+            $order_itemid=$this->db->query("select o.itemid from  king_orders o where o.id=? ",array($orderid))->row()->itemid;
+            $raw_prod_ref=$this->db->query("select qty,product_id from m_product_deal_link where itemid = ?",$order_itemid)->result_array();
+            
+            foreach ($raw_prod_ref as $prod_ref) {
+                
+                    $avail_stock=$this->db->query("select sum(available_qty) as stock from t_stock_info where product_id = '".$prod_ref["product_id"]."' and available_qty > 0 and mrp > 0 group by product_id")->row()->stock;
+                    
+                    if(!$avail_stock) $avail_stock =0; 
+                 
+                    $arr_rslt =array(
+                        "product_id"=>$prod_ref["product_id"]
+                        ,"stock" =>$avail_stock
+                        );
+            }
+            return $arr_rslt;
 
+  
+            /*$raw_prods=$this->db->query("select * from products_group_orders where transid in ('".implode("','",$v_transids)."')")->result_array();
+
+            foreach($raw_prods as $r)
+            {
+                    $itemid=$this->db->query("select itemid from king_orders where id=? and transid = ? ",array($r['order_id'],$r['transid']))->row()->itemid;
+                    $qty=$this->db->query("select l.qty from products_group_pids p join m_product_group_deal_link l on l.group_id=p.group_id where p.product_id=? and itemid = ? ",array($r['product_id'],$itemid))->row()->qty;
+
+                    if(!isset($products[$itemid]))
+                            $products[$itemid]=array();
+
+                    $products[$itemid][]=array("itemid"=>$itemid,"qty"=>$qty,"product_id"=>$r['product_id'],"order_id"=>$r['order_id']);
+                    $productids[]=$r['product_id'];
+
+            }
+
+            */
+    }
     function get_orders_of_trans($transid) {
-            $sql="select o.*,tr.*,di.name,o.status,pi.p_invoice_no,o.quantity
+            $sql="select o.status,o.shipped,o.id,o.itemid,o.brandid,o.quantity,o.time,o.bill_person,o.ship_phone,o.i_orgprice,o.i_price,o.i_tax,o.i_discount,o.i_coup_discount,o.redeem_value,o.member_id,o.is_ordqty_splitd
+                    ,di.name
+                    ,tr.init,tr.actiontime,tr.status tr_status,tr.is_pnh,tr.batch_enabled
+                    ,pi.p_invoice_no
                     from king_orders o
                     join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
                     join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
@@ -57,7 +95,7 @@ class reservation_model extends Model
         if($franchise_id) 
             $cond .=" and tr.franchise_id=$franchise_id ";
         
-        if($batch_type != 'pending') {
+        if($batch_type != 'pending' && $userid!=1) {
             if($userid) {
                 $cond .= ' and sd.assigned_userid = '.$userid.' ';
             }
@@ -178,7 +216,7 @@ class reservation_model extends Model
         else if($fr_reg_diff > 30 && $fr_reg_diff <= 60)
         {
                 $fr_reg_level_color = 'orange';
-                $fr_reg_level = 'orange';//'Mid Level';
+                $fr_reg_level = 'Mid Level';
         }else if($fr_reg_diff > 60)
         {
                 $fr_reg_level_color = 'green';

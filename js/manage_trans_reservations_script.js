@@ -59,10 +59,10 @@ $("#btn_cteate_group_batch").live("click",function(){
                     var batch_size = $("#batch_size").val();
                     var assigned_uid = $("#assigned_uid").find(":selected").val();
                     
-                    if(batch_group_name == '00') { show_output("Error: Please select Batch type"); return false; }
+                    if(batch_group_name == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
                     if(assigned_uid == '00') { 
-                        if(!confirm("Are you sure you don't want to assign user for this batch?")) {
-                            show_output("Warning: Batch is not assigned to a specific user");
+                        if(!confirm("Warning :\n Are you sure you do not want to assign user for this batch?")) {
+                            show_output("Warning :\n Batch will not assign to any user.");
                             return false;
                         }
                         assigned_uid = '0';
@@ -164,17 +164,18 @@ $("#show_picklist_block").dialog({
     width:950,
     modal: true
 });
-
-$("#pick_all_fran").live("change",function() {
-    var checkBoxes=$(".chk_pick_list_by_fran");
-    if($(this).is(":checked")) {
-        checkBoxes.attr("checked", !checkBoxes.attr("checked"));
-    }
-    else {
-        checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
-    }
-});
-
+function chkall_fran_orders(franid) {
+    //$("#pick_all_fran").live("change",function() {
+        var checkBoxes=$(".chk_pick_list_by_fran_"+franid);
+        
+        if($("#pick_all_fran_"+franid).is(":checked")) {
+            checkBoxes.attr("checked", !checkBoxes.attr("checked"));
+        }
+        else {
+            checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
+        }
+    //});
+}
 function process_picklist_by_fran(elt,franchise_id) {
     $("#picklist_by_fran_form_"+franchise_id).submit();
     
@@ -197,21 +198,48 @@ $("#pick_all").live("change",function() {
 
 
 $("#btn_generate_pick_list").live("click",function(){
-        var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
-        var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
-        var total=(pick_list_trans_ready+pick_list_trans_partial);
-        if(total==0) { alert("Please select any of transaction to generate pick list"); return false;}
-        var p_invoice_ids=[];
-        $.each($("input.pick_list_trans_ready:checked"),function() {
-            p_invoice_ids.push($(this).val());
-        });
-        $.each($("input.pick_list_trans_partial:checked"),function() {
-            p_invoice_ids.push($(this).val());
-        });
-        var p_invoice_ids_str = p_invoice_ids.join(",");
+        
+        
+        if($("#show_by_group").is(":checked")) {
+                var p_invoice_ids=[];
+                //var pick_list_trans=$("input[name='chk_pick_list_by_fran']:checked").length;
+                var pick_list_trans=$("input#chk_pick_list_by_fran:checked").length;
+                //alert(pick_list_trans);
+               // alert($("input.chk_pick_list_by_fran:checked").val());
+               //  return false;
+                if(pick_list_trans==0) { alert("Please select any of fransachise transaction to generate pick list."); return false;}
+                
+                 
+               $.each($("input#chk_pick_list_by_fran:checked"),function() {
+                   p_invoice_ids.push($(this).val());
 
-        $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
-        $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+               });
+               $.unique(p_invoice_ids);
+               var p_invoice_ids_str=p_invoice_ids.join(",");
+               console.log(p_invoice_ids_str);
+               $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
+                $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+                return false;
+        }
+        else {
+                var p_invoice_ids=[];
+                
+                var pick_list_trans_ready=$("input.pick_list_trans_ready:checked").length;
+                //var pick_list_trans_partial=$("input.pick_list_trans_partial:checked").length;
+                //var total=(pick_list_trans_ready+pick_list_trans_partial);
+                if(pick_list_trans_ready==0) { alert("Please select any of transaction to generate pick list"); return false;}
+                
+                $.each($("input.pick_list_trans_ready:checked"),function() {
+                    p_invoice_ids.push($(this).val());
+                });
+                $.each($("input.pick_list_trans_partial:checked"),function() {
+                    p_invoice_ids.push($(this).val());
+                });
+                var p_invoice_ids_str = p_invoice_ids.join(",");
+
+                $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
+                $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+        }
 });
 /* end picklist code ========================================================================== */
 
@@ -230,7 +258,7 @@ function reallot_stock_for_all_transaction(userid,pg) {
     }
     var updated_by = userid;
     $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
-    $.post(site_url+"admin/reserve_avail_stock_all_transaction/"+updated_by,"",function(rdata) {
+    $.post(site_url+"admin/jx_reserve_avail_stock_all_transaction/"+updated_by,"",function(rdata) {
             if(rdata == '') {
                 rdata=("No transaction processed for allotment.");
             }
@@ -250,11 +278,34 @@ function reserve_stock_for_trans(userid,transid,pg) {
     var ttl_num_orders=$("."+transid+"_total_orders").val();
     var batch_remarks='';
     var updated_by = userid;
-
+    
     $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
         
             if(rdata == '') {
                 rdata=("No transaction processed for allotment.");
+            }else {
+                
+            }
+            loadTransactionList(pg);
+            $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
+
+    });
+    return false;
+}
+function reallot_frans_all_trans(elt,userid,franchise_id,pg) {
+    if(!confirm("Are you sure you want to process \nthis transaction for batch?")) {
+            return false;
+            //var batch_remarks=prompt("Enter remarks?");
+    }
+    var all_trans = $(elt).attr("all_trans");
+    var batch_remarks='';
+    var updated_by = userid;
+    
+    var  postData = {all_trans: '"'+all_trans+'"'};
+    $.post(site_url+'admin/jx_reallot_frans_all_trans/'+batch_remarks+'/'+updated_by+'',postData,function(rdata) {
+        
+            if(rdata == '') {
+                rdata=("No franchise transaction processed for allotment.");
             }else {
                 
             }
