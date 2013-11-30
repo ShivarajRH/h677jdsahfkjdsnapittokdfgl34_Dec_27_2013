@@ -106,7 +106,6 @@ else
                                 <td>'.$trans_arr['town_name'].'</td>
                                 <td><span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['franchise_name'].'</a><br></span>
                                     <span>'.$trans_arr['ship_phone'].'<br></span><span class="fran_experience" style="background-color:'.$arr_fran['f_color'].';color: #ffffff;">'.$arr_fran['f_level'].'</span>
-                                
                                 </td>';
                         
                         if( $batch_type == "pending") 

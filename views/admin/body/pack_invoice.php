@@ -177,7 +177,12 @@
 			</td>
 			<?php echo ($mlt)?'<td>'.anchor('admin/proforma_invoice/'.$i['p_invoice_no'],$i['p_invoice_no'],'target=_"blank"').'<br>'.anchor('admin/trans/'.$i['transid'],$i['transid'],"target=_'blank'").'</td>':'';?>
 			
-			<td class="prod"><input type="hidden" class="pid" value="<?=$i['product_id']?>"><?=$i['product_name']?> -  <?=anchor_popup('admin/product/'.$i['product_id'],'view')?>
+			<td class="prod"><input type="hidden" class="pid" value="<?=$i['product_id']?>">  
+                        
+                        <?php //anchor_popup('admin/product/'.$i['product_id'],'view')?>
+                            
+                            <a href="<?=site_url('admin/product/'.$i['product_id'])?>" target="_blank"><?=$i['product_name']?></a>
+                            
 		<?php $imeis=$this->db->query("select * from t_imei_no where status=0 and product_id=?",$i['product_id'])->result_array();?>
 		<?php if($p_has_imei_scan){
 			

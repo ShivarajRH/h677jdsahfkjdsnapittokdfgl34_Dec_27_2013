@@ -1348,3 +1348,115 @@ select o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id
                                 join king_dealitems di on di.id = o.itemid 
                                 where f.franchise_id = '59' and tr.actiontime between '1375295400' and '1385663399'  and i.id is null and tr.transid in ('PNH15738','PNH15823','PNH16782','PNH19782','PNH19853','PNH26592','PNH29531','PNH36986','PNH39332','PNH39793','PNH48698','PNH49463','PNH51412','PNH51721','PNH52341','PNH53357','PNH55354','PNH58263','PNH58455','PNH58537','PNH59839','PNH61216','PNH62146','PNH62621','PNH63981','PNH66269','PNH68579','PNH73961','PNH76274','PNH76511','PNH78821','PNH82149','PNH82916','PNH83211','PNH83586','PNH83626','PNH83834','PNH89454')
                                 order by tr.init,di.name;
+
+
+### Nov_29_2013
+
+select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
+                    from king_orders a
+                    join king_transactions tr on tr.transid = a.transid and tr.is_pnh=1
+                    where a.status in (0,1) and tr.batch_enabled=1 
+                    group by a.transid) as ddd
+                    where ddd.orders_status=0
+
+select * from t_stock_info where stock_id='26411' or product_id='26411'
+
+select * from proforma_invoices where transid='H18APE26411'
+
+select * from shipment_batch_process where batch_id = 5000;
+_______________________________________________________________________________________________
+###############################################################################################
+update shipment_batch_process set status = 2 where batch_id != 5000;
+
+update proforma_invoices  a 
+	join shipment_batch_process_invoice_link b on a.p_invoice_no = b.p_invoice_no 
+	set invoice_status = 0 
+	where invoice_status = 1 and b.invoice_no = 0 
+	
+update king_orders set status = 0 where status = 1 ;
+###############################################################################################
+_______________________________________________________________________________________________
+
+RENAME from snapittoday_db_oct snapittoday_db_nov;
+
+STOCK ALLOTED - PNHCIH65185 with 1 product Alloted. 
+STOCK ALLOTED - PNHCIH65185 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 2 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 2 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 2 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHDJV14356 with 1 product Alloted. 
+STOCK ALLOTED - PNHEQC73122 with 1 product Alloted. 
+STOCK ALLOTED - PNHEQC73122 with 1 product Alloted. 
+STOCK ALLOTED - PNHEQC73122 with 1 product Alloted. 
+STOCK ALLOTED - PNHEQC73122 with 1 product Alloted. 
+STOCK ALLOTED - PNHEQC73122 with 1 product Alloted. 
+STOCK ALLOTED - PNHESC16249 with 1 product Alloted. 
+STOCK ALLOTED - PNHESC16249 with 1 product Alloted. 
+STOCK ALLOTED - PNHESC16249 with 1 product Alloted. 
+STOCK ALLOTED - PNHFSF34938 with 1 product Alloted. 
+STOCK ALLOTED - PNHFTA26362 with 1 product Alloted. 
+STOCK ALLOTED - PNHFTA26362 with 1 product Alloted. 
+STOCK ALLOTED - PNHFTA26362 with 1 product Alloted. 
+STOCK ALLOTED - PNHFTA26362 with 1 product Alloted. 
+STOCK ALLOTED - PNHFTA26362 with 1 product Alloted. 
+STOCK ALLOTED - PNHGGW34943 with 1 product Alloted. 
+STOCK ALLOTED - PNHGGW34943 with 1 product Alloted. 
+STOCK ALLOTED - PNHGGW34943 with 1 product Alloted. 
+STOCK ALLOTED - PNHGGW34943 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHAL36241 with 1 product Alloted. 
+STOCK ALLOTED - PNHHZW89963 with 1 product Alloted. 
+STOCK ALLOTED - PNHHZW89963 with 1 product Alloted. 
+STOCK ALLOTED - PNHHZW89963 with 1 product Alloted. 
+STOCK ALLOTED - PNHHZW89963 with 1 product Alloted. 
+STOCK ALLOTED - PNHHZW89963 with 1 product Alloted. 
+STOCK ALLOTED - PNHJYW63221 with 1 product Alloted. 
+STOCK ALLOTED - PNHJYW63221 with 1 product Alloted. 
+STOCK ALLOTED - PNHJYW63221 with 1 product Alloted. 
+STOCK ALLOTED - PNHJYW63221 with 2 product Alloted. 
+STOCK ALLOTED - PNHMKA33359 with 1 product Alloted. 
+STOCK ALLOTED - PNHMKA33359 with 1 product Alloted. 
+STOCK ALLOTED - PNHQBY27499 with 1 product Alloted. 
+STOCK ALLOTED - PNHQBY27499 with 1 product Alloted. 
+STOCK ALLOTED - PNHQBY27499 with 1 product Alloted. 
+STOCK ALLOTED - PNHQBY27499 with 1 product Alloted. 
+STOCK ALLOTED - PNHTQE79561 with 1 product Alloted. 
+STOCK ALLOTED - PNHTQE79561 with 1 product Alloted. 
+STOCK ALLOTED - PNHTQE79561 with 1 product Alloted. 
+STOCK ALLOTED - PNHWXR42666 with 1 product Alloted. 
+STOCK ALLOTED - PNHWXR42666 with 1 product Alloted. 
+STOCK ALLOTED - PNHZVY46717 with 1 product Alloted. 
+STOCK ALLOTED - PNHZVY46717 with 1 product Alloted. 
+STOCK ALLOTED - PNHZVY46717 with 1 product Alloted. 
+STOCK ALLOTED - PNHZVY46717 with 1 product Alloted. 
+STOCK ALLOTED - PNHZVY46717 with 1 product Alloted. 
+STOCK ALLOTED - PNHZVY46717 with 1 product Alloted.
+
+
+create database snapittoday_db_nov;
+drop database snapittoday_db_nov;
+
+CREATE DATABASE snapittoday_db_nov / DROP DATABASE snapittoday_db_oct;
+
+
+http://localhost/snapitto/admin/product/153072
+
+#Nov_30_2013

@@ -47,7 +47,9 @@ class Reservation extends Voucher {
         foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
         $str_all_trans = implode(",",$all_trans);
         
-        $rslt = $this->db->query("select o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id,di.name,o.status,pi.p_invoice_no,o.quantity,f.franchise_id,pi.p_invoice_no
+        $rslt = $this->db->query("select o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id,di.name
+                                ,o.status,pi.p_invoice_no,o.quantity
+                                ,f.franchise_id,pi.p_invoice_no
                                 from king_orders o
                                 join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
                                 join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
@@ -60,24 +62,23 @@ class Reservation extends Voucher {
         $output = '<table width="100" class="subdatagrid">
                             <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Trans</th>
-                                <th>Order ID</th>
-                                <th>Order Name</th>
-                                <th>Qty</th>
-                                <th>Stock</th>
-                                <th>Status</th>
-                                <th><input type="checkbox" value="" name="pick_all_fran" id="pick_all_fran_'.$franchise_id.'" class="pick_list_trans_grp_fran" title="Select all invoices" onclick="chkall_fran_orders('.$franchise_id.')" />PickList</th>
-                                <th>Action</th>
+                                <th style="width:25px">#</th>
+                                <th style="width:100px">Trans</th>
+                                <th style="width:100px">Order ID</th>
+                                <th style="width:250px">Order Name</th>
+                                <th style="width:25px"><input type="checkbox" value="" name="pick_all_fran" id="pick_all_fran_'.$franchise_id.'" class="pick_list_trans_grp_fran" title="Select all invoices" onclick="chkall_fran_orders('.$franchise_id.')" />PickList</th>
+                                <th style="width:100px">Action</th>
                             </tr>
                             </thead>
                             <tbody>';
         //echo '<pre>'; print_r($this->db->last_query()); exit;
+        /*<th>Qty</th><th>Stock</th><th>Status</th>$stockinfo = $this->reservations->get_stock_from_orderid($row['id']);
+                 <td>'.$row['quantity'].'</td><td><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>
+                <td>'.$row['status'].'</td>*/
         
         $arr_tmp=array();
         foreach ($rslt as $i=>$row) {
                 $invoice_action = '--';
-                $stockinfo = $this->reservations->get_stock_from_orderid($row['id']);
                 
                 if(!in_array($row['transid'],$arr_tmp)) {
                     $arr_tmp[]=$row['transid'];
@@ -98,13 +99,10 @@ class Reservation extends Voucher {
                 
                 $output .= '<tr>
                                 <td>'.++$i.'</td>
-                                <td>'.$transid_msg.'</td>
-                                <td>'.$row['id'].'</td>
-                                <td>'.$row['name'].'</td>
-                                <td>'.$row['quantity'].'</td>
-                                <td><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>
-                                <td>'.$row['status'].'</td>
-                                <td>
+                                <td align="center">'.$transid_msg.'</td>
+                                <td align="center">'.$row['id'].'</td>
+                                <td><span class="info_links"><a href="pnh_deal/'.$row['itemid'].'" target="_blank">'.$row['name'].'</a></span></td>
+                                <td align="center">
                                     <input type="checkbox" value="'.$row['p_invoice_no'].'" name="chk_pick_list_by_fran[]" id="chk_pick_list_by_fran" class="chk_pick_list_by_fran_'.$franchise_id.'" title="Select this for picklist" />
                                 </td>
                                 <td align="center">'.$invoice_action.'</td>
@@ -180,7 +178,7 @@ class Reservation extends Voucher {
         if($user) {
             $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
                     from king_orders a
-                    join king_transactions tr on tr.transid = a.transid
+                    join king_transactions tr on tr.transid = a.transid and tr.is_pnh=1
                     where a.status in (0,1) and tr.batch_enabled=1 and a.transid in ".$all_trans."
                     group by a.transid) as ddd
                     where ddd.orders_status=0")->result_array() or die("Error");
@@ -204,12 +202,12 @@ class Reservation extends Voucher {
      * @param type $updated_by
      */
     function jx_reserve_avail_stock_all_transaction($updated_by,$batch_remarks='By transaction reservation system') {
-        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE); $output=array();
         if($user) {
             $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
                     from king_orders a
                     join king_transactions tr on tr.transid = a.transid
-                    where a.status in (0,1) and tr.batch_enabled=1 #and a.transid=@tid
+                    where a.status in (0,1) and tr.batch_enabled=1 and tr.is_pnh=1  #and a.transid=@tid
                     group by a.transid) as ddd
                     where ddd.orders_status=0")->result_array() or die("Error");
             foreach($rslt_for_trans as $rslt) {
@@ -218,13 +216,19 @@ class Reservation extends Voucher {
 
                 //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
                 // Process to batch this transaction
-                $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+                $output['result'][] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+                
             }
+            
+//                $count_alloted = count($arr_result["alloted"]);
+//                $count_nostock = count($arr_result["nostock"]);
+//                $output['result'] =array("alloted"=>$count_alloted);
         }
         else {
-            echo 'You dodn\'t have access permission to do this acation';
+            $output = array("status"=>"fail","resp"=>'You dodn\'t have access permission to do this acation');
         }
         //$this->output->set_output($output);
+        echo json_encode($output);
     }
     
     /**
@@ -239,7 +243,9 @@ class Reservation extends Voucher {
         $batch_remarks=$batch_remarks=='' ? 'by transaction reservation system' : $batch_remarks ;
         
         // Process to batch this transaction
-        echo $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        $output['result'] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        
+        echo json_encode($output);
     }
        
     /**
@@ -306,7 +312,7 @@ class Reservation extends Voucher {
      * @param type $update_by
      * @param type $msg
      */
-    function cancel_reserved_proforma_invoice($p_invoice,$update_by=1,$msg="Proporma Cancelled by reservation system")
+    function cancel_reserved_proforma_invoice($p_invoice,$update_by=1,$msg="Proforma cancelled by reservation system")
     {
         echo $this->reservations->reservation_cancel_proforma_invoice($p_invoice,$update_by,$msg);
     }

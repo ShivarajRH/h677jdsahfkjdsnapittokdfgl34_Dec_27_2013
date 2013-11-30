@@ -11,6 +11,16 @@ class reservation_model extends Model
     function __construct() {
             parent::__construct();
     }
+    /**
+     * transaction creator name info
+     * @param type $transid
+     * @return type string
+     */
+    function get_trans_created_by($transid) {
+        $username=@$this->db->query("select username from king_admin a join king_transactions b on a.id = b.trans_created_by where transid = ? ",$transid)->row()->username;
+        return $username;
+    }
+    
     function get_stock_from_orderid($orderid) {
    
             $order_itemid=$this->db->query("select o.itemid from  king_orders o where o.id=? ",array($orderid))->row()->itemid;
@@ -95,7 +105,7 @@ class reservation_model extends Model
         if($franchise_id) 
             $cond .=" and tr.franchise_id=$franchise_id ";
         
-        if($batch_type != 'pending' && $userid!=1) {
+        if($userid!=1) { //$batch_type != 'pending' && 
             if($userid) {
                 $cond .= ' and sd.assigned_userid = '.$userid.' ';
             }
@@ -255,14 +265,17 @@ class reservation_model extends Model
     function do_batching_process($transid,$ttl_num,$batch_remarks="PNH Offline Order Placed.",$updated_by)
     {
             ini_set('memory_limit','512M');
+            ini_set('max_execution_time','60000');
+            
             $i_transid=false;
             $num=$ttl_num;
+            $process_partial = 1;
 
             $user = $this->erpm->auth();
-            $output='';
+            $output=array();
 
             if(empty($num)) {
-                    $output.=("Enter no of orders to process"); return $output;
+                    $output = array("status"=>"fail","resp"=>"Enter no of orders to process"); return $output;
             }
             
             $i_transid=$transid;//$this->input->post("transid");
@@ -312,7 +325,7 @@ class reservation_model extends Model
                     $v_transids[]=$t['transid'];
             }
             if(empty($trans)) {
-                    $output .= ("No orders to process"); return $output;
+                    $output = array("status"=>"fail","resp"=>"No orders to process"); return $output;
             }
 
             $itemids=array_unique($itemids);
@@ -457,11 +470,11 @@ class reservation_model extends Model
             
             $orders=array_unique($to_process_orders);
 
-            /*echo '<pre>';
-            print_r($productids);
-            print_r($orders);
-            print_r($stock);
-            exit;*/
+//            echo '<pre>';
+//            print_r($productids);
+//            print_r($orders);
+//            print_r($stock);
+//            exit;
             
 
             $p_invoices=$this->erpm->do_proforma_invoice($orders);
@@ -529,7 +542,9 @@ class reservation_model extends Model
                     $invid = $pinv_det['id'];
                     $pinvno = $pinv_det['p_invoice_no'];
                     $ptransid = $pinv_det['transid'];
-
+                    
+                    $output['p_invoice_no'][] = $pinvno;
+                    
                     $s_prods=$this->db->query("select t.partner_reference_no,o.transid,o.id,p.product_id,p.qty,o.quantity,o.i_orgprice,o.id as order_id from king_orders o join m_product_deal_link p on p.itemid=o.itemid join king_transactions t on t.transid  = o.transid  where o.id=? and o.transid = ? order by o.sno asc",array($o,$ptransid))->result_array();
 
                     $s_prods_1=$this->db->query("select t.partner_reference_no,o.transid,o.id,go.product_id,p.qty,o.quantity,o.i_orgprice,o.id as order_id 
@@ -616,23 +631,23 @@ class reservation_model extends Model
                                     {
                                             $stk_movtype=0;
                                             //$prod_id=0,$mrp=0,$bc='',$loc_id=0,$rb_id=0,$p_stk_id=0,$qty=0,$update_by=0,$stk_movtype=0,$update_by_refid=0,$mrp_change_updated=-1,$msg=''
-                                            $rdata=$this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,12312,-1,$batch_remarks);
+                                            $rdata=$this->erpm->_upd_product_stock($stk_prod['product_id'],$stk_prod['mrp'],$stk_prod['product_barcode'],$stk_prod['location_id'],$stk_prod['rack_bin_id'],$stk_prod['stock_info_id'],$stk_prod['qty'],$updated_by,$stk_movtype,$invid,-1,$batch_remarks);
                                             if($rdata) {
                                                 //Stock log updated.
                                                 $stk_movtype_msg = ($stk_movtype)?' De-Alloted. ': " Alloted. ";
-                                                $tot_prdt[$stk_prod['product_id']]=true;
-                                                $success = "<br>Product-".$stk_prod['product_id']." and stock-".$stk_prod['stock_info_id'].' with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
+                                                //$tot_prdt[$stk_prod['product_id']]=true;
+                                                //$success = "<br>Product-".$stk_prod['product_id']." and stock-".$stk_prod['stock_info_id'].' with '.$stk_prod['qty'].' quantity is '.$stk_movtype_msg."";
                                             }
                                             elseif(is_array($rdata)) {
-                                                $output .= "<br>".$rdata;
+                                                $output['resp'][] = "<br>".$rdata;
                                                 
                                             }else {
-                                                $output .= "<br>Transaction Stock log not updated.";
+                                                $output['resp'][] = "<br>Transaction Stock log not updated.";
                                             }
                                              
                                     }
                                     
-                                    $output .= '<br>STOCK ALLOTED - '.$i_transid.' with '.count($alloted_stock).' product'.$stk_movtype_msg.'';
+                                    $output['resp'][] = '<br>STOCK ALLOTED - '.$i_transid.' with '.count($alloted_stock).' product'.$stk_movtype_msg.'';
                             }
                            
                     }
@@ -684,15 +699,15 @@ class reservation_model extends Model
 					$data = implode('","',$tmp);
 				
                                 
-                                        $output .= "<br>>Transaction $i_transid with ".$data.'.';
+                                        $output['resp'][] = "<br>Transaction $i_transid with ".$data.'.';
                                 
 		}else
 		{
 			if(!count($batch_inv_link)) {
-				//$output.="<br>INSUFFICIENT STOCK - $i_transid";
+				$output['resp'][] ="<br>INSUFFICIENT STOCK - $i_transid";
                         }
 		}
-                echo ($output);
+                return $output;
     }
     
     function reservation_cancel_proforma_invoice($p_invoice,$update_by=1,$msg) {

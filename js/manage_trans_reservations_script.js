@@ -35,54 +35,56 @@ function show_orders_list(franid,from,to,batch_type) {
         return true;
 }
 
-$("#btn_cteate_group_batch").live("click",function(){
-    var hmtldata ='--';
-    $.post(site_url+"admin/manage_reservation_create_batch_form",{},function(rdata) {
-            hmtldata = rdata;
-            $("#dlg_create_group_batch_block").html(hmtldata);
-    }).fail(fail);
-    
-    $("#dlg_create_group_batch_block").dialog({
-        autoOpen: false,
-        //open:function() {        },
-        height: 350,
-        width:340,
-        open:function() {
-            
-        },
-        modal: true,
-        buttons: {
-            "Create Batch":function() {
-                    //$("form",this).submit();
-                    var batch_group_name = $("#batch_group_name").find(":selected").val();
-                    var assigned_menuids = $("#assigned_menuids").val();
-                    var batch_size = $("#batch_size").val();
-                    var assigned_uid = $("#assigned_uid").find(":selected").val();
-                    
-                    if(batch_group_name == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
-                    if(assigned_uid == '00') { 
-                        if(!confirm("Warning :\n Are you sure you do not want to assign user for this batch?")) {
-                            show_output("Warning :\n Batch will not assign to any user.");
-                            return false;
-                        }
-                        assigned_uid = '0';
+$("#dlg_create_group_batch_block").dialog({
+                autoOpen: false,
+                height: 350,
+                width:340,
+                modal: true,
+                buttons: {
+                    "Create Batch":function() {
+                            //$("form",this).submit();
+                            var batch_group_name = $("#batch_group_name").find(":selected").val();
+                            var assigned_menuids = $("#assigned_menuids").val();
+                            var batch_size = $("#batch_size").val();
+                            var assigned_uid = $("#assigned_uid").find(":selected").val();
+
+                            if(batch_group_name == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
+                            if(assigned_uid == '00') { 
+                                if(!confirm("Warning :\n Are you sure you do not want to assign user for this batch?")) {
+                                    show_output("Warning :\n Batch will not assign to any user.");
+                                    return false;
+                                }
+                                assigned_uid = '0';
+                            }
+
+                            var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid};
+                            $.post(site_url+"admin/create_batch_by_group_config",postData,function(rdata) {
+                                    show_output(rdata);
+                                    $("#batch_group_name").val($("#batch_group_name option:nth-child(0)").val());
+
+                            }).fail(fail);
+                    },
+                    Cancel: function() { 
+                      $(this).dialog( "close" );
                     }
-                    
-                    var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid};
-                    $.post(site_url+"admin/create_batch_by_group_config",postData,function(rdata) {
-                            show_output(rdata);
-                            $("#batch_group_name").val($("#batch_group_name option:nth-child(0)").val());
-                            
-                    }).fail(fail);
-            },
-            Cancel: function() {
-              $( this ).dialog( "close" );
-            }
-        }
-    });
-    
-    $("#dlg_create_group_batch_block").dialog("open").dialog('option', 'title', "Create Batch");
+                },
+                close: function() {
+                    $(this).dialog("close");
+                },
+                title: "Create Group Batch"
+        });
+
+
+$("#btn_cteate_group_batch").live("click",function(){
+   
+   $("#dlg_create_group_batch_block").html('');
+   $.post(site_url+"admin/manage_reservation_create_batch_form",{},function(hmtldata) {
+        $("#dlg_create_group_batch_block").html(hmtldata).dialog("open");
+   }).fail(fail);
+   
+    return false;
 });
+
 function show_output(rdata) {
     $(".create_batch_msg_block").slideDown().html(rdata);//.delay("6500").slideUp("slow");
 }
@@ -257,16 +259,24 @@ function reallot_stock_for_all_transaction(userid,pg) {
         return false;
     }
     var updated_by = userid;
+    var rdata='';
     $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
-    $.post(site_url+"admin/jx_reserve_avail_stock_all_transaction/"+updated_by,"",function(rdata) {
-            if(rdata == '') {
-                rdata=("No transaction processed for allotment.");
+    $.post(site_url+"admin/jx_reserve_avail_stock_all_transaction/"+updated_by,"",function(resp) {
+            if(resp.status == 'fail') {
+                        rdata = resp.response+"4";
             }
             else {
-                loadTransactionList(pg);
+                
+                $.each(resp.result,function(i,val_arr){
+                        $.each(val_arr,function(i,row){
+                                rdata += row;
+                        });
+                });
+                
             }
+            loadTransactionList(pg);
             $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
-    });
+    },"json");
     return false;
 }
  
@@ -278,18 +288,23 @@ function reserve_stock_for_trans(userid,transid,pg) {
     var ttl_num_orders=$("."+transid+"_total_orders").val();
     var batch_remarks='';
     var updated_by = userid;
-    
-    $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(rdata) {
+    var rdata='';
+    $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(resp) {
         
-            if(rdata == '') {
-                rdata=("No transaction processed for allotment.");
-            }else {
+            if(resp.status == 'fail') {
+                        rdata = resp.response;
+            }
+            else {
+                
+                $.each(resp.result,function(i,row){
+                        rdata += row;
+                });
                 
             }
             loadTransactionList(pg);
             $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
 
-    });
+    },"json");
     return false;
 }
 function reallot_frans_all_trans(elt,userid,franchise_id,pg) {

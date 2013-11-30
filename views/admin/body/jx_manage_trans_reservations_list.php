@@ -48,15 +48,12 @@ if($terrid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
  }
 
-$arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid'],$pg,$limit); //
-$total_trans_rows=count($arr_trans_set['result']);
+$arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid']); 
 
-if($total_trans_rows == 0 ) {
-    $output.='<script>$(".ttl_trans_listed").html("");
-                                $(".pagination_top").html("");
-                                $(".re_allot_all_block").css({"padding":"0"});
-                    </script>
-                    <h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
+//echo '<pre>'.count($arr_trans_set['result']);die();
+
+if(count($arr_trans_set['result']) == 0 ) {
+    $output.='<h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
 }
 else 
 {
@@ -86,141 +83,155 @@ else
                     left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
                     left join proforma_invoices pi on pi.order_id = o.id and pi.invoice_status = 1 
                     left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no
-            WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond  and tr.transid in ($str_all_trans)
-            group by o.transid) as g $cond_batch group by transid order by {$orderby_cond} desc limit $pg,$limit";
+            WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond and tr.transid in ($str_all_trans)
+            group by o.transid) as g $cond_batch group by transid order by {$orderby_cond} desc";
 
              //echo "<p><pre>".$sql.'</pre></p>';die(); 
-
-             $transactions_src=$this->db->query($sql)->result_array();
-             //$trans_arr=$this->db->query($sql);
+            
+            
              
+            $transactions_src=$this->db->query($sql);
+            $total_trans_rows=$transactions_src->num_rows();
             
-            $output .= '
-            <form name="p_invoice_for_picklist" id="p_invoice_for_picklist">
-            <table class="datagrid" width="100%">
-            <thead>
-                <tr>
-                    <th style="width:15px">Slno</th>
-                    <th style="width:120px">Ordered On</th>
-                    <th style="width:120px">Batch ID(Group)</th>
-                    <th style="width:200px">Transaction Reference</th>
-                    <th style="padding:0px !important;">Item details</th>
-                    <th align="center">Pick List<br> '.$chk_box_global.'</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>';
-            
-            $c = $pg;
-            foreach($transactions_src as $trans_arr) {
-                 
-                    $batch_ids = array();
-                    $invoice_infos=array();
-                    $trans_action_msg = '';
-                    $batch_id_msg='--';
-                    $pick_list_msg='';$trans_action_msg='';
+            if($total_trans_rows == 0 ) {
+                           $output.='<script>$(".ttl_trans_listed").html("");
+                                            $(".pagination_top").html("");
+                                            $(".re_allot_all_block").css({"padding":"0"});
+                                </script>
+                                <h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
+            }
+            else 
+            {
+                $transactions_src=$this->db->query($sql." limit $pg,$limit ");
+                
+                $transactions=$transactions_src->result_array();
 
-           
-                    $trans_created_by = @$this->db->query("select username from king_admin a join king_transactions b on a.id = b.trans_created_by where transid = ? ",$trans_arr['transid'])->row()->username;
-                    if($trans_created_by) 
-                            $trans_created_by = '<div class="trans_created_by"> by '.($trans_created_by).'';
+                $output .= '
+                <form name="p_invoice_for_picklist" id="p_invoice_for_picklist">
+                <table class="datagrid" width="100%">
+                <thead>
+                    <tr>
+                        <th style="width:15px">Slno</th>
+                        <th style="width:120px">Ordered On</th>
+                        <th style="width:120px">Batch ID(Group)</th>
+                        <th style="width:200px">Transaction Reference</th>
+                        <th style="padding:0px !important;">Item details</th>
+                        <th align="center">Pick List<br> '.$chk_box_global.'</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>';
 
-                    $arr_fran = $this->reservations->fran_experience_info($trans_arr['f_created_on']);
+                $c = $pg;
+                foreach($transactions as $trans_arr) {
 
-                    if($trans_arr['batch_id'] != '') $batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
+                        $batch_ids = array();
+                        $invoice_infos=array();
+                        $trans_action_msg = '';
+                        $batch_id_msg='--';
+                        $pick_list_msg='';$trans_action_msg='';
 
-                    $output .= '<tr class="'.$batch_type.'_ord">
-                        <td>'.++$c.'</td>
-                        <td>'.$trans_arr['str_date'].'<div class="str_time">'.($trans_arr['str_time']).'</div>'.$trans_created_by.'</td>
-                        <td>'.$batch_id_msg.'</td>
-                        <td>
-                            <span class="info_links"><a href="trans/'.$trans_arr['transid'].'" target="_blank">'.$trans_arr['transid'].'</span><br></a>
-                            <span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['bill_person'].'</a><br></span>
-                            <span class="info_links">'.$trans_arr['town_name'].'</span>,
-                            <span class="info_links">'.$trans_arr['territory_name'].'<br></span>
-                            <span>'.$trans_arr['ship_phone'].'<br></span><span class="fran_experience" style="background-color:'.$arr_fran['f_color'].';color: #ffffff;">'.$arr_fran['f_level'].'</span>
-                        </td>
-                        <td>';
-            
-            
-                    $output .='<table class="subdatagrid" cellpadding="0" cellspacing="0">
-                        <tr>
-                            <th>Slno</th>
-                            <th>Order id</th>
-                            <th>Deal Name</th>
-                            <th>Quantity</th>
-                            <th>MRP</th>
-                            <th>Amount</th>
-                            <th>Alloted/Status?</th>
-                            <th>Stock</th>
+                        $trans_created_by = $this->reservations->get_trans_created_by($trans_arr['transid']);
+                        if($trans_created_by) 
+                                $trans_created_by = '<div class="trans_created_by"> by '.($trans_created_by).'';
+
+                        $arr_fran = $this->reservations->fran_experience_info($trans_arr['f_created_on']);
+
+                        if($trans_arr['batch_id'] != '') $batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
+
+                        $output .= '<tr class="'.$batch_type.'_ord">
+                            <td>'.++$c.'</td>
+                            <td>'.$trans_arr['str_date'].'<div class="str_time">'.($trans_arr['str_time']).'</div>'.$trans_created_by.'</td>
+                            <td>'.$batch_id_msg.'</td>
+                            <td>
+                                <span class="info_links"><a href="trans/'.$trans_arr['transid'].'" target="_blank">'.$trans_arr['transid'].'</span><br></a>
+                                <span class="info_links"><a href="'.site_url("admin/pnh_franchise/{$trans_arr['franchise_id']}").'"  target="_blank">'.$trans_arr['bill_person'].'</a><br></span>
+                                <span class="info_links">'.$trans_arr['town_name'].'</span>,
+                                <span class="info_links">'.$trans_arr['territory_name'].'<br></span>
+                                <span>'.$trans_arr['ship_phone'].'<br></span><span class="fran_experience" style="background-color:'.$arr_fran['f_color'].';color: #ffffff;">'.$arr_fran['f_level'].'</span>
+                            </td>
+                            <td>';
+
+
+                        $output .='<table class="subdatagrid" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <th>Slno</th>
+                                <th>Order id</th>
+                                <th>Deal Name</th>
+                                <th>Quantity</th>
+                                <th>MRP</th>
+                                <th>Amount</th>
+                                <th>Alloted</th>
+                            </tr>';
+
+                            /*<th>Alloted/Status?</th><th>Stock</th>
+                            $stockinfo = $this->reservations->get_stock_from_orderid($order_i['id']);$status=array("Confirmed","Processed","Shipped","Cancelled","Returned");
+                            <td style="width:20px">'.($order_i['status']?"Yes":"No").' | '.$status[$trans_arr['shipped']].' </td>
+                            <td style="width:20px"><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>*/
+
+                        $trans_orders = $this->reservations->get_orders_of_trans($trans_arr['transid']);
+                        foreach($trans_orders as $j=>$order_i)  {
+
+
+                            $output .='<input type="hidden" size="2" class="'.$trans_arr['transid'].'_total_orders" value="'.count($trans_orders).'" />';
+
+                                        $amount=round($order_i['i_orgprice']-($order_i['i_coup_discount']+$order_i['i_discount']),2);
+                                        $output .= '<tr class="'.$ord_stat_txt.'_ord">
+                                            <td style="width:25px">'.++$k.'</td>
+                                            <td style="width:50px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['id'].'</a></span></td>
+                                            <td style="width:200px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['name'].'</a></span></td>
+                                            <td style="width:50px">'.$order_i['quantity'].'</td>
+                                            <td style="width:50px">'.$order_i['i_orgprice'].'</td>
+                                            <td style="width:50px">'.$amount.'</td>
+                                            <td style="width:20px">'.($order_i['status']?"Yes":"No").' </td>
+
+                                        </tr>';
+                        }
+
+                        $output .= '</table></td>';
+
+
+                       if( $batch_type == "pending") 
+                        {
+                                $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
+                                $pick_list_msg .= '--';
+
+                                $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a>';
+                                $output .= '<script>$(".re_allot_all_block").css({"padding":"4px 10px"});</script>';
+
+
+                        }
+                        else {
+                                $arr_pinv_ids =array();
+                                foreach ($arr_trans_set['result'] as $i=>$arr_trans) { 
+                                    if($trans_arr['transid'] == $arr_trans['transid']) {
+                                        $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
+
+                                    }
+                                }
+
+                                foreach ($arr_pinv_ids as $p_invoice_id ) {
+                                    if($p_invoice_id != '') {
+                                        $trans_action_msg .= '<div>
+                                                            <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
+                                                            <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$user['userid'].','.$pg.')" class="">De-Allot</a>
+                                                        </div>';
+                                        $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_ready" title="Select this for picklist" />';
+                                    }
+                                }
+                        }
+
+                        $output .= '<td style="width:70px">'.$pick_list_msg.'</td>';
+                        $output .= '<td width="200">'.$trans_action_msg.'</td>
                         </tr>';
-            
-                    
-                    $trans_orders = $this->reservations->get_orders_of_trans($trans_arr['transid']);
-                    foreach($trans_orders as $j=>$order_i)  {
-                        
-                        $stockinfo = $this->reservations->get_stock_from_orderid($order_i['id']);
-                        
-                        $output .='<input type="hidden" size="2" class="'.$trans_arr['transid'].'_total_orders" value="'.count($trans_orders).'" />';
-                        
-                        $status=array("Confirmed","Processed","Shipped","Cancelled","Returned");
-                                    $amount=round($order_i['i_orgprice']-($order_i['i_coup_discount']+$order_i['i_discount']),2);
-                                    $output .= '<tr class="'.$ord_stat_txt.'_ord">
-                                        <td style="width:25px">'.++$k.'</td>
-                                        <td style="width:50px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['id'].'</a></span></td>
-                                        <td style="width:200px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['name'].'</a></span></td>
-                                        <td style="width:50px">'.$order_i['quantity'].'</td>
-                                        <td style="width:50px">'.$order_i['i_orgprice'].'</td>
-                                        <td style="width:50px">'.$amount.'</td>
-                                        <td style="width:20px">'.($order_i['status']?"Yes":"No").' | '.$status[$trans_arr['shipped']].' </td>
-                                        <td style="width:20px"><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>
-                                    </tr>';
-                    }
-                
-                    $output .= '</table></td>';
-                
-                
-                   if( $batch_type == "pending") 
-                    {
-                            $trans_action_msg .= '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($trans_arr['transid']).'\','.$pg.');">Re-Allot</a>';
-                            $pick_list_msg .= '--';
 
-                            $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a>';
-                            $output .= '<script>$(".re_allot_all_block").css({"padding":"4px 10px"});</script>';
+                        $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];
+                        $fil_townlist[$trans_arr['town_id']] = $trans_arr['town_name'];
+                        $fil_menulist[$trans_arr['menuid']] = $trans_arr['menu_name'];
+                        $fil_brandlist[$trans_arr['brandid']] = $trans_arr['brand_name'];
+                        $fil_franchiselist[$trans_arr['franchise_id']] = $trans_arr['franchise_name'];
 
-
-                    }
-                    else {
-                            $arr_pinv_ids =array();
-                            foreach ($arr_trans_set['result'] as $i=>$arr_trans) { 
-                                if($trans_arr['transid'] == $arr_trans['transid']) {
-                                    $arr_pinv_ids[] = $arr_trans['p_inv_nos'];
-
-                                }
-                            }
-
-                            foreach ($arr_pinv_ids as $p_invoice_id ) {
-                                if($p_invoice_id != '') {
-                                    $trans_action_msg .= '<div>
-                                                        <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
-                                                        <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$user['userid'].','.$pg.')" class="">De-Allot</a>
-                                                    </div>';
-                                    $pick_list_msg .= '<input type="checkbox" value="'.$p_invoice_id.'" id="pick_list_trans" name="pick_list_trans[]" class="pick_list_trans_ready" title="Select this for picklist" />';
-                                }
-                            }
-                    }
-
-                    $output .= '<td style="width:70px">'.$pick_list_msg.'</td>';
-                    $output .= '<td width="200">'.$trans_action_msg.'</td>
-                    </tr>';
-
-                    $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];
-                    $fil_townlist[$trans_arr['town_id']] = $trans_arr['town_name'];
-                    $fil_menulist[$trans_arr['menuid']] = $trans_arr['menu_name'];
-                    $fil_brandlist[$trans_arr['brandid']] = $trans_arr['brand_name'];
-                    $fil_franchiselist[$trans_arr['franchise_id']] = $trans_arr['franchise_name'];
-            
-        }
+            }
     
         
     //   PAGINATION
@@ -240,17 +251,19 @@ else
             $endlimit=($pg+1*$limit);
             $endlimit=($endlimit>$total_trans_rows)?$total_trans_rows : $endlimit;
             
-    $output .= '</tbody>
-        </table>
-    </form>
-    <div class="trans_pagination">'.$trans_pagination.' </div>
-        <script>
-            $(".pagination_top").html(\''.($trans_pagination).'\');
-            $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
-            $(".btn_picklist_block").html(\''.($generate_btn_link).'\');
+            $output .= '</tbody>
+                </table>
+            </form>
+            <div class="trans_pagination">'.$trans_pagination.' </div>
+                <script>
+                    $(".pagination_top").html(\''.($trans_pagination).'\');
+                    $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
+                    $(".btn_picklist_block").html(\''.($generate_btn_link).'\');
 
-            $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
-        </script>';
+                    $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
+                </script>';
+        }
+    
 }
 echo $output;
 //===========

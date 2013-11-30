@@ -4,6 +4,7 @@
     <div>
         <h2>Manage Transaction Reservations</h2>
         <div class="re_allot_all_block"></div>
+        <div class="btn_picklist_block"></div>
     </div>
     <div class="clear"></div>
     <div id="list_wrapper">
@@ -97,8 +98,6 @@
     <div class="level2_filters">
             <div class="trans_pagination pagination_top"></div>
             
-            <div class="btn_picklist_block"></div>
-            
             <span class="ttl_trans_listed dash_bar"></span>
     </div>        
         <div id="trans_list_replace_block"></div>
@@ -110,8 +109,10 @@
     </form>
     <iframe id="hndl_picklist_print" name="hndl_picklist_print" style="width: 100%;height: 100%; border: none;"></iframe>
 </div>
-<div id="dlg_create_group_batch_block" style="display: none;" ></div>
-<div class="reservation_action_status" style="display: none;"></div>
+<div style="display: none;">
+    <div id="dlg_create_group_batch_block"  ></div>
+    <div class="reservation_action_status" ></div>
+</div>
 
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>
 <script>
