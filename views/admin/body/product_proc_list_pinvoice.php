@@ -24,19 +24,25 @@
 			<b>By :</b> <?php echo $user['username'] ?>
 		</div> 
 		<div class="heading">
-			<h2 style="">Product procurement list for Proforma Invoices<?=$this->uri->segment(3)?></h2>	
+			<h2 style="">Product procurement list <?=$this->uri->segment(3)?></h2>	
 		</div>
                 <div class="print_link_block"><a href="javascript:void(0)" class="print_link" onclick="print();">Print</a></div>
 	</div>
-	
+	<?php
+        foreach($prods as $ii=>$product) {
+                echo '<h3>'.$product['menuname'].'</h3>';
+        ?>
 	<div id="wrapper" style="clear: both">
 		<table border=1 class="tbl_class"  cellpadding=3>
 		<tr style="background:#aaa">
 			<th>#</th><th>Product ID</th><th>Product Name</th><th>Qty</th><Th>MRP</Th><th>Location</th>
 		</tr>
 		<?php $i=1; 
-                foreach($prods as $pp){
-                    foreach($pp as $p){
+                //foreach($prods as $pp){
+                    
+                    foreach($product as $k=>$p){
+                        if($k==='menuname')  continue;
+//                echo ''.$k;
                     ?>
 			<tr <?php if($i%2==0){?>style="background:#eee;"<?php }?>>
                                 <td><?=$i?></td>
@@ -49,10 +55,10 @@
 			</tr>
 		<?php $i++;
                     }
-		}?>
+		//} ?>
 		</table>
 	</div>
-	
+	<?php } ?>
 
 	<div class="block">
 		<br>

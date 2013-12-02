@@ -1,34 +1,44 @@
 <?php
-$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block=$orderby_cond='';
-$from=strtotime($s);
-$to=strtotime("23:59:59 $e");
+$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block=$orderby_cond = $datefilter_msg ='';
 
+ if($s!=0 and $e != 0) {
+    $from=strtotime($s);
+    $to=strtotime("23:59:59 $e");
+    $cond .= ' and tr.actiontime between '.$from.' and '.$to.' ';
+    $datefilter_msg .= ' from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong> ';
+ }
+ 
 $chk_box_global = '<input type="checkbox" value="" name="pick_all" id="pick_all" title="Select all transactions" />';
 
 $generate_btn_link = '<div class="show_by_group_block"><label for="show_by_group">Process by franchise:</label> <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
 $generate_btn_link .= '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
-$generate_btn_link .= '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
 
-$orderby_cond .='g.init';
+if($oldest_newest == 'new') 
+    $orderby_cond = ' g.actiontime desc ';
+else
+    $orderby_cond = ' g.actiontime asc ';
 
-if( $batch_type == "ready" or $batch_type == "partial") {
+$old_new_msg = '<select name="sel_old_new" id="sel_old_new"><option value="new"  '.($oldest_newest=='new'?"selected":"").'>NEWEST </option><option value="old" '.($oldest_newest=='old'?"selected":"").' >OLDEST</option></select>';
+
+//$orderby_cond .='g.init';
+
+if( $batch_type == "pending") {
+        $chk_box_global = $generate_btn_link='';
+}
+else {
         if($batch_group_type == 1) {
-            //$cond_batch .= ' g.batch_id <> 5000 '; $orderby_cond = 'g.batch_id';
+            $cond_batch .= ' g.batch_id <> 5000 '; $orderby_cond = 'g.batch_id desc';
         }
         elseif($batch_group_type == 2) {
-           // $cond_batch .= ' g.batch_id = 5000 ';
+            $cond_batch .= ' g.batch_id = 5000 ';
         }
-        else
-           // $cond_batch .= ' g.batch_id > 0 ';
-        
+                
         // is batch assigned to user?
-        if($user['userid']) {
+        //if($user['userid']) {
             //$cond .= ' and sd.assigned_userid = '.$user['userid'].' ';
-        }
+        //}
+        $msg_generate_pick_list .= '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
 }
-elseif( $batch_type == "pending")
-        $chk_box_global = $generate_btn_link='';
-
 $cond_batch = ($cond_batch!='')? " where ".$cond_batch:"";
 
 
@@ -48,9 +58,7 @@ if($terrid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
  }
 
-$arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid']); 
-
-//echo '<pre>'.count($arr_trans_set['result']);die();
+$arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid']); //,$oldest_newestecho '<pre>'.count($arr_trans_set['result']);die();
 
 if(count($arr_trans_set['result']) == 0 ) {
     $output.='<h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
@@ -83,10 +91,11 @@ else
                     left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
                     left join proforma_invoices pi on pi.order_id = o.id and pi.invoice_status = 1 
                     left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no
-            WHERE tr.actiontime between $from and $to and o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond and tr.transid in ($str_all_trans)
-            group by o.transid) as g $cond_batch group by transid order by {$orderby_cond} desc";
+            WHERE o.status in (0,1) and tr.batch_enabled=1 and i.id is null $cond and tr.transid in ($str_all_trans)
+            group by o.transid) as g $cond_batch group by transid order by $orderby_cond";
+            
 
-             //echo "<p><pre>".$sql.'</pre></p>';die(); 
+//             echo "<p><pre>".$sql.'</pre></p>';die(); 
             
             
              
@@ -176,14 +185,17 @@ else
                             $output .='<input type="hidden" size="2" class="'.$trans_arr['transid'].'_total_orders" value="'.count($trans_orders).'" />';
 
                                         $amount=round($order_i['i_orgprice']-($order_i['i_coup_discount']+$order_i['i_discount']),2);
-                                        $output .= '<tr class="'.$ord_stat_txt.'_ord">
+                                        
+                                        $o_status = ($order_i['status']?"yes":"no");
+                                            
+                                        $output .= '<tr class="order_status_'.$o_status.'">
                                             <td style="width:25px">'.++$k.'</td>
                                             <td style="width:50px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['id'].'</a></span></td>
                                             <td style="width:200px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['name'].'</a></span></td>
                                             <td style="width:50px">'.$order_i['quantity'].'</td>
                                             <td style="width:50px">'.$order_i['i_orgprice'].'</td>
                                             <td style="width:50px">'.$amount.'</td>
-                                            <td style="width:20px">'.($order_i['status']?"Yes":"No").' </td>
+                                            <td style="width:20px">'.ucfirst($o_status).' </td>
 
                                         </tr>';
                         }
@@ -199,9 +211,9 @@ else
                                 $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');">Re-Allot all pending transactions</a>';
                                 $output .= '<script>$(".re_allot_all_block").css({"padding":"4px 10px"});</script>';
 
-
                         }
                         else {
+                                
                                 $arr_pinv_ids =array();
                                 foreach ($arr_trans_set['result'] as $i=>$arr_trans) { 
                                     if($trans_arr['transid'] == $arr_trans['transid']) {
@@ -236,10 +248,10 @@ else
         
     //   PAGINATION
             $this->load->library('pagination');
-            $config['base_url'] = site_url("admin/jx_manage_trans_reservations_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$limit); 
+            $config['base_url'] = site_url("admin/jx_manage_trans_reservations_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$oldest_newest."/".$limit); 
             $config['total_rows'] = $total_trans_rows;
             $config['per_page'] = $limit;
-            $config['uri_segment'] = 14;
+            $config['uri_segment'] = 15;
             $config['num_links'] = 5;
             $config['cur_tag_open'] = '<span class="curr_pg_link">';
             $config['cur_tag_close'] = '</span>';
@@ -257,13 +269,14 @@ else
             <div class="trans_pagination">'.$trans_pagination.' </div>
                 <script>
                     $(".pagination_top").html(\''.($trans_pagination).'\');
-                    $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
-                    $(".btn_picklist_block").html(\''.($generate_btn_link).'\');
-
+                    $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions '.$datefilter_msg.'");
+                    $(".btn_picklist_block").html(\''.($msg_generate_pick_list).'\');
+                    $(".above_header_block_btns").html(\''.($generate_btn_link).'\');
+                    $(".oldest_newest_sel_block").html(\''.$old_new_msg.'\');
                     $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
                 </script>';
         }
-    
+        // 
 }
 echo $output;
 //===========

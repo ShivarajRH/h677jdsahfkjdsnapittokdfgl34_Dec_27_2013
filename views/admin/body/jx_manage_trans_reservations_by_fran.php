@@ -1,12 +1,25 @@
 <?php
-$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block='';
-$from=strtotime($s);
-$to=strtotime("23:59:59 $e");
+$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block = $msg_generate_pick_list='';
+ if($s!=0 and $e != 0) {
+    $from=strtotime($s);
+    $to=strtotime("23:59:59 $e");
+    $cond .= ' and tr.actiontime between '.$from.' and '.$to.' ';
+    $datefilter_msg .= ' from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong> ';
+ }else {
+     $from=$to=0;
+ }
+$old_new_msg = '';
+$sel_terr_by_fran='<select name=\'sel_terr_id\' id=\'sel_terr_id\'></select>';
 
-//$generate_btn_link = '<div class="show_by_group_block"><label for="show_by_group">Process by franchise:</label> <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
-$generate_btn_link .= '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
-$generate_btn_link .= '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
-
+if( $batch_type == "pending") {
+    $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');" style="padding:4px 10px;">Re-Allot all pending transactions</a>';
+    //$generate_btn_link=$msg_generate_pick_list='';
+}
+else {
+    $generate_btn_link = '<div class="show_by_group_block"><label for="show_by_group">Process by franchise:</label> <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
+    $msg_generate_pick_list = '<input type="submit" value="Generate Pick List" name="btn_generate_pick_list" id="btn_generate_pick_list" title="Click to generate picklist for printing"/>';
+    $generate_btn_link = '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
+}
 
 if($menuid!=0) {
      $cond .= ' and dl.menuid='.$menuid; 
@@ -77,7 +90,6 @@ else
             $transactions=$this->db->query($sql." limit $pg,$limit")->result_array();
 
             $output .= '
-            <select name="sel_terr_id" id="sel_terr_id"></select>    
             <table class="datagrid" width="100%">
                         <thead>
                             <tr>
@@ -159,18 +171,15 @@ else
             
             
             
-            
-            if( $batch_type == "pending") {
-                $re_allot_all_block = '<a href="javascript:void(0);" onclick="reallot_stock_for_all_transaction('.$user['userid'].','.$pg.');" style="padding:4px 10px;">Re-Allot all pending transactions</a>';
-                $generate_btn_link='';
-            }
-            
-            
             $output .='</tbody>
                         </table>
                     <script>
-                        $(".ttl_trans_listed").html("Showing <strong>'.$total_trans_rows.'</strong> franchises from <strong>'.date("m-d-Y",$from).'</strong> to <strong>'.date("m-d-Y",$to).'</strong>");
+                        $(".ttl_trans_listed").html("Showing <strong>'.$total_trans_rows.'</strong> franchises '.$datefilter_msg.'");
+                        $(".sel_terr_block").html("'.$sel_terr_by_fran.'");
+                        $(".above_header_block_btns").html(\''.($generate_btn_link).'\');
+                        $(".btn_picklist_block").html(\''.($msg_generate_pick_list).'\');
                         $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
+                        $(".oldest_newest_sel_block").html(\''.$old_new_msg.'\');
                     </script>    
                     ';
             

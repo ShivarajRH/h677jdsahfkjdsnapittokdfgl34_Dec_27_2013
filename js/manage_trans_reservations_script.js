@@ -71,6 +71,7 @@ $("#dlg_create_group_batch_block").dialog({
                 close: function() {
                     $(this).dialog("close");
                 },
+                position: ['center', 'center'],
                 title: "Create Group Batch"
         });
 
@@ -164,6 +165,7 @@ $("#show_picklist_block").dialog({
     },
     height: 650,
     width:950,
+    position: ['center', 'center'],
     modal: true
 });
 function chkall_fran_orders(franid) {
@@ -252,6 +254,7 @@ $(".reservation_action_status").dialog({
     top:120,
     height: 133,
     width:433,
+    position: ['center', 'center'],
     modal: true
 });
 function reallot_stock_for_all_transaction(userid,pg) {
@@ -345,7 +348,12 @@ function cancel_proforma_invoice(p_invoice_no,userid,pg) {
     });
     return false;
 }
-    
+$(window).resize(function() { //on resize window center the dialog
+    $("#dlg_create_group_batch_block").dialog("option", "position", ['center', 'center']);
+    $(".reservation_action_status").dialog("option", "position", ['center', 'center']);
+    $("#show_picklist_block").dialog("option", "position", ['center', 'center']);
+});
+
 //filter box show/hide
 $(".close_filters").toggle(function() {
     $(".close_filters .close_btn").html("Hide");
@@ -377,6 +385,11 @@ $("#trans_date_form").submit(function() {
 });
 //ONCHANGE Batch_type
 $("#batch_type").live("change",function() {
+    loadTransactionList(0);
+    return false;
+});
+//ONCHANGE Batch_type
+$("#sel_old_new").live("change",function() {
     loadTransactionList(0);
     return false;
 });

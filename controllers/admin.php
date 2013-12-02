@@ -89,7 +89,7 @@ class Admin extends Erp {
 		if ($this->form_validation->run () !== FALSE) {
 			//print_r($user);echo '<br>';
 			$userid = md5 ( strtolower ( $user ) );
-			//print_r($userid);echo '<br>';
+			print_r($userid);echo '<br>';
 			$userdetails = $this->adminmodel->getUser ( $userid );
 			//print_r($userdetails);
 			//print_r(md5($pass));exit;
@@ -104,7 +104,7 @@ class Admin extends Erp {
 				//print_r($usertype);echo 'sd';exit;
 				$sessionData = array ("userid"=>$userdetails->id,'username' => $userdetails->name, 'login_flag' => true, 'usertype' => $usertype, 'brandid' => $brandid ,'access'=>$userdetails->access);
 				$this->session->set_userdata ( array("admin_user" => $sessionData) );
-
+                                    
 				redirect("admin");
 
 				//echo '<div align=left><a href="">logout</a>';

@@ -197,18 +197,49 @@ h3.filter_heading { margin-bottom: 0px; margin-top: 0;width: 788px;}
 .trans_created_by { padding: 5px 0 5px; font-size: 11px; 
                    /*font-weight: bold;*/ 
 }
+input[type="submit"] { height: 30px; }
+
 .datagrid .small_text { font-size: 10px; }
-.btn_picklist_block { float: right; margin-right: 25px; margin-top: 13px;}
-.btn_picklist_block input[type="submit"] { height: 30px; }
+.btn_picklist_block { float: right; margin-right: 25px;}
+
 .create_batch_msg_block {
     padding: 5px 5px;
     margin: 2px 2px;
     color: #E0260D;
 }
+.above_header_block_btns { float: right; margin-right: 25px; margin-top: 27px;}
+
 .show_by_group_block {padding: 5px 33px; float: left;}
 .view_all_orders a {
     margin-top: 5px; font-size: 11px;
 }
-.view_all_link {
-    
+.order_status_yes {
+    /*background-color: #C3C3E5;*/
+}
+.order_status_no {
+    /*background-color: #99CC99;*/font-weight: bold;
+    color: #993300;
+}
+.order_status_no a {
+    font-weight: bold;
+    color: #993300;
+}
+.sel_terr_block {
+    float: left;
+    margin: 0 9px 0 2px;
+}
+.sel_terr_block select {
+    margin: 0;
+}
+.oldest_newest_sel_block {
+    float: right;
+    margin: 3px 9px 0 2px;
+}
+.oldest_newest_sel_block select {
+    margin: 0;
+    width: 100px;
+    background-color: #7D7683;
+    color: whitesmoke;
+    width: 100px;
+    font-weight: bold;
 }

@@ -37,9 +37,16 @@ class Reservation extends Voucher {
         $this->load->view("admin",$data);
     }
     
-    function get_franchise_orders($franchise_id,$from,$to,$batch_type) {
+    function get_franchise_orders($franchise_id,$from=0,$to=0,$batch_type) {
         $output = '';
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+        
+         if($from!=0 and $to != 0) {
+            $cond .= '  and tr.actiontime between '.$from.' and '.$to.' ';
+         }else {
+             $from=$to=0;
+         }
+        
         
         $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,$franchise_id);
         
@@ -56,7 +63,7 @@ class Reservation extends Voucher {
                                 left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
                                 left join proforma_invoices `pi` on pi.order_id = o.id and pi.invoice_status = 1 
                                 join king_dealitems di on di.id = o.itemid 
-                                where f.franchise_id = ? and tr.actiontime between ? and ?  and i.id is null and tr.transid in ($str_all_trans)
+                                where f.franchise_id = ? $cond and i.id is null and tr.transid in ($str_all_trans)
                                 order by tr.init,di.name ",array($franchise_id,$from,$to))->result_array();
         
         $output = '<table width="100" class="subdatagrid">
@@ -157,10 +164,26 @@ class Reservation extends Voucher {
     function p_invoice_for_picklist() {
         $user=$this->auth(INVOICE_PRINT_ROLE);
         $p_invoice_ids = explode(",",$_POST['pick_list_trans']);
+        
+        $tmp_arr=array();
         foreach ($p_invoice_ids as $p_inv_id) {
-            //echo '<br>'.$p_inv_id;
-            $data['prods'][] = $this->reservations->product_proc_list_for_invoice($p_inv_id);
+            
+            $arr_rslt = $arr_prod = $this->reservations->product_proc_list_for_invoice($p_inv_id);
+            foreach($arr_rslt as $row) {
+                if(!in_array($row['menuid'],$tmp_arr)) {
+                    $tmp_arr[]=$row['menuid'];
+                    $rslt_arr[$row['menuid']][] = $row;
+                    $rslt_arr[$row['menuid']]['menuname'] = $row['menuname'];
+                }
+                else {
+                    $rslt_arr[$row['menuid']][] = $row;
+                    $rslt_arr[$row['menuid']]['menuname'] = $row['menuname'];
+                }
+            }
+            
         }
+//        echo '<pre>';print_r($rslt_arr);die();
+        $data['prods']=$rslt_arr;
         $this->load->view("admin/body/product_proc_list_pinvoice",$data);
     }
     
@@ -256,18 +279,18 @@ class Reservation extends Voucher {
      * @param type $pg
      * @param type $limit
      */
-    function jx_manage_trans_reservations_list($batch_type,$from,$to,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$showbygrp=0,$batch_group_type=0,$limit=1,$pg=0) {
+    function jx_manage_trans_reservations_list($batch_type,$from=0,$to=0,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$showbygrp=0,$batch_group_type=0,$oldest_newest,$limit=1,$pg=0) {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         $this->load->model("reservation_model");
-        if($from != '') {
+        if($from != 0 and $to !=0) {
                 $s=date("Y-m-d", strtotime($from));
                 $e=date("Y-m-d", strtotime($to));
                             //die($s.'<br>'.$e);
         }
-        else {
+        /*else {
                 $s=date("Y-m-d",strtotime("last month")); 
                 $e=date("Y-m-d",strtotime("today"));
-        }
+        }*/
         
         $data['user']=$user;
         $data['batch_type']=$batch_type;
@@ -282,6 +305,7 @@ class Reservation extends Voucher {
         $data['brandid']=$brandid;
         $data['showbygrp']=$showbygrp;
         $data['batch_group_type']=$batch_group_type;
+        $data['oldest_newest']=$oldest_newest;
         
         if(!$showbygrp)
             $this->load->view("admin/body/jx_manage_trans_reservations_list",$data);

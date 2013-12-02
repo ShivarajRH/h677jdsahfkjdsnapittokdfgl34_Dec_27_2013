@@ -1460,3 +1460,123 @@ CREATE DATABASE snapittoday_db_nov / DROP DATABASE snapittoday_db_oct;
 http://localhost/snapitto/admin/product/153072
 
 #Nov_30_2013
+
+select md5('superadmin1')//('17c4520f6cfd1ab53d8745e84681eb49')
+
+#1
+select product_id,product,location,sum(rqty) as qty from ( 
+                select rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty 
+                        from t_reserved_batch_stock rbs 
+                        join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                        join m_product_info pi on pi.product_id = si.product_id 
+                        join m_rack_bin_info rak on rak.id = si.rack_bin_id 
+                        join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and invoice_no = 0 
+                        where e.p_invoice_no='114324'
+                group by rbs.id  ) as g 
+                group by product_id,location;
+#2
+select product_id,product,location,sum(rqty) as qty 
+from ( 
+                select  * #rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty 
+                        from t_reserved_batch_stock rbs 
+                        join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                        join m_product_info pi on pi.product_id = si.product_id 
+                        join m_rack_bin_info rak on rak.id = si.rack_bin_id 
+                        join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and invoice_no = 0 
+                        where e.p_invoice_no='114324'
+) group by rbs.id  ) as g 
+#group by product_id,location
+
+#3
+select dl.menuid,mnu.name as menuname,rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty
+                        from t_reserved_batch_stock rbs 
+                        join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                        join m_product_info pi on pi.product_id = si.product_id 
+                        join m_rack_bin_info rak on rak.id = si.rack_bin_id
+			join king_orders o on o.id = rbs.order_id
+			join king_dealitems dlt on dlt.id = o.itemid
+			join king_deals dl on dl.dealid = dlt.dealid
+			join pnh_menu mnu on mnu.id = dl.menuid
+                        join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and e.invoice_no = 0 
+                        where e.p_invoice_no='114324'
+
+select * from t_reserved_batch_stock
+select * from king_orders
+
+desc t_reserved_batch_stock ==> batch_id,p_invoice_no, product_id,stock_info_id,order_id,
+ 
+desc t_stock_info ==> stock_id,product_id,location_id,rack_bin_id
+
+desc m_product_info ==>product_id,pid,tmp_itemid,tmp_dealid
+
+desc king_deals ==> dealid,catid,brandid,vendorid,menuid
+
+desc king_orders ==>id>> orderid,transid,userid,itemid,brandid,
+
+desc king_dealitems => dealid,id>itemid,name,quantity,available,tmp_pnh_itemid,tmp_pnh_dealid,is_pnh
+
+desc shipment_batch_process_invoice_link => batch_id,p_invoice_no,invoice_no,assigned_userid
+
+desc king_transactions => transid,orderid,franchise_id,is_pnh,batch_enabled
+
+desc pnh_menu ==> id>>menuid,name,status
+select * from pnh_menu where status=1
+
+# Final
+======================================================================================================================================
+select menuid,menuname,product_id,product,location,sum(rqty) as qty from ( 
+                select dl.menuid,mnu.name as menuname,rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty 
+                        from t_reserved_batch_stock rbs 
+                        join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                        join m_product_info pi on pi.product_id = si.product_id 
+                        join m_rack_bin_info rak on rak.id = si.rack_bin_id
+			
+			join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and e.invoice_no = 0 
+
+			join king_orders o on o.id = rbs.order_id
+			join king_dealitems dlt on dlt.id = o.itemid
+			join king_deals dl on dl.dealid = dlt.dealid
+			join pnh_menu as mnu on mnu.id = dl.menuid and mnu.status=1
+
+                        where e.p_invoice_no='114308'
+                group by rbs.id  ) as g 
+                group by product_id,location;
+======================================================================================================================================
+
+#other as p_inv_nos ,CONCAT_WS(',',p_inv_nos) as p
+select * from ( 
+                    select transid,group_concat(p_inv_nos) as p_inv_nos,status,count(*) as t,if(count(*)>1,'partial',(if(status,'ready','pending'))) as trans_status,franchise_id  
+                    from (
+                    select o.transid,group_concat(distinct pi.p_invoice_no) as p_inv_nos,o.status,count(*) as ttl_o,tr.franchise_id,tr.actiontime
+                            from king_orders o
+                            join king_transactions tr on tr.transid=o.transid
+                            left join king_invoice i on i.order_id = o.id and i.invoice_status = 1 
+                            
+                            left join proforma_invoices pi on pi.order_id = o.id and o.transid  = pi.transid and pi.invoice_status = 1 
+                            left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no
+                            
+                            where o.status in (0,1)  and i.id is null and tr.franchise_id != 0 and pi.p_invoice_no='106198' #$cond
+                            group by o.transid,o.status
+                    ) as g 
+                    group by g.transid )as g1   having g1.trans_status = 'partial';
+
+SELECT TRIM(LEADING 'x' FROM 'xxxbarxxx');
+
+select * from shipment_batch_process_invoice_link where p_invoice_no='106198'
+
+select menuid,menuname,product_id,product,location,sum(rqty) as qty from ( 
+                select dl.menuid,mnu.name as menuname,rbs.product_id,pi.product_name as product,concat(concat(rack_name,bin_name),'::',si.mrp) as location,rbs.qty as rqty 
+                        from t_reserved_batch_stock rbs 
+                        join t_stock_info si on rbs.stock_info_id = si.stock_id 
+                        join m_product_info pi on pi.product_id = si.product_id 
+                        join m_rack_bin_info rak on rak.id = si.rack_bin_id 
+                        join shipment_batch_process_invoice_link e on e.p_invoice_no = rbs.p_invoice_no and invoice_no = 0
+                        
+                        join king_orders o on o.id = rbs.order_id
+                        join king_dealitems dlt on dlt.id = o.itemid
+			join king_deals dl on dl.dealid = dlt.dealid
+			join pnh_menu as mnu on mnu.id = dl.menuid and mnu.status=1
+                        
+                        where e.p_invoice_no='114308' 
+                group by rbs.id  ) as g 
+                group by product_id,location

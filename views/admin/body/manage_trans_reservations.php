@@ -4,7 +4,7 @@
     <div>
         <h2>Manage Transaction Reservations</h2>
         <div class="re_allot_all_block"></div>
-        <div class="btn_picklist_block"></div>
+        <div class="above_header_block_btns"></div>
     </div>
     <div class="clear"></div>
     <div id="list_wrapper">
@@ -33,9 +33,9 @@
                             <form id="trans_date_form" method="post">
                                     <b>Show transactions : </b>
                                     <label for="date_from">From :</label><input type="text" id="date_from"
-                                            name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4*4)?>" />
+                                            name="date_from" value="<?php //echo date('Y-m-01',time()-60*60*24*7*4*4)?>" />
                                     <label for="date_to">To :</label><input type="text" id="date_to"
-                                            name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
+                                            name="date_to" value="<?php //echo date('Y-m-d',time())?>" /> 
                                     <input type="submit" value="Submit">
                             </form>
                         </div>
@@ -82,8 +82,8 @@
                             <span class="limit_display_block">
                                 Show
                                     <select name="limit_filter" id="limit_filter">
-                                        <option value="20">20</option>
-                                        <option value="50" selected>50</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50" >50</option>
                                         <option value="100">100</option>
                                     </select>
                                 items per page.
@@ -98,7 +98,12 @@
     <div class="level2_filters">
             <div class="trans_pagination pagination_top"></div>
             
+            <div class="btn_picklist_block"></div>
+            <div class="oldest_newest_sel_block"></div>
+            <div class="sel_terr_block"></div>
+            
             <span class="ttl_trans_listed dash_bar"></span>
+            
     </div>        
         <div id="trans_list_replace_block"></div>
 
@@ -136,8 +141,8 @@
         var menuid=($("#sel_menu").val()=='00')?0:$("#sel_menu").val();
         var brandid=($("#sel_brands").val()=='00')?0:$("#sel_brands").val();
          
-        var date_from= $("#date_from").val();
-        var date_to= $("#date_to").val();
+        var date_from= ($("#date_from").val() == '')?0:$("#date_from").val();
+        var date_to= ($("#date_to").val() == '')?0:$("#date_to").val();
         
         
         var limit= $("#limit_filter").val();
@@ -150,9 +155,11 @@
         
         var batch_group_type=($("#sel_batch_group_type").val()=='00')? 0:$("#sel_batch_group_type").val();
         
+        var sel_old_new=$("#sel_old_new").val();
+        
         //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
         $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
-        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbygrp+"/"+batch_group_type+"/"+limit+"/"+pg+"",{},function(rdata) {
+        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbygrp+"/"+batch_group_type+'/'+sel_old_new+"/"+limit+"/"+pg+"",{},function(rdata) {
             $("#trans_list_replace_block").html(rdata);
             
         });
