@@ -37,8 +37,8 @@ function show_orders_list(franid,from,to,batch_type) {
 
 $("#dlg_create_group_batch_block").dialog({
                 autoOpen: false,
-                height: 350,
-                width:340,
+                height: 400,
+                width:450,
                 modal: true,
                 buttons: {
                     "Create Batch":function() {
@@ -47,6 +47,8 @@ $("#dlg_create_group_batch_block").dialog({
                             var assigned_menuids = $("#assigned_menuids").val();
                             var batch_size = $("#batch_size").val();
                             var assigned_uid = $("#assigned_uid").find(":selected").val();
+                            var territory_id = $("#dlg_sel_territory").find(":selected").val();
+                            var townid = $("#dlg_sel_town").find(":selected").val();
 
                             if(batch_group_name == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
                             if(assigned_uid == '00') { 
@@ -56,8 +58,10 @@ $("#dlg_create_group_batch_block").dialog({
                                 }
                                 assigned_uid = '0';
                             }
-
-                            var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid};
+                            if(territory_id == '00') {territory_id=0;  }
+                            if(townid == '00') {townid=0;  }
+                            
+                            var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid,territory_id:territory_id,townid:townid};
                             $.post(site_url+"admin/create_batch_by_group_config",postData,function(rdata) {
                                     show_output(rdata);
                                     $("#batch_group_name").val($("#batch_group_name option:nth-child(0)").val());
@@ -161,6 +165,8 @@ $("#batch_group_name").live("change",function() {
 $("#show_picklist_block").dialog({
     autoOpen: false,
     open:function() {
+        
+        
       $("form",this).submit();  
     },
     height: 650,
@@ -169,7 +175,7 @@ $("#show_picklist_block").dialog({
     modal: true
 });
 function chkall_fran_orders(franid) {
-    //$("#pick_all_fran").live("change",function() {
+    
         var checkBoxes=$(".chk_pick_list_by_fran_"+franid);
         
         if($("#pick_all_fran_"+franid).is(":checked")) {
@@ -178,7 +184,7 @@ function chkall_fran_orders(franid) {
         else {
             checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
         }
-    //});
+    
 }
 function process_picklist_by_fran(elt,franchise_id) {
     $("#picklist_by_fran_form_"+franchise_id).submit();
@@ -220,9 +226,15 @@ $("#btn_generate_pick_list").live("click",function(){
                });
                $.unique(p_invoice_ids);
                var p_invoice_ids_str=p_invoice_ids.join(",");
-               console.log(p_invoice_ids_str);
-               $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
-                $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+
+//               $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
+//                $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+
+                var postData = {pick_list_trans:p_invoice_ids_str};
+                $.post(site_url+"admin/p_invoice_for_picklist",postData,function(resp) {
+                        $("#show_picklist_block").html(resp).dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+                });
+                
                 return false;
         }
         else {
@@ -240,11 +252,24 @@ $("#btn_generate_pick_list").live("click",function(){
                     p_invoice_ids.push($(this).val());
                 });
                 var p_invoice_ids_str = p_invoice_ids.join(",");
-
-                $("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
-                $("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+                
+                var postData = {pick_list_trans:p_invoice_ids_str};
+                $.post(site_url+"admin/p_invoice_for_picklist",postData,function(resp) {
+                        $("#show_picklist_block").html(resp).dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
+                });
+                
+                //$("#show_picklist_block input[name='pick_list_trans']").val(p_invoice_ids_str);
+                //$("#show_picklist_block").dialog("open").dialog('option', 'title', 'Pick List for '+p_invoice_ids.length+" proforma invoice/s");
         }
 });
+
+$(".print_link").click(function() {
+    
+
+    $('#show_picklist_block').printElement();
+
+});
+
 /* end picklist code ========================================================================== */
 
 $(".reservation_action_status").dialog({
@@ -539,6 +564,76 @@ function objToOptions_users(obj) {
     });
     return(output);
 }
+
+ //By default load lists
+loadTransactionList(0);
+var pg=0;
+    
+function loadTransactionList(pg) 
+{
+    $(".pagination_top").html("");
+    $(".ttl_trans_listed").html("");
+    $(".re_allot_all_block").css({"padding":"0"});
+
+
+    var batch_type = $('.tab_list .selected').attr('id');
+//        var batch_type= ($("#batch_type").val() == "00")?0: $("#batch_type").val();
+    var terrid= ($("#sel_territory").val()=='00')?0:$("#sel_territory").val();
+    var townid=($("#sel_town").val()=='00')?0:$("#sel_town").val();
+    var franchiseid=($("#sel_franchise").val()=='00')?0:$("#sel_franchise").val();
+    var menuid=($("#sel_menu").val()=='00')?0:$("#sel_menu").val();
+    var brandid=($("#sel_brands").val()=='00')?0:$("#sel_brands").val();
+
+    var date_from= ($("#date_from").val() == '')?0:$("#date_from").val();
+    var date_to= ($("#date_to").val() == '')?0:$("#date_to").val();
+
+
+    var limit= $("#limit_filter").val();
+
+    if(typeof pg != 'undefined')
+        $(".page_num").val=pg;
+    pg = (typeof pg== 'undefined') ? $(".page_num").val() : $(".page_num").val();
+
+    var showbyfrangrp = ($("#show_by_group").is(":checked"))? 1:0;
+
+    var batch_group_type=($("#sel_batch_group_type").val()=='00')? 0:$("#sel_batch_group_type").val();
+
+    var sel_latest=($("#sel_old_new").find(":selected").val()==0) ? 0 : $("#sel_old_new").find(":selected").val();
+
+    $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
+    $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbyfrangrp+"/"+batch_group_type+'/'+sel_latest+"/"+limit+"/"+pg+"",{},function(rdata) {
+        $("#trans_list_replace_block").html(rdata);
+
+    });
+}
+
+function done(data) { }
+function fail(xhr,status) { $('#trans_list_replace_block').print("Error: "+xhr.responseText+" "+xhr+" | "+status);}
+function success(resp) {
+        $('#trans_list_replace_block').html(resp);
+}
+ $(document).ready(function() {
+        //FIRST RUN
+        $( "#date_from").datepicker({
+             changeMonth: true,
+             dateFormat:'yy-mm-dd',
+             numberOfMonths: 1,
+             maxDate:0,
+//             minDate: new Date(reg_date),
+               onClose: function( selectedDate ) {
+                 $( "#date_to" ).datepicker( "option", "minDate", selectedDate ); //selectedDate
+             }
+           });
+        $( "#date_to" ).datepicker({
+            changeMonth: true,
+             dateFormat:'yy-mm-dd',
+//             numberOfMonths: 1,
+             maxDate:0,
+             onClose: function( selectedDate ) {
+               $( "#date_from" ).datepicker( "option", "maxDate", selectedDate );
+             }
+        });
+    });
 /*
 function batch_enable_disable(transid,flag,pg) {
     var d_msg=(flag==1)?"enable":"disable";

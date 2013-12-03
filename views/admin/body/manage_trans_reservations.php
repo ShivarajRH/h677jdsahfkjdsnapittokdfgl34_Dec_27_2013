@@ -3,8 +3,11 @@
 <div class="container">
     <div>
         <h2>Manage Transaction Reservations</h2>
-        <div class="re_allot_all_block"></div>
-        <div class="above_header_block_btns"></div>
+        <div class="above_header_block_btns">
+            <div class="re_allot_all_block"></div>
+            <div class="batch_btn_link"></div>
+            <div class="process_by_fran_link"></div>
+        </div>
     </div>
     <div class="clear"></div>
     <div id="list_wrapper">
@@ -99,7 +102,7 @@
             <div class="trans_pagination pagination_top"></div>
             
             <div class="btn_picklist_block"></div>
-            <div class="oldest_newest_sel_block"></div>
+            <div class="oldest_newest_sel_block"><select name="sel_old_new" id="sel_old_new"><option value="1" selected>NEWEST </option><option value="0" <?=($oldest_newest=='0') ? "selected":""; ?> >OLDEST</option></select></div>
             <div class="sel_terr_block"></div>
             
             <span class="ttl_trans_listed dash_bar"></span>
@@ -109,10 +112,10 @@
 
 </div>
 <div id="show_picklist_block" style="display: none;" >
-    <form target="hndl_picklist_print" action="<?=site_url("admin/p_invoice_for_picklist")?>" method="post">
+<!--    <form target="hndl_picklist_print" action="<?=site_url("admin/p_invoice_for_picklist")?>" method="post">
         <input type="hidden" name="pick_list_trans" value=""/>
     </form>
-    <iframe id="hndl_picklist_print" name="hndl_picklist_print" style="width: 100%;height: 100%; border: none;"></iframe>
+    <iframe id="hndl_picklist_print" name="hndl_picklist_print" onload="BufferLoaded('hndl_picklist_print');"  style="width: 100%;height: 100%; border: none;"></iframe>-->
 </div>
 <div style="display: none;">
     <div id="dlg_create_group_batch_block"  ></div>
@@ -122,77 +125,7 @@
 <script type="text/javascript" src="<?=base_url()?>js/manage_trans_reservations_script.js"></script>
 <script>
 // <![CDATA[
-    //By default load lists
-    loadTransactionList(0);
-    var pg=0;
-    
-    function loadTransactionList(pg) 
-    {
-        $(".pagination_top").html("");
-        $(".ttl_trans_listed").html("");
-        $(".re_allot_all_block").css({"padding":"0"});
-        
-        
-        var batch_type = $('.tab_list .selected').attr('id');
-//        var batch_type= ($("#batch_type").val() == "00")?0: $("#batch_type").val();
-        var terrid= ($("#sel_territory").val()=='00')?0:$("#sel_territory").val();
-        var townid=($("#sel_town").val()=='00')?0:$("#sel_town").val();
-        var franchiseid=($("#sel_franchise").val()=='00')?0:$("#sel_franchise").val();
-        var menuid=($("#sel_menu").val()=='00')?0:$("#sel_menu").val();
-        var brandid=($("#sel_brands").val()=='00')?0:$("#sel_brands").val();
-         
-        var date_from= ($("#date_from").val() == '')?0:$("#date_from").val();
-        var date_to= ($("#date_to").val() == '')?0:$("#date_to").val();
-        
-        
-        var limit= $("#limit_filter").val();
-        
-        if(typeof pg != 'undefined')
-            $(".page_num").val=pg;
-        pg = (typeof pg== 'undefined') ? $(".page_num").val() : $(".page_num").val();
-        
-        var showbygrp = ($("#show_by_group").is(":checked"))? 1:0;
-        
-        var batch_group_type=($("#sel_batch_group_type").val()=='00')? 0:$("#sel_batch_group_type").val();
-        
-        var sel_old_new=$("#sel_old_new").val();
-        
-        //alert(batch_type+"/"+date_from+"/"+date_to+"/"+pg);
-        $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>"); 
-        $.post(site_url+'admin/jx_manage_trans_reservations_list/'+batch_type+'/'+date_from+'/'+date_to+'/'+terrid+'/'+townid+'/'+franchiseid+'/'+menuid+'/'+brandid+"/"+showbygrp+"/"+batch_group_type+'/'+sel_old_new+"/"+limit+"/"+pg+"",{},function(rdata) {
-            $("#trans_list_replace_block").html(rdata);
-            
-        });
-    }
-    
-    $(document).ready(function() {
-        //FIRST RUN
-        $( "#date_from").datepicker({
-             changeMonth: true,
-             dateFormat:'yy-mm-dd',
-             numberOfMonths: 1,
-             maxDate:0,
-//             minDate: new Date(reg_date),
-               onClose: function( selectedDate ) {
-                 $( "#date_to" ).datepicker( "option", "minDate", selectedDate ); //selectedDate
-             }
-           });
-        $( "#date_to" ).datepicker({
-            changeMonth: true,
-             dateFormat:'yy-mm-dd',
-//             numberOfMonths: 1,
-             maxDate:0,
-             onClose: function( selectedDate ) {
-               $( "#date_from" ).datepicker( "option", "maxDate", selectedDate );
-             }
-        });
-    });
-    
-    function done(data) { }
-    function fail(xhr,status) { $('#trans_list_replace_block').print("Error: "+xhr.responseText+" "+xhr+" | "+status);}
-    function success(resp) {
-            $('#trans_list_replace_block').html(resp);
-    }
+   
 // ]]>
 </script>
 

@@ -153,12 +153,9 @@ class reservation_model extends Model
     function do_create_batch_by_group_config () {
         $output = '';
         
-        foreach(array("batch_group_name","assigned_menuids","batch_size","assigned_uid") as $i) {
+        foreach(array("batch_group_name","assigned_menuids","batch_size","assigned_uid","territory_id","townid") as $i) {
             $$i=$this->input->post($i);
-            //echo "$batch_group_name, $assigned_menuids, $batch_size,$assigned_uid <br>";
-           // 112,118, 2,37
         }
-        //die();
         $rslt = $this->db->query("select d.menuid,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) from king_transactions tr
                                 join king_orders as o on o.transid=tr.transid
                                 join proforma_invoices as `pi` on pi.order_id = o.id

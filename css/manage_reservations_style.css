@@ -113,9 +113,13 @@ table.datagridsort tbody td { padding: 4px; }
 .danger_link {
     margin: 7px;
 }
+.above_header_block_btns { margin-right: 0px; margin-top: 27px;float: right; float: right; display:block; }
+
 .re_allot_all_block a  { color: #F1EFEE;background:#FF7777; }
-.re_allot_all_block {    float:right;font-weight: bold; padding: 0px;min-width: inherit; border-radius: 3px; margin-top: 20px; }
+.re_allot_all_block {    float:right;font-weight: bold; padding: 0px;min-width: inherit; border-radius: 3px;}
 .re_allot_all_block:hover,.re_allot_all_block a:hover {  background-color: #FA1527 }
+.batch_btn_link {  float: right;}
+.process_by_fran_link { float: right; }
 
 .ttl_trans_listed {float: left; 
 max-width: inherit;
@@ -207,8 +211,6 @@ input[type="submit"] { height: 30px; }
     margin: 2px 2px;
     color: #E0260D;
 }
-.above_header_block_btns { float: right; margin-right: 25px; margin-top: 27px;}
-
 .show_by_group_block {padding: 5px 33px; float: left;}
 .view_all_orders a {
     margin-top: 5px; font-size: 11px;

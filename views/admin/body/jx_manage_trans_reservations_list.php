@@ -1,5 +1,5 @@
 <?php
-$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block=$orderby_cond = $datefilter_msg ='';
+$output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block=$orderby_cond = $datefilter_msg =$msg_generate_pick_list='';
 
  if($s!=0 and $e != 0) {
     $from=strtotime($s);
@@ -10,24 +10,24 @@ $output = $cond = $cond_batch = $inner_loop_cond = $re_allot_all_block=$orderby_
  
 $chk_box_global = '<input type="checkbox" value="" name="pick_all" id="pick_all" title="Select all transactions" />';
 
-$generate_btn_link = '<div class="show_by_group_block"><label for="show_by_group">Process by franchise:</label> <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
-$generate_btn_link .= '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
+$msg_process_by_fran = '<div class="show_by_group_block"><label for="show_by_group">Process by franchise:</label> <input type="checkbox" value="by_group" name="show_by_group" id="show_by_group" '.($showbygrp?"checked":"").' title="Click to Show By Group"/></div>';
+$batch_btn_link .= '<input type="submit" value="Create Group Batch" name="btn_cteate_group_batch" id="btn_cteate_group_batch" title="Click to Create Group Batch"/>';
 
-if($oldest_newest == 'new') 
-    $orderby_cond = ' g.actiontime desc ';
+if($latest == 0)
+    $orderby_cond = ' g.actiontime ASC ';
 else
-    $orderby_cond = ' g.actiontime asc ';
+    $orderby_cond = ' g.actiontime DESC ';
 
-$old_new_msg = '<select name="sel_old_new" id="sel_old_new"><option value="new"  '.($oldest_newest=='new'?"selected":"").'>NEWEST </option><option value="old" '.($oldest_newest=='old'?"selected":"").' >OLDEST</option></select>';
+            //$old_new_msg = '<option value="1" selected>NEWEST </option><option value="0" '.($oldest_newest=='0' ? "selected":"").'>OLDEST</option>';
 
 //$orderby_cond .='g.init';
 
 if( $batch_type == "pending") {
-        $chk_box_global = $generate_btn_link='';
+        $chk_box_global ='';// $generate_btn_link='';
 }
 else {
         if($batch_group_type == 1) {
-            $cond_batch .= ' g.batch_id <> 5000 '; $orderby_cond = 'g.batch_id desc';
+            $cond_batch .= ' g.batch_id <> 5000 '; $orderby_cond = ' g.batch_id desc';
         }
         elseif($batch_group_type == 2) {
             $cond_batch .= ' g.batch_id = 5000 ';
@@ -189,7 +189,7 @@ else
                                         $o_status = ($order_i['status']?"yes":"no");
                                             
                                         $output .= '<tr class="order_status_'.$o_status.'">
-                                            <td style="width:25px">'.++$k.'</td>
+                                            <td style="width:25px">'.++$j.'</td>
                                             <td style="width:50px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['id'].'</a></span></td>
                                             <td style="width:200px"><span class="info_links"><a href="pnh_deal/'.$order_i['itemid'].'" target="_blank">'.$order_i['name'].'</a></span></td>
                                             <td style="width:50px">'.$order_i['quantity'].'</td>
@@ -245,10 +245,9 @@ else
 
             }
     
-        
     //   PAGINATION
-            $this->load->library('pagination');
-            $config['base_url'] = site_url("admin/jx_manage_trans_reservations_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$oldest_newest."/".$limit); 
+            $this->load->library('pagination');//
+            $config['base_url'] = site_url("admin/jx_manage_trans_reservations_list/".$batch_type.'/'.$s.'/'.$e.'/'.$terrid.'/'.$townid.'/'.$franchiseid.'/'.$menuid.'/'.$brandid."/".$showbygrp."/".$batch_group_type."/".$latest."/".$limit); 
             $config['total_rows'] = $total_trans_rows;
             $config['per_page'] = $limit;
             $config['uri_segment'] = 15;
@@ -271,12 +270,13 @@ else
                     $(".pagination_top").html(\''.($trans_pagination).'\');
                     $(".ttl_trans_listed").html("Showing <strong>'.($pg+1).' - '.$endlimit.'</strong> / <strong>'.$total_trans_rows.'</strong> transactions '.$datefilter_msg.'");
                     $(".btn_picklist_block").html(\''.($msg_generate_pick_list).'\');
-                    $(".above_header_block_btns").html(\''.($generate_btn_link).'\');
-                    $(".oldest_newest_sel_block").html(\''.$old_new_msg.'\');
+                    $(".batch_btn_link").html(\''.($batch_btn_link).'\');
+                    $(".process_by_fran_link").html(\''.($msg_process_by_fran).'\');
                     $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
+                    $(".sel_terr_block").html("");
                 </script>';
         }
-        // 
+        // //$("#sel_old_new").html(\''.$old_new_msg.'\');
 }
 echo $output;
 //===========

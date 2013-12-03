@@ -1580,3 +1580,4 @@ select menuid,menuname,product_id,product,location,sum(rqty) as qty from (
                         where e.p_invoice_no='114308' 
                 group by rbs.id  ) as g 
                 group by product_id,location
+

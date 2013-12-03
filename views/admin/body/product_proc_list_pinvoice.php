@@ -9,7 +9,7 @@
 	  {
 	  	.onscreen {width:100%}
 	  }
-          .heading h2 {margin-bottom: 5px;}
+          .heading2 h2 {margin-bottom: 5px;}
           .print_link_block { margin-bottom: 5px;}
           .print_link_block .print_link {font-weight:bold;}
           .tbl_class {font-family:arial;font-size:13px;width: 100%;}
@@ -23,10 +23,10 @@
 			<b>Date :</b> <?=Date('d-m-Y'); ?><br />
 			<b>By :</b> <?php echo $user['username'] ?>
 		</div> 
-		<div class="heading">
+		<div class="heading2">
 			<h2 style="">Product procurement list <?=$this->uri->segment(3)?></h2>	
 		</div>
-                <div class="print_link_block"><a href="javascript:void(0)" class="print_link" onclick="print();">Print</a></div>
+                <div class="print_link_block"><a href="javascript:void(0);" class="print_link" onclick="print();">Print</a></div>
 	</div>
 	<?php
         foreach($prods as $ii=>$product) {
@@ -67,4 +67,3 @@
 	</div> 
 
 </body>
-<?php

@@ -279,13 +279,17 @@ class Reservation extends Voucher {
      * @param type $pg
      * @param type $limit
      */
-    function jx_manage_trans_reservations_list($batch_type,$from=0,$to=0,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$showbygrp=0,$batch_group_type=0,$oldest_newest,$limit=1,$pg=0) {
+    function jx_manage_trans_reservations_list($batch_type,$from=0,$to=0,$terrid=0,$townid=0,$franchiseid=0,$menuid=0,$brandid=0,$showbyfrangrp=0,$batch_group_type=0,$latest=1,$limit=10,$pg=0) 
+    {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
         $this->load->model("reservation_model");
+        
         if($from != 0 and $to !=0) {
                 $s=date("Y-m-d", strtotime($from));
                 $e=date("Y-m-d", strtotime($to));
-                            //die($s.'<br>'.$e);
+        }
+        else {
+            $s=$e=0;
         }
         /*else {
                 $s=date("Y-m-d",strtotime("last month")); 
@@ -294,20 +298,21 @@ class Reservation extends Voucher {
         
         $data['user']=$user;
         $data['batch_type']=$batch_type;
-        $data['pg']=$pg;
-        $data['limit']=$limit;
-        $data['s']=$s;
-        $data['e']=$e;
+        $data['s']= $s;
+        $data['e'] = $e;
         $data['terrid']=$terrid;
         $data['townid']=$townid;
         $data['franchiseid']=$franchiseid;
         $data['menuid']=$menuid;
         $data['brandid']=$brandid;
-        $data['showbygrp']=$showbygrp;
+        $data['showbygrp']=$showbyfrangrp;
         $data['batch_group_type']=$batch_group_type;
-        $data['oldest_newest']=$oldest_newest;
-        
-        if(!$showbygrp)
+        $data['latest']= $latest;
+        $data['limit']=$limit;
+        $data['pg']=$pg;
+//        echo '<pre>';        
+//        print_r($data);        //die();
+        if(!$showbyfrangrp)
             $this->load->view("admin/body/jx_manage_trans_reservations_list",$data);
         else 
             $this->load->view("admin/body/jx_manage_trans_reservations_by_fran",$data);
