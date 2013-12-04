@@ -14,6 +14,7 @@
 	$sub="prod_menu";
 /*
 	$subs=array("prod"=>"Products","selling"=>"Selling","stock"=>"Warehousing","control"=>"Website Control","marketing"=>"Marketing","accounting"=>"Accounting","crm"=>"Customer Relationship","admin"=>"Admin Control");
+	
 	$menu["prod"]=array("menu"=>"Menu","categories"=>"Categories","deals"=>"Deals","brands"=>"Brands","products"=>"Products","freesamples"=>"Free Samples","vendors"=>"Vendors","variants"=>"Variants");
 	$menu["selling"]=array("orders"=>"Orders","offline"=>"Offline Orders","callcenter"=>"callcenter","batch_process"=>"Shipment batch process","pending_batch_process"=>"Pending Shipment batch process","outscan"=>"Outscan Order","courier"=>"Courier");
 	$menu['stock']=array("purchaseorders"=>"View POs","purchaseorder"=>"Purchase Order","po_product"=>"PO Productwise","apply_grn"=>"Update Stock","barcode"=>"Barcode","storage_locs"=>"Storage Locations","rackbins"=>"Rack & Bins");
@@ -148,32 +149,7 @@
 		<a href="<?=site_url("admin/streams")?>"><img src="<?=IMAGES_URL?>storeking_icon_streams.png" style="cursor:pointer;"></a>
 	</div>
 	<script>
-	$(function(){
-		$("#phone_booth form").submit(function(){
-			if(!is_required($(".pb_customer",$(this)).val()))
-			{
-				alert("Please enter Customer number");
-				return false;
-			}
-			if(!is_required($(".pb_agent",$(this)).val()))
-			{
-				alert("Please enter Agent number");
-				return false;
-			}
-			$(".loading",$(this)).show();
-			$.post("<?=site_url("admin/makeacall")?>",$(this).serialize(),function(data){
-				$("#phone_booth .loading").hide();
-				if(data=="0")
-					show_popup("Error in initiating call");
-				else
-				{
-					$("#phone_booth").hide();
-					show_popup("Call Initiated");
-				}
-			});
-			return false;
-		});
-	});
+	
 	</script>
 	
 	
@@ -194,24 +170,24 @@
 			<a href="<?=site_url("admin/dashboard")?>">Dashboard</a>
 		</li>
 	<?php foreach($menu as $id=>$m){?>
-		<li id="<?=$id?>_menu">
-			<a href="<?=site_url("admin/".key($m))?>"><?=$subs[$id]?></a>
-			<ul>
-				<?php foreach($m as $u=>$s){?>
-				<li>
-					<?php if(isset($submenu[$u])){?>
-					<span>&raquo;</span>
-					<ul class="submenu <?=(($u=="pnh_class"||$u=="pnh_reports"||$u=="list_employee"||$u=="pnh_franchises"||$u=="pnh_deals"||$u=="pnh_members"||$u=="pnh_special_margins")?"submenuright":"")?>">
-						<?php foreach($submenu[$u] as $ur=>$sm){?>
-							<li><a href="<?=site_url("admin/$ur")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$sm?></a></li>
-						<?php }?>
-					</ul>
-					<?php }?>
-					<a href="<?=site_url("admin/$u")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$s?></a>
-				</li>
-				<?php }?>
-			</ul>
-		</li>
+            <li id="<?=$id?>_menu">
+                    <a href="<?=site_url("admin/".key($m))?>"><?=$subs[$id]?></a>
+                    <ul>
+                        <?php foreach($m as $u=>$s){?>
+                        <li>
+                            <?php if(isset($submenu[$u])){?>
+                            <span>&raquo;</span>
+                            <ul class="submenu <?=(($u=="pnh_class"||$u=="pnh_reports"||$u=="list_employee"||$u=="pnh_franchises"||$u=="pnh_deals"||$u=="pnh_members"||$u=="pnh_special_margins")?"submenuright":"")?>">
+                                    <?php foreach($submenu[$u] as $ur=>$sm){?>
+                                            <li><a href="<?=site_url("admin/$ur")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$sm?></a></li>
+                                    <?php }?>
+                            </ul>
+                            <?php }?>
+                            <a href="<?=site_url("admin/$u")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$s?></a>
+                        </li>
+                        <?php }?>
+                    </ul>
+            </li>
 	<?php }?>
 		<li class="clear"></li>
 	</ul>
@@ -225,18 +201,13 @@
 </div>
 <style type="text/css">
 .notify_block {     color:white;font-size: 12px;  border-radius: 10px;  }
-
 #searchbox{	color:#aaa;	font-size:14px;	}
  
-
 /* SEARCH FORM */
 #searchformbox {}
 #searchformbox div { color:#eeeeee; }
 #searchformbox div input { font-size:18px; padding:5px; width:294px; }
-#hd #suggestions{ position: absolute;
-margin-left: 0px;
-width: 294px;
-display: none;z-index: 999}
+#hd #suggestions{ position: absolute;margin-left: 0px;width: 294px;display: none;z-index: 999; }
 
 /* SEARCHRESULTS */
 #hd #searchresults { border-width: 0px;
@@ -273,98 +244,7 @@ background: #6B6A6A;}
 </style>
 <script type="text/javascript">
     var userid="<?php echo $user["userid"];?>"; 
-    $(document).ready(function() {
-        $.post(site_url+'admin/jx_get_stream_notifications/'+userid,{},function(rdata){
-            if(rdata>0 && rdata!='')
-                    $(".notify_block").css({"background-color": "brown", "padding":"2px 10px"}).html(rdata);
-            return false;
-        });
-        $(".notify_block").bind("click",function() { var update=1; // print(userid);
-            $.post(site_url+'admin/jx_get_stream_notifications/'+userid+'/'+update,{},function(rdata){
-                if(rdata>0 && rdata!='')
-                    $(".notify_block").css({"background-color": "brown"}).html(rdata); 
-                return false;
-            });
-            return true;
-        });
-        return false;
-    });
     
-$(function(){
-	$("#searchbox").focus(function(){
-		sr=$(this);
-		if(sr.val()=="Search...")
-		{
-			sr.css("color","#000");
-			sr.val("");
-		}
-	});
-	$("#searchbox").blur(function(){
-		sr=$(this);
-		if(sr.val().length==0)
-		{
-			sr.css("color","#aaa");
-			sr.val("Search...");
-		}
-	});
-	$("#searchbox").keypress(function(e){
-		 
-		if(e.which==13)
-		{
-			$("#searchkeyword").val($(this).val());
-			$("#searchform").submit();
-		}
-	});
-	$("#searchtrigh").click(function(){
-		if($("#searchbox").val()=="Search...")
-		{
-			alert("inpput!!!");return;
-		}
-		$("#searchkeyword").val($("#searchbox").val());
-		$("#searchform").submit();
-	});
-
-	var data_request = null;
-
-	$("#searchform").submit(function(){
-		var srch_val = $.trim($("#searchbox").val());
-			$("#searchbox").val(srch_val);
-			$("#searchkeyword").val(srch_val);
-	});
-	
-	
-	$("#suggestions").css({ 'box-shadow' : '#888 5px 10px 10px', // Added when CSS3 is standard
-		'-webkit-box-shadow' : '#888 5px 10px 10px', // Safari
-		'-moz-box-shadow' : '#888 5px 10px 10px'});
-	
-	// Fade out the suggestions box when not active
-	 $("#searchbox").blur(function(){
-	 	$('#suggestions').fadeOut();
-	 }).keyup(function(){
-	 	inputString = $(this).val();
-	 	
-	 	if(inputString.length == 0) {
-			$('#suggestions').fadeOut(); // Hide the suggestions box
-		} else {
-			$('#suggestions').show(); // Show the suggestions box
-			$('#suggestions').html("<p id='searchresults'><span class='category'>Loading...</span></p>");
-			
-			if(data_request)
-				data_request.abort();
-			
-			data_request = $.post(site_url+'/admin/jx_searchbykwd', {kwd: ""+inputString+""}, function(data) { // Do an AJAX call
-				$('#suggestions').html(data); // Fill the suggestions box
-			});
-		}
-	 });
-	 
-	 $('#searchresults .viewall').live('click',function(){
-	 	$("#searchform").submit();
-	 });
-	
-});
- 
-
 </script>
 <?php 
 $menu=$tmenu;

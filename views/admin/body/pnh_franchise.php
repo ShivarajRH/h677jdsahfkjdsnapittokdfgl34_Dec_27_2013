@@ -675,9 +675,9 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 										<option value="old">Old</option>
 									</select>
 									<input
-										type="submit" value="Go">
+										type="submit" value="Go"> &nbsp;<input type="button" class="button-flat-highlight" value="Download" onclick="import_sales_summary(<?php echo $f['franchise_id']?>)" style="width:86px;height:23px;">
 								</form>
-							</div>
+								</div>
 						</div>
 						
 					</div>	
@@ -3026,7 +3026,22 @@ $("#pnh_membersch").dialog({
 			}
 		}
 		});
-		
+
+	function import_sales_summary(fid)
+	{
+		if($("#d_ac_from").val().length==0 || $("#d_ac_to").val().length==0)
+		{
+			alert("Please enter valid from and to date");
+			return false;
+		}
+		else
+		{	
+			frm_date=$('#d_ac_from').val();
+			to_date=$('#d_ac_to').val();
+			location.href = site_url+'/admin/to_download_franstat_exl_format/'+fid+'/'+frm_date+'/'+to_date;
+			return false;
+		}
+	}	
 	</script>
  
 <?php

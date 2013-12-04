@@ -152,9 +152,8 @@ else
                                            </form>';
                                     
                                     $output .= '<br><a class="btn_picklist proceed_link clear" href="javascript:void(0)" onclick="process_picklist_by_fran(this,'.$trans_arr['franchise_id'].')" p_invoice_ids="'.$str_pinv_ids.'">Generate Picklist</a>
-                                          <form action="'.site_url("admin/p_invoice_for_picklist").'" method="post" id="picklist_by_fran_form_'.$trans_arr['franchise_id'].'" target="_blank">
-                                                <input type="hidden" value="'.$str_pinv_ids.'" name="pick_list_trans"/>
-                                                <input type="hidden" value="'.$trans_arr['franchise_id'].'" name="franchise_id"/>
+                                          <form action="">
+                                                <input type="hidden" value="'.$str_pinv_ids.'" name="pick_list_invids" id="picklist_by_fran_all_'.$trans_arr['franchise_id'].'"/>
                                            </form> ';
 
                                     $output .= '</td>

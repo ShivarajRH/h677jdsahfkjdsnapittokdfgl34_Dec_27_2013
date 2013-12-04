@@ -30,7 +30,7 @@
 	$menu["prod"]=array("products"=>"Products","products_group"=>"Products Group","categories"=>"Categories","brands"=>"Brands","prods_bulk_upload"=>"Product bulk upload","products_group_bulk_upload"=>"Products group bulk upload","export_data"=>"Export Data","prod_mrp_update"=>"MRP Update","product_price_changelog"=>"Price Changelog","product_src_changelog"=>"Product Sourceable ChangeLog","list_deals_nsrc_prod"=>"Deals - Products not sourceable");
 	$menu['stock']=array("storage_locs"=>"Storage Locations","rackbins"=>"Rack & Bins","vendors"=>"Vendors","purchaseorders"=>"View POs","purchaseorder"=>"Create PO","apply_grn"=>"Stock Intake","stock_intake_list"=>"Stock Intakes Summary","stock_unavail_report"=>"Stock Unavailability Report","warehouse_summary"=>"Warehouse Summary","unavail_product_ageing_report"=>"Ageing Report");
 	$menu['front']=array("menu"=>"Menu","deals"=>"Deals","manage_trans_reservations"=>"Manage Transaction Reservations","deals_table"=>"Deals table","deals_bulk_upload"=>"Deals Bulk upload","freesamples"=>"Free Samples","variants"=>"Variants","cache_control"=>"Cache Control","activity"=>"Activity","vars"=>"Vars","deal_price_changelog"=>"Price Changelog","partner_deal_prices"=>"Bulk partner deal price update","auto_image_updater"=>"Auto Image updater");
-	$menu["selling"]=array("orders"=>"Orders","order_summary"=>"Order Summary","bulk_cancelorders"=>"Bulk Cancel Orders","partner_orders"=>"Partner Orders","partner_order_import"=>"Partner Order Import","offline"=>"Offline Orders","callcenter"=>"Recent Transaction","sales_analytics_graph"=>'Sales Graph');
+	$menu["selling"]=array("orders"=>"Orders","order_summary"=>"Order Summary","bulk_cancelorders"=>"Bulk Cancel Orders","partner_orders"=>"Partner Orders","partner_order_import"=>"Partner Order Import","uplaod_partner_settelment_details"=>"Upload partner payment","offline"=>"Offline Orders","callcenter"=>"Recent Transaction","sales_analytics_graph"=>'Sales Graph');
 	$menu['shipment']=array("batch_process"=>"Shipment batch process","pending_batch_process"=>"Pending Shipment batch process","manage_trans_reservations"=>"Manage Transaction Reservations",'update_partnerorder_manifesto'=>"Update HS18 Manifesto","outscan/0"=>"Outscan Order" ,"generate_kfile"=>"Generate kfile","print_franlabels"=>"Print Franchise Delivery Labels","pnh_pending_shipments"=>"PNH Manifesto","update_ship_kfile"=>"Update shipment kfile","courier"=>"Courier","pnh_shipment_sms_notify"=>"PNH Shipment SMS Notification","packed_list"=>"Packed Summary","outscan_list"=>"Outscan Summary","pnh_ship_log"=>"Ship Log","pnh_invoice_returns/sit"=>"Invoice return");
 	$menu['crm']=array("support"=>"Customer Support/Tickets","users"=>"Site Users","review"=>"Reviews","callcenter"=>"Recent transactions","stock_checker"=>"Stock Checker");
 	$menu['accounting']=array("vouchers"=>"Vouchers","create_voucher"=>"Create Voucher","pending_pay_grns"=>"Ready for payment","add_bankdetails"=>"Add Bank Details","pending_grns"=>"Unaccounted Stock Intakes","adminusers"=>"Admin Access","roles"=>"User Roles","clients"=>"Corporate Clients","client_orders"=>"Corporate Orders","client_invoices"=>"Corporate Invoices","pending_refunds_list"=>"Pending Refunds","partners"=>"Partners","deals_report"=>"Deals Report","pnh_investor_report"=>"PNH Sales Report","investor_report"=>"Investor Report","pnh_executive_account_log"=>"PNH Executive Paid Log");
@@ -40,7 +40,7 @@
 	
 	$menu['pnh']=array("pnh_franchises"=>"Franchises","pnh_class"=>"Admin","pnh_deals"=>"Deals","list_allmenumargin"=>"Manage Menu Margin","pnh_members"=>"Members","list_employee"=>"Employees","pnh_special_margins"=>"Special Margins","pnh_receiptsbytype/1"=>"Pending Receipts","pnh_receipt_upd_log"=>"Receipts Update Log","pnh_special_margins"=>"Discounts","pnh_reports"=>"Reports","pnh_voucher_book"=>"Manage Voucher Books");
 	$menu['streams']=array("streams"=>"View Streams","stream_create"=>"Create Stream",'streams_manager'=>"Streams Manager");
-	$submenu['list_employee']=array("list_employee"=>"Employees","add_employee"=>"Add Employees","assignment_histroy"=>"Assignment Histroy","roletree_view"=>"Role Tree View","calender"=>"Calender View","manage_routes"=>"Routes","pnh_exsms_log"=>"PNH SMS Log");
+	$submenu['list_employee']=array("list_employee"=>"Employees","add_employee"=>"Add Employees","assignment_histroy"=>"Assignment Histroy","roletree_view"=>"Role Tree View","calender"=>"Calender View","manage_routes"=>"Routes","pnh_exsms_log"=>"PNH SMS Log","employee_exp_incentive_track"=>"Employee Expense and Incentive Tracking");
 	$submenu['add_bankdetails']=array("list_allbanks"=>"Banks");
 	$submenu['products']=array("addproduct"=>"Add Product","products_report"=>"Product report");
 	$submenu['categories']=array("addcat"=>"Add Category");
@@ -50,7 +50,8 @@
 	//$submenu['generate_manifesto']=array("pnh_pending_shipments"=>"Pending shipments for delivery","generate_manifesto"=>"Generate Manifesto","view_manifesto_sent_log"=>"View Driver Sent Log");
 	$submenu['pnh_pending_shipments']=array("outscan/1"=>"Already Packed- Outscan","pnh_pending_shipments"=>"Choose shipments for delivery","view_manifesto_sent_log"=>"Print manifesto ","shipments_transit_log"=>"Shipments Transit log","update_bulk_lrdetails"=>"Bulk Update LR Details","pnh_scan_delivery_akw"=>"Scan delivery acknowledgement");
 	$submenu['courier']=array("towns_courier_priority"=>"Manage Towns Courier Priority");
-	
+	$submenu['uplaod_partner_settelment_details']=array("view_partner_settelment_log"=>"View Settelment Log");
+
 	
 	
 	//$submenu['paflist'] = array("createpaf"=>"Create PAF","paflist"=>"List all PAF");
@@ -63,7 +64,7 @@
 	$submenu['pnh_franchises']=array("pnh_addfranchise"=>"Add franchise","orders_status_summary"=>"Order Status Summary","fr_hyg_anlytcs_report"=>"Franchise Hygenie Analytics ","pnh_quotes"=>"Franchise Requests",'pnh_invoice_returns/sk'=>"Manage Returns","pnh_add_credits"=>"Add Credit","export_pnh_sales_report"=>"Export PNH Franchise Sales","list_activesuperscheme"=>"Super Scheme Log","pnh_franchise_activate_imei"=>"Franchise IMEI Activation","pnh_activation"=>"SMS Alternative Activations");
 	
 	$submenu['menu']=array("addmenu"=>"Add Menu");
-	$submenu['deals']=array("adddeal"=>"Add Deal","pnh_catalogue"=>"Products Catalogue","deal_product_link_update_log"=>"Deal product link updates log");
+	$submenu['deals']=array("adddeal"=>"Add Deal","pnh_catalogue"=>"Products Catalogue","deal_product_link_update_log"=>"Deal product link updates log","deal_img_currection"=>"Deal image currection");
 	
 	$submenu['orders']=array('orders/1'=>'Pending Orders','partial_shipment'=>'Partial Shipment Orders','disabled_but_possible_shipment'=>'Disabled But Possible','product_order_summary'=>'Product Order Summ Last 90 Days');
 	
@@ -170,24 +171,24 @@
 			<a href="<?=site_url("admin/dashboard")?>">Dashboard</a>
 		</li>
 	<?php foreach($menu as $id=>$m){?>
-            <li id="<?=$id?>_menu">
-                    <a href="<?=site_url("admin/".key($m))?>"><?=$subs[$id]?></a>
-                    <ul>
-                        <?php foreach($m as $u=>$s){?>
-                        <li>
-                            <?php if(isset($submenu[$u])){?>
-                            <span>&raquo;</span>
-                            <ul class="submenu <?=(($u=="pnh_class"||$u=="pnh_reports"||$u=="list_employee"||$u=="pnh_franchises"||$u=="pnh_deals"||$u=="pnh_members"||$u=="pnh_special_margins")?"submenuright":"")?>">
-                                    <?php foreach($submenu[$u] as $ur=>$sm){?>
-                                            <li><a href="<?=site_url("admin/$ur")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$sm?></a></li>
-                                    <?php }?>
-                            </ul>
-                            <?php }?>
-                            <a href="<?=site_url("admin/$u")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$s?></a>
-                        </li>
-                        <?php }?>
-                    </ul>
-            </li>
+		<li id="<?=$id?>_menu">
+			<a href="<?=site_url("admin/".key($m))?>"><?=$subs[$id]?></a>
+			<ul>
+				<?php foreach($m as $u=>$s){?>
+				<li>
+					<?php if(isset($submenu[$u])){?>
+					<span>&raquo;</span>
+					<ul class="submenu <?=(($u=="pnh_class"||$u=="pnh_reports"||$u=="list_employee"||$u=="pnh_franchises"||$u=="pnh_deals"||$u=="pnh_members"||$u=="pnh_special_margins")?"submenuright":"")?>">
+						<?php foreach($submenu[$u] as $ur=>$sm){?>
+							<li><a href="<?=site_url("admin/$ur")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$sm?></a></li>
+						<?php }?>
+					</ul>
+					<?php }?>
+					<a href="<?=site_url("admin/$u")?>" <?=$this->uri->segment(2)==$u?"class='selected'":""?>><?=$s?></a>
+				</li>
+				<?php }?>
+			</ul>
+		</li>
 	<?php }?>
 		<li class="clear"></li>
 	</ul>
@@ -201,13 +202,18 @@
 </div>
 <style type="text/css">
 .notify_block {     color:white;font-size: 12px;  border-radius: 10px;  }
+
 #searchbox{	color:#aaa;	font-size:14px;	}
  
+
 /* SEARCH FORM */
 #searchformbox {}
 #searchformbox div { color:#eeeeee; }
 #searchformbox div input { font-size:18px; padding:5px; width:294px; }
-#hd #suggestions{ position: absolute;margin-left: 0px;width: 294px;display: none;z-index: 999; }
+#hd #suggestions{ position: absolute;
+margin-left: 0px;
+width: 294px;
+display: none;z-index: 999}
 
 /* SEARCHRESULTS */
 #hd #searchresults { border-width: 0px;

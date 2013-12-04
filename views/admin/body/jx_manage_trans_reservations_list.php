@@ -78,7 +78,7 @@ else
                     ,ter.territory_name
                     ,twn.town_name
                     ,dl.menuid,m.name as menu_name,bs.name as brand_name
-                    ,sd.batch_id,sd.assigned_userid
+                    ,sd.batch_id
             from king_transactions tr
                     join king_orders o on o.transid=tr.transid
                     join king_dealitems di on di.id=o.itemid
@@ -221,9 +221,9 @@ else
 
                                     }
                                 }
-
+                                
                                 foreach ($arr_pinv_ids as $p_invoice_id ) {
-                                    if($p_invoice_id != '') {
+                                    if($p_invoice_id != '' and $trans_arr['batch_id'] != GLOBAL_BATCH_ID) {
                                         $trans_action_msg .= '<div>
                                                             <a class="proceed_link clear" href="pack_invoice/'.$p_invoice_id.'" target="_blank">Generate invoice</a><br>
                                                             <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$p_invoice_id.'\','.$user['userid'].','.$pg.')" class="">De-Allot</a>

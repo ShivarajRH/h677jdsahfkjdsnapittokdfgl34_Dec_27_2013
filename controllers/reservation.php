@@ -15,13 +15,10 @@ class Reservation extends Voucher {
         
         foreach(array("p_invoice_ids","franchise_id") as $i) 
             $$i=$this->input->post($i);
-            //$result = $this->reservations->do_pack_invoice_by_fran();
-            //$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
+            //$result = $this->reservations->do_pack_invoice_by_fran();$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
             $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
-        // echo '<pre>'; print_r($invoices);echo '</pre>'; die();
-        //$data['batch']=$this->erpm->getbatch($bid);
-        //$data['invoices']=$this->erpm->getbatchinvoices($bid);
-        //$data['bid']=$bid;
+
+        //$data['batch']=$this->erpm->getbatch($bid);$data['invoices']=$this->erpm->getbatchinvoices($bid);$data['bid']=$bid;
         $data['page']="pack_invoice";
         $this->load->view("admin",$data);
     }
@@ -37,8 +34,8 @@ class Reservation extends Voucher {
         $this->load->view("admin",$data);
     }
     
-    function get_franchise_orders($franchise_id,$from=0,$to=0,$batch_type) {
-        $output = '';
+    function jx_get_franchise_orders($franchise_id,$from=0,$to=0,$batch_type) {
+        $output = $picklist_btn_msg= '';
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
         
          if($from!=0 and $to != 0) {
@@ -46,31 +43,31 @@ class Reservation extends Voucher {
          }else {
              $from=$to=0;
          }
-        
-        
         $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,$franchise_id);
-        
-        
+       
         foreach ($arr_trans_set['result'] as $i=>$arr_trans) { $all_trans[$i] = "'".$arr_trans['transid']."'";  }
         $str_all_trans = implode(",",$all_trans);
         
-        $rslt = $this->db->query("select o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id,di.name
+        $rslt = $this->db->query("select DISTINCT o.*,tr.transid,tr.amount,tr.paid,tr.init,tr.is_pnh,tr.franchise_id,di.name
                                 ,o.status,pi.p_invoice_no,o.quantity
                                 ,f.franchise_id,pi.p_invoice_no
+                                ,sd.batch_id
                                 from king_orders o
                                 join king_transactions tr on tr.transid = o.transid and o.status in (0,1) and tr.batch_enabled = 1
                                 join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
                                 left join king_invoice i on o.id = i.order_id and i.invoice_status = 1
-                                left join proforma_invoices `pi` on pi.order_id = o.id and pi.invoice_status = 1 
+                                left join proforma_invoices `pi` on pi.order_id = o.id and pi.invoice_status = 1
+                                left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no 
                                 join king_dealitems di on di.id = o.itemid 
                                 where f.franchise_id = ? $cond and i.id is null and tr.transid in ($str_all_trans)
-                                order by tr.init,di.name ",array($franchise_id,$from,$to))->result_array();
-        
+                                order by tr.init desc",array($franchise_id,$from,$to))->result_array();
+                                            #,di.name
         $output = '<table width="100" class="subdatagrid">
                             <thead>
                             <tr>
                                 <th style="width:25px">#</th>
                                 <th style="width:100px">Trans</th>
+                                <th style="width:100px">Batch ID</th>
                                 <th style="width:100px">Order ID</th>
                                 <th style="width:250px">Order Name</th>
                                 <th style="width:25px"><input type="checkbox" value="" name="pick_all_fran" id="pick_all_fran_'.$franchise_id.'" class="pick_list_trans_grp_fran" title="Select all invoices" onclick="chkall_fran_orders('.$franchise_id.')" />PickList</th>
@@ -78,14 +75,11 @@ class Reservation extends Voucher {
                             </tr>
                             </thead>
                             <tbody>';
-        //echo '<pre>'; print_r($this->db->last_query()); exit;
-        /*<th>Qty</th><th>Stock</th><th>Status</th>$stockinfo = $this->reservations->get_stock_from_orderid($row['id']);
-                 <td>'.$row['quantity'].'</td><td><a href="'.site_url("admin/product/".$stockinfo['product_id']).'" target="_blank">'.$stockinfo['stock'].'</a></td>
-                <td>'.$row['status'].'</td>*/
-        
+        //echo '<pre>'.$this->db->last_query(); die();
         $arr_tmp=array();
         foreach ($rslt as $i=>$row) {
-                $invoice_action = '--';
+                $invoice_action =$batch_id_msg = '--';
+                $batch_id=$row['batch_id'];
                 
                 if(!in_array($row['transid'],$arr_tmp)) {
                     $arr_tmp[]=$row['transid'];
@@ -95,30 +89,33 @@ class Reservation extends Voucher {
                             $invoice_action = '<a href="javascript:void(0);" class="retry_link" onclick="return reserve_stock_for_trans('.$user['userid'].',\''.trim($row['transid']).'\',0);">Re-Allot</a>';
                     }
                     else {
-                            $invoice_action = '<a class="proceed_link clear" href="pack_invoice/'.$row['p_invoice_no'].'" target="_blank">Generate invoice</a>
-                                <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$row['p_invoice_no'].'\','.$user['userid'].',0)" class="">De-Allot</a>';
+                            if($batch_id != GLOBAL_BATCH_ID) {
+                                $invoice_action = '<a class="proceed_link clear" href="pack_invoice/'.$row['p_invoice_no'].'" target="_blank">Generate invoice</a>
+                                    <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$row['p_invoice_no'].'\','.$user['userid'].',0)" class="">De-Allot</a>';
+                                $picklist_btn_msg = '<input type="checkbox" value="'.$row['p_invoice_no'].'" name="chk_pick_list_by_fran[]" id="chk_pick_list_by_fran" class="chk_pick_list_by_fran_'.$franchise_id.'" title="Select this for picklist" />';
+                                
+                            }
                     }
                 }
                 else {
                     
-                    $transid_msg=' --||--';//'<a href="'.site_url('admin/trans/'.$row['transid']).'" target="_blank">'.$row['transid'].'-second</a>';
+                    $transid_msg=' --||--';//'-second</a>';
                 }
-                
+                if(isset($batch_id)) $batch_id_msg = '<a href="'.site_url("admin/batch/".$batch_id).'" target="_blank">B'.$batch_id.'</a>';
                 $output .= '<tr>
                                 <td>'.++$i.'</td>
                                 <td align="center">'.$transid_msg.'</td>
+                                <td align="center">'.$batch_id_msg.'</td>
                                 <td align="center">'.$row['id'].'</td>
                                 <td><span class="info_links"><a href="pnh_deal/'.$row['itemid'].'" target="_blank">'.$row['name'].'</a></span></td>
-                                <td align="center">
-                                    <input type="checkbox" value="'.$row['p_invoice_no'].'" name="chk_pick_list_by_fran[]" id="chk_pick_list_by_fran" class="chk_pick_list_by_fran_'.$franchise_id.'" title="Select this for picklist" />
-                                </td>
+                                <td align="center">'.$picklist_btn_msg.'</td>
                                 <td align="center">'.$invoice_action.'</td>
                          </tr>';
         }
         $output .= '</tbody></table>';
         echo $output;
-        
     }
+
     /**
      * creates a new batch by select menuids,batch_size
      */
@@ -132,18 +129,18 @@ class Reservation extends Voucher {
      */
     function jx_suggest_menus_groupid($batchgroupid) {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);$output=array();
-        $rslt = $this->db->query("select assigned_menuid,batch_size,assigned_uid from m_batch_config where id=?",$batchgroupid)->row_array();
+        $rslt = $this->db->query("select assigned_menuid,batch_size,group_assigned_uid from m_batch_config where id=?",$batchgroupid)->row_array();
         if(count($rslt)>0) {
             $output['status'] = 'success';
             $output['assigned_menuid'] = $rslt['assigned_menuid'];
             $output['batch_size'] = $rslt['batch_size'];
                 $arr =array();
-                $arr_uids = explode(",",$rslt['assigned_uid']);
+                $arr_uids = explode(",",$rslt['group_assigned_uid']);
                 foreach($arr_uids as $i=>$userid) {
                     $arr[$i]["userid"] = $userid;
                     $arr[$i]["username"] = $this->db->query("select username from king_admin where id=?",$userid)->row()->username;
                 }
-            $output['assigned_uid'] = json_encode($arr);
+            $output['group_assigned_uid'] = json_encode($arr);
         }
         else {
             $output['status'] = 'fail';
@@ -291,10 +288,7 @@ class Reservation extends Voucher {
         else {
             $s=$e=0;
         }
-        /*else {
-                $s=date("Y-m-d",strtotime("last month")); 
-                $e=date("Y-m-d",strtotime("today"));
-        }*/
+        /*else {                $s=date("Y-m-d",strtotime("last month"));                 $e=date("Y-m-d",strtotime("today"));        }*/
         
         $data['user']=$user;
         $data['batch_type']=$batch_type;
@@ -310,8 +304,7 @@ class Reservation extends Voucher {
         $data['latest']= $latest;
         $data['limit']=$limit;
         $data['pg']=$pg;
-//        echo '<pre>';        
-//        print_r($data);        //die();
+//        echo '<pre>';    print_r($data);        //die();
         if(!$showbyfrangrp)
             $this->load->view("admin/body/jx_manage_trans_reservations_list",$data);
         else 

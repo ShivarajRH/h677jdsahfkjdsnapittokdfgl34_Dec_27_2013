@@ -123,7 +123,7 @@ function calc_vvalue()
 			else
 				price=price-sdiscount;
 				
-				alert(dp_price);
+				
 					
 		}else
 		{

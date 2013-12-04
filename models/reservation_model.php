@@ -120,10 +120,8 @@ class reservation_model extends Model
                             from king_orders o
                             join king_transactions tr on tr.transid=o.transid
                             left join king_invoice i on i.order_id = o.id and i.invoice_status = 1 
-                            
                             left join proforma_invoices pi on pi.order_id = o.id and o.transid  = pi.transid and pi.invoice_status = 1 
                             left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no 
-                            
                             where o.status in (0,1)  and i.id is null and tr.franchise_id != 0 $cond and ((sd.packed=0 and sd.p_invoice_no > 0) or (sd.p_invoice_no is null and sd.packed is null ))
                             group by o.transid,o.status
                     ) as g 
@@ -153,16 +151,20 @@ class reservation_model extends Model
     function do_create_batch_by_group_config () {
         $output = '';
         
-        foreach(array("batch_group_name","assigned_menuids","batch_size","assigned_uid","territory_id","townid") as $i) {
+        foreach(array("batch_group_id","assigned_menuids","batch_size","assigned_uid","territory_id","townid") as $i) {
             $$i=$this->input->post($i);
+            //echo $i.'=>'.$$i."<br>";
         }
+        //die();
+        $global_batch_id=GLOBAL_BATCH_ID;
+        
         $rslt = $this->db->query("select d.menuid,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) from king_transactions tr
                                 join king_orders as o on o.transid=tr.transid
-                                join proforma_invoices as `pi` on pi.order_id = o.id
+                                join proforma_invoices as `pi` on pi.order_id = o.id and pi.invoice_status=1
                                 join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
                                 join king_dealitems dl on dl.id = o.itemid
                                 join king_deals d on d.dealid = dl.dealid  and d.menuid in (?)
-                                where sd.batch_id=5000
+                                where sd.batch_id=$global_batch_id
                                 order by tr.init asc
                                 limit 0,$batch_size",array($assigned_menuids))->result_array();
         
@@ -171,12 +173,13 @@ class reservation_model extends Model
         
         if($ttl_inbatch>0) {
             
-            $this->db->query("insert into shipment_batch_process(num_orders,batch_remarks,created_on) values(?,?,?)",array($ttl_inbatch,$batch_remarks,date('Y-m-d H:i:s')));
+            $this->db->query("insert into shipment_batch_process(num_orders,assigned_userid,territory_id,batch_configid,batch_remarks,created_on) values(?,?,?,?,?,?)"
+                    ,array($ttl_inbatch,$assigned_uid,$territory_id,$batch_configid,$batch_remarks,date('Y-m-d H:i:s') ));
             $batch_id = $this->db->insert_id();
-        
+
             foreach ($rslt as $row) {
                 
-                $arr_set = array("batch_id"=>$batch_id,"assigned_userid"=>$assigned_uid);
+                $arr_set = array("batch_id"=>$batch_id);
                 $arr_where =array("id"=>$row['id']);
                 
                 $this->db->update("shipment_batch_process_invoice_link",$arr_set,$arr_where);
@@ -239,24 +242,6 @@ class reservation_model extends Model
                 $fr_reg_level = 'Experienced';
         }
         return array("f_level"=>$fr_reg_level,"f_color"=>$fr_reg_level_color);
-    }
-    
-    /**
-     * function to check if transaction is fully invoiced or not 
-     * @param type $transid
-     * @return boolean 
-     */
-    function is_transaction_invoiced($transid) 
-    {
-        $rslt = $this->db->query("select a.id,b.invoice_no 
-                            from king_orders a 
-                            left join king_invoice b on a.id = b.order_id and invoice_status = 1 
-                            where a.transid = ? and b.id is null 
-                            group by a.id ",$transid);
-        
-        // if resultset has atleast one record then pending orders for invoice is available 
-        // else all orders in transactions are invoiced 
-        return (($rslt->num_rows()>0)?false:true);
     }
     
     

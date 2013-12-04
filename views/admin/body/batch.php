@@ -52,9 +52,12 @@
 					
 		
 		$trans_ids = array();
-		if(empty($inv['transid'])) $inv['transid']=$inv['pi_transid'];
+		if(empty($inv['transid'])) 
+			$inv['transid']=$inv['pi_transid'];
 		foreach($invoices as $inv)
 		{
+			if(empty($inv['transid'])) 
+				$inv['transid']=$inv['pi_transid'];
 			array_push($trans_ids,"'".$inv['transid']."'");
 		}
 	?>
@@ -79,7 +82,14 @@
 				join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
 				where batch_id=? and invoice_status = 1 and invoice_no = 0 ",$batch['batch_id'])->row()->t;?></b>
 		</div>
-		
+		<?php
+			if($this->db->query("select count(distinct p.p_invoice_no) as t from proforma_invoices p
+				join shipment_batch_process_invoice_link s on s.p_invoice_no = p.p_invoice_no 
+				where batch_id=? and invoice_status = 1 and invoice_no = 0 ",$batch['batch_id'])->row()->t == 0)
+				{
+					$this->db->query("update shipment_batch_process set status = 2 where batch_id = ? and status != 2 limit 1",$batch['batch_id']);
+				}
+		?>
 	</div>
 	
 	<?php if($is_pnh) { ?>

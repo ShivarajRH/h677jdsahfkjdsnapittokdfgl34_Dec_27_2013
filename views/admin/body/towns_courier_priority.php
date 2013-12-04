@@ -15,7 +15,6 @@ h2 {    width: 60%;    float: left; }
 .delivery_type span{ font-size: 11px;}
 .delivery_type input[type="radio"] { width: 11px;padding-top: 10px;margin: 2px 3px 0 2px;}
 .clear { clear: both; }
-.dia_fran_list,.dia_fran_list a { white-space:nowrap;margin-bottom:3px;margin-right:3px;padding:3px;background:#757D92;color:#fff;cursor:pointer; }
 </style>
 <div class="container">
     <h2>Manage Towns Courier Priority</h2>

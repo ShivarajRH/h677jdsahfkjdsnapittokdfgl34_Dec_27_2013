@@ -1,3 +1,6 @@
+<?php
+	$user = $this->erpm->auth(); 
+?>
 <div class="container">
 <h2>Purchase Order : <?=$po['po_id']?></h2>
 <table class="datagrid" style="float:left">
@@ -17,7 +20,7 @@
 </td>
 </form>
 <?php }else{?>
-<td><?php echo format_datetime_ts($po['date_of_delivery']);?></td>
+<td><?php echo format_datetime($po['date_of_delivery']);?></td>
 <?php }?>
 </tr>
 <!--  <td style="font-weight:bold;<?php echo (strtotime($po['date_of_delivery']) < time())?'color:#cd0000;':'' ?> "><?=date("d/m/Y g:ia",strtotime($po['date_of_delivery']))?></td>-->
@@ -34,29 +37,6 @@ switch($po['po_status']){
 }
 
 ?></td></tr>
-<tr>
-<?php 
-
-function dateDiff($start, $end) {
-
-$start_ts = strtotime($start);
-$end_ts = strtotime($end);
-
-
-$diff = $end_ts - $start_ts; //time returns current time in seconds
- $days=floor($diff/(60*60*24)); //seconds/minute*minutes/hour*hours/day) */ 
-//$days=round($diff / 86400);
-$hours=round(($diff-$days*60*60*24)/(60*60));
-
-return "$days days $hours hours $diff sec remaining";
-
-}
-
-?>
-<td>Delivery TAT</td>
-<!--  <td><?php echo ($po['po_status'] <= 1)?timespan(strtotime($po['date_of_delivery'])):timespan(strtotime($po['date_of_delivery']),strtotime($po['modified_on']))?></td>-->
-<td><?php echo $po['date_of_delivery']?dateDiff($po['created_on'],date('Y-m-d H:i:s',$po['date_of_delivery'])):'NA'?></td>
-</tr>	
 
 <tr>
 <td colspan=2 align="right">
@@ -116,20 +96,21 @@ return "$days days $hours hours $diff sec remaining";
 
 <div style="padding:20px 0px;">
 <h4>Products in PO</h4>
-<table class="datagrid">
+
+<table id="po_prod_list" class="datagrid nofooter">
 <thead>
 <tr>
 <th>Sno</th>
 <th>Product</th>
 <th>Order Qty</th>
 <th>Received Qty</th>
-<th>MRP</th>
-<th>DP Price</th>
-<th>Margin</th>
-<th>Scheme Discount</th>
-<th>Purchase Price</th>
-<th>FOC</th>
-<th>Has Offer</th>
+<th class="hideinprint">MRP</th>
+<th class="hideinprint">DP Price</th>
+<th class="hideinprint">Margin</th>
+<th class="hideinprint">Scheme Discount</th>
+<th class="hideinprint">Purchase Price</th>
+<th class="hideinprint">FOC</th>
+<th class="hideinprint">Has Offer</th>
 <th>Note</th>
 </tr>
 </thead>
@@ -140,16 +121,23 @@ return "$days days $hours hours $diff sec remaining";
 <td><a href="<?=site_url("admin/product/{$i['product_id']}")?>"><?=$i['product_name']?></a></td>
 <td><?=$i['order_qty']?></td>
 <td><?=$i['received_qty']?></td>
-<td><?=$i['mrp']?></td>
-<td><?=$i['dp_price']?></td>
-<td><?=$i['margin']?>%</td>
-<td><?=$i['scheme_discount_value']?></td>
-<td><?=$i['purchase_price']?></td>
-<td><?=$i['is_foc']?"YES":"NO"?></td>
-<td><?=$i['has_offer']?"YES":"NO"?></td>
+<td class="hideinprint"><?=$i['mrp']?></td>
+<td class="hideinprint"><?=$i['dp_price']?></td>
+<td class="hideinprint"><?=$i['margin']?>%</td>
+<td class="hideinprint"><?=$i['scheme_discount_value']?></td>
+<td class="hideinprint"><?=$i['purchase_price']?></td>
+<td class="hideinprint"><?=$i['is_foc']?"YES":"NO"?></td>
+<td class="hideinprint"><?=$i['has_offer']?"YES":"NO"?></td>
 <td><?=$i['special_note']?></td>
 </tr>
 <?php }?>
+
+	<tr class="hideinprint">
+		<td colspan="13" style="text-align: right">
+			<a href="javascript:void(0)" onclick="print_podoc()">Print Document</a>
+		</td>
+	</tr>
+
 </tbody>
 </table>
 </div>
@@ -157,9 +145,28 @@ return "$days days $hours hours $diff sec remaining";
 </div>
 
 <script>
+/*var button = $('<input type="button" value="save" id="po_deliverydate_button">');
+$('#po_deliverydate_button').after(button);
+if("#po_deliverydate_button").click(function(){
+	var value = $(this).prev().val();
+	 save(value);
+});*/
+
+
+
+function print_podoc()
+{
+	var html = '<div><style> body{font-size:12px;font-family:arial;} .hideinprint{display:none}</style> <h2 align="center">PO Product List</h2> <div> <b style="float:right">Printed By : <?php echo $user['username'];?> <br> Printed On : <?php echo format_datetime_ts(time());?>  </b> <b style="font-size:14px;">PO: #<?=$po['po_id']?></b> </div><table cellpadding=5 cellspacing=0 border=1 width="100%" style="font-size:12px;font-family:arial;">'+$('#po_prod_list').html()+'</table></div>';
+		prw=window.open("",'');
+		prw.document.write(html);
+		prw.focus();
+		prw.print();
+}
+
 
 $("#po_deliverydate").datetimepicker({
-	timeFormat: "hh:mm tt"
+.	timeFormat: "hh:mm tt",
+	dateFormat: "D MM d, yy"
 });
 function closepo()
 {

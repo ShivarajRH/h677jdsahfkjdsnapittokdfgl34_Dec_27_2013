@@ -1,5 +1,7 @@
 <?php 
 include APPPATH.'/controllers/stream.php';
+require_once 'Classes/PHPExcel.php';
+include 'Classes/PHPExcel/Writer/Excel2007.php';
 class Erp extends Stream
 {
 	public $user_access=array();
@@ -464,10 +466,14 @@ class Erp extends Stream
 		
 			$user=$this->auth(PURCHASE_ORDER_ROLE);
 			if($_POST)
-			$expected_podeliverydate=strtotime($this->input->post('po_deliverydate'));
+			$expected_podeliverydate=$this->input->post('po_deliverydate');
+			$datetime = DateTime::createFromFormat("D F d, Y H:i a", $expected_podeliverydate);
+			$expected_podeliverydate=$datetime->format("Y-m-d H:i:s");
+			
 			$this->db->query("update t_po_info set date_of_delivery=? where po_id=?",array($expected_podeliverydate,$poid));
 			redirect("admin/viewpo/$poid");
 	}
+	
 	function assignadmintoticket($tid,$admin)
 	{
 		$user=$this->auth(CALLCENTER_ROLE);
@@ -718,49 +724,60 @@ class Erp extends Stream
 		$v_cond = $v_join_cond = '';
 		if($vid)
 		{
-			$v_join_cond = ' join m_vendor_brand_link vb on vb.brand_id = a.brand_id and vendor_id = '.$vid;
-			$v_cond = ' and vendor_id = '.$vid;
+			$v_join_cond = ' join m_vendor_brand_link vb on vb.brand_id = a.brand_id and vb.vendor_id = '.$vid;
+			$v_cond = ' and vb.vendor_id = '.$vid;
 		}
 				
 		
-		$sql = "(	select distinct a.product_id as id,product_name as product,a.mrp,a.is_sourceable as src,ifnull(sum(s.available_qty),0) as stock,0 as orders,0 as margin,0 as otime,0 as pen_ord_qty
-						from m_product_deal_link d
-						join m_product_info a on d.product_id = a.product_id 
-						$v_join_cond 
-						left join t_stock_info s on s.product_id = a.product_id 
-						where a.brand_id=$bid 
-					group by d.id 
-				)
-				union 
-				(
-					select distinct a.product_id as id,product_name as product,a.mrp,a.is_sourceable as src,0,ifnull(sum(o.quantity*d.qty),0) as orders,0 as margin,o.time as otime,0 as pen_ord_qty
-						from m_product_deal_link d
-						join m_product_info a on d.product_id = a.product_id 
-						$v_join_cond 
-						left join king_orders o on o.itemid = d.itemid and o.time > (unix_timestamp()-(24*90*60*60))  
-						where a.brand_id=$bid 
-					group by d.id 
-				)
-				union 
-				(
-					select distinct a.product_id as id,product_name as product,a.mrp,a.is_sourceable as src,0,0,0 as margin,o.time as otime,sum(o.quantity*d.qty) as pen_ord_qty
-						from m_product_deal_link d
-						join m_product_info a on d.product_id = a.product_id 
-						$v_join_cond 
-						join king_orders o on o.itemid = d.itemid   
-						where a.brand_id=$bid and o.status = 0 
-					group by a.product_id   
-				)
-				union 
-				(
-					select distinct a.product_id as id,product_name as product,a.mrp,a.is_sourceable as src,0,0,brand_margin as margin,0 as otime,0 as pen_ord_qty
-						from m_product_info a
-						join m_vendor_brand_link vb on vb.brand_id = a.brand_id  
-						where a.brand_id=$bid $v_cond group by a.product_id 
-						order by brand_margin asc
-				)
-				order by otime desc,orders desc,product asc   
-				";
+			$sql = "(SELECT DISTINCT a.product_id AS id,product_name AS product,a.mrp,a.is_sourceable AS src,IFNULL(SUM(s.available_qty),0) AS stock,0 AS orders,0 AS margin,0 AS otime,0 AS pen_ord_qty,0 AS order_qty 
+					FROM m_product_deal_link d
+					JOIN m_product_info a ON d.product_id = a.product_id 
+					$v_join_cond
+					LEFT JOIN t_stock_info s ON s.product_id = a.product_id 
+					WHERE a.brand_id=$bid 
+					GROUP BY d.id 
+					)
+					UNION 
+					(
+					SELECT DISTINCT a.product_id AS id,product_name AS product,a.mrp,a.is_sourceable AS src,0,IFNULL(SUM(o.quantity*d.qty),0) AS orders,0 AS margin,o.time AS otime,0 AS pen_ord_qty,0 AS order_qty 
+					FROM m_product_deal_link d
+					JOIN m_product_info a ON d.product_id = a.product_id 
+					$v_join_cond
+					LEFT JOIN king_orders o ON o.itemid = d.itemid AND o.time > (UNIX_TIMESTAMP()-(24*90*60*60))  
+					WHERE a.brand_id=$bid 
+					GROUP BY d.id 
+					)
+					UNION 
+					(
+					SELECT DISTINCT a.product_id AS id,product_name AS product,a.mrp,a.is_sourceable AS src,0,0,0 AS margin,o.time AS otime,SUM(o.quantity*d.qty) AS pen_ord_qty,0 AS order_qty 
+					FROM m_product_deal_link d
+					JOIN m_product_info a ON d.product_id = a.product_id 
+					$v_join_cond 
+					JOIN king_orders o ON o.itemid = d.itemid   
+					WHERE a.brand_id=$bid AND o.status = 0 
+					GROUP BY a.product_id   
+					)
+					UNION 
+					(
+					SELECT DISTINCT a.product_id AS id,product_name AS product,a.mrp,a.is_sourceable AS src,0,0,brand_margin AS margin,0 AS otime,0 AS pen_ord_qty,0 AS order_qty 
+					FROM m_product_info a
+					$v_join_cond
+					WHERE a.brand_id=$bid  AND vb.vendor_id = 6 GROUP BY a.product_id 
+					ORDER BY brand_margin ASC
+					)
+					UNION
+					(
+					SELECT DISTINCT a.product_id AS id,product_name AS product,a.mrp,a.is_sourceable AS src,0,0,brand_margin AS margin,0 AS otime,0 AS pen_ord_qty,p.order_qty AS order_qty
+					FROM m_product_info a
+					JOIN t_po_product_link p ON p.product_id=a.product_id
+					JOIN t_po_info i ON i.po_id=p.po_id
+					JOIN m_vendor_brand_link vb ON vb.brand_id = a.brand_id
+					WHERE a.brand_id=$bid AND po_status<2 $v_cond GROUP BY i.po_id 
+					ORDER BY brand_margin ASC
+					)
+					ORDER BY otime DESC,orders DESC,product ASC  
+							";
+		
 		$res = $this->db->query($sql);
 		
 		
@@ -779,6 +796,8 @@ class Erp extends Stream
 					$product_list[$row['id']]['orders'] += $row['orders'];
 					$product_list[$row['id']]['margin'] += $row['margin'];
 					$product_list[$row['id']]['pen_ord_qty'] += $row['pen_ord_qty'];
+					$product_list[$row['id']]['order_qty'] += $row['order_qty'];
+					
 				}
 			}
 		}
@@ -908,14 +927,24 @@ class Erp extends Stream
 		$this->load->view("admin",$data);
 	}
 	
-	function purchaseorders($s=false,$e=false)
+	function purchaseorders($s=false,$e=false,$vid=false,$status="0",$pg=0)
 	{
 		$user=$this->auth(PURCHASE_ORDER_ROLE|FINANCE_ROLE);
 		if($s!=false && $e!=false && (strtotime($s)<=0 || strtotime($e)<=0))
 			show_404();
-		$data['pos']=$this->erpm->getpos_date_range($s,$e);
-		if($e)
-			$data['pagetitle']="between $s and $e";
+		
+		if($status == -1)	
+			$status = '';
+			
+		$data['pos']=$this->erpm->getpos_date_range($s,$e,$vid,$status);
+		$data['total_po']=$total_po=$this->erpm->getpos_date_range_total($s,$e,$vid,$status,$pg);
+		
+		$data['pagination']=$this->_prepare_pagination(site_url("admin/purchaseorders/$s/$e/$vid/$status"), $total_po, 50, 7);
+		
+		$data['sdate']=$sdate?$sdate:'';
+		$data['edate']=$edate?$edate:'';
+		$data['vid']=$vid;
+		$data['status']=$status;
 		$data['page']="viewpos";
 		$this->load->view("admin",$data);
 	}
@@ -1213,6 +1242,38 @@ class Erp extends Stream
 		$user=$this->auth();
 		$id=$this->input->post("id");
 		echo json_encode($this->erpm->getproductdetails($id));
+	}
+	
+	function jx_getopenpolistbypid($pid=0)
+	{
+		$this->erpm->auth();
+		
+		$output = array();
+		$output['product_name'] = $this->db->query("select product_name from m_product_info where product_id = ? ",$pid)->row()->product_name;
+	
+		$sql = "select sum(b.order_qty-b.received_qty) as qty 
+					from t_po_info a
+					join t_po_product_link b on a.po_id = b.po_id 
+					where a.po_status = 0 and b.product_id = ? and (b.order_qty-b.received_qty) > 0
+				";
+		$output['ttl_open_qty'] = $this->db->query($sql,$pid)->row()->qty;
+		
+		$sql = "select c.vendor_id,c.vendor_name,b.po_id,(b.order_qty-b.received_qty) as qty,unix_timestamp(a.created_on) as po_date
+						from t_po_info a
+						join t_po_product_link b on a.po_id = b.po_id 
+						join m_vendor_info c on c.vendor_id = a.vendor_id 
+						where a.po_status = 0 and b.product_id = ? and (b.order_qty-b.received_qty) > 0
+					order by po_date
+				";
+		$res = $this->db->query($sql,$pid);
+				
+		$ven_po_list = array();
+		if($res->num_rows())
+			$output['vendor_po_list'] = $res->result_array();	
+		else
+			$output['vendor_po_list'] = array();
+		
+		 echo json_encode($output);
 	}
 	
 	function jx_load_unavail_products()
@@ -1821,7 +1882,7 @@ class Erp extends Stream
                 $output['message'] = 'No towns for territory';
             }
             echo json_encode($output);
-        } 
+        }
         /**
          * Function to fetch all franchise under territory and town
          * @param type $terrid
@@ -3911,14 +3972,30 @@ class Erp extends Stream
 		$this->load->view("admin",$data);
 	}*/
 	
-	function pack_invoice($inv_no="")
+	function pack_invoice($inv_no="",$mlt=0,$fid=0)
 	{
 		$user=$this->auth(INVOICE_PRINT_ROLE);
 		
-		
-		
-		$data['batch_id']=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? and invoice_no is null  ",$inv_no)->row()->batch_id;
-		$data['invoice']=$this->erpm->getinvoiceforpacking($inv_no);
+		//multiple transaction process
+		$data['mlt']=$mlt;
+		$inv_det=array();
+		if($mlt)
+		{
+			$pinv_det=$this->erpm->getbatchinvoices($inv_no,$fid);
+			
+			foreach($pinv_det as $p)
+			{
+				foreach($this->erpm->getinvoiceforpacking($p['p_invoice_no']) as $pdet)
+					array_push($inv_det,$pdet);
+			}
+			$data['invoice']=$inv_det;
+			$data['batch_id']=$inv_no;
+		}else{
+			if(!$this->db->query("select count(*) as ttl from proforma_invoices where p_invoice_no=?",$inv_no)->row()->ttl)
+				show_error("Proforma invoice not found");
+			$data['invoice']=$this->erpm->getinvoiceforpacking($inv_no);
+			//$data['batch_id']=$this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? and invoice_no is null  ",$inv_no)->row()->batch_id;
+		}
 		
 		$is_fran_suspended = @$this->db->query("select ifnull(is_suspended,0) as is_suspended from king_transactions a left join pnh_m_franchise_info b on a.franchise_id = b.franchise_id where a.transid = ? ",$data['invoice']['transid'])->row()->is_suspended;
 		if($is_fran_suspended)
@@ -4158,10 +4235,11 @@ group by g.product_id ");
 	{
 		$user=$this->auth(PRODUCT_MANAGER_ROLE);
 		$data['product']=$this->db->query("select ifnull(sum(s.available_qty),0) as stock,p.*,b.name as brand from m_product_info p left outer join t_stock_info s on s.product_id=p.product_id join king_brands b on b.id=p.brand_id where p.product_id=?",$pid)->row_array();
-		$data['prdct_lst'] = $this->db->query("select * from m_product_info where is_serial_required='1'");
+
+		$data['prdct_lst'] = $this->db->query("select *,concat(product_name,'-',product_id) as product_name from m_product_info where is_serial_required=? and brand_id = ? and product_id != ? order by product_name ",array($p['is_serial_required'],$p['brand_id'],$p['product_id']));
+		
 		$data['page']="viewproduct";
 		$this->load->view("admin",$data);
-		
 	}
 	
 	/*
@@ -5605,7 +5683,7 @@ group by g.product_id ");
 		$fran_crdet = $this->erpm->get_fran_availcreditlimit($fid);
 		$fran['balance'] = $fran_crdet[3];
 		
-                $fran_courier = $this->erpm->get_fran_courier_details($fid);
+        $fran_courier = $this->erpm->get_fran_courier_details($fid);
 		$fran['courier'] = $fran_courier;
 		
 		$fran['total_ord'] = $this->db->query("select count(transid) as t from king_transactions where franchise_id = ? ",$_POST['id'])->row()->t;
@@ -9239,6 +9317,83 @@ group by g.product_id ");
 			die("Invalid voucher details");
 		
 	}
+
+	/*
+	 *  Employee Expense and Incentive Tracking
+	 */
+	
+	function employee_exp_incentive_track()
+	{
+		$user=$this->auth(true);
+		
+		$data['exp_list'] = $this->db->query("select employee_id,name 
+						from m_employee_info a
+						join m_employee_roles b on b.role_id=a.job_title where b.role_id in (2,3,4,6)")->result_array();
+		$data['page']="employee_exp_incentive_tracking";
+		$this->load->view("admin",$data);
+	}
+	
+	function emp_det($tid=false,$role_id=false)
+	{
+		if($tid && $role_id == '0')
+		{
+			
+			$data['exp_list'] = $this->db->query("select a.employee_id,a.name,d.territory_name,b.role_name 
+						from m_employee_info a
+						join m_employee_roles b on b.role_id=a.job_title
+						join m_town_territory_link c on c.employee_id=a.employee_id 
+						join pnh_m_territory_info d on d.id=c.territory_id
+						where d.id='".$tid."' and c.is_active=1 and b.role_id in (2,3,4,6) group by name order by role_id")->result_array();
+		}
+		if($role_id && $tid == '0')
+		{
+			
+			$data['exp_list'] = $this->db->query("select a.employee_id,a.name,b.role_name 
+						from m_employee_info a
+						join m_employee_roles b on b.role_id=a.job_title
+						where b.role_id='".$role_id."' and b.role_id in (2,3,4,6) group by name order by role_id")->result_array();
+		}
+		if($role_id =='0' && $tid == '0')
+		{
+			
+			$data['exp_list'] = $this->db->query("select employee_id,name 
+							from m_employee_info a
+							join m_employee_roles b on b.role_id=a.job_title where b.role_id in (2,3,4,6)")->result_array();
+		}
+		$data['page']="employee_exp_incentive_tracking";
+		$this->load->view("admin",$data);
+	}
+	
+	
+	function add_emp_expense_det()
+	{
+		$empid = $this->input->post('empid');
+		$name = $this->input->post('name');
+		$s = $this->input->post("s_date");
+		$e = $this->input->post("e_date");
+		$exp_clm = $this->input->post('exp_claim');
+		$exp_paid = $this->input->post("exp_paid");
+		$remarks = $this->input->post("remarks");
+		
+		
+		$this->db->query("insert into pnh_t_emp_expenses(emp_id,emp_name,start_date,end_date,expenses_claimed,expenses_paid,remarks,is_active) values ('".$empid."','".$name."','".$s."','".$e."','".$exp_clm."','".$exp_paid."','".$remarks."','1')");
+		$this->session->set_flashdata("erp_pop_info","Expense Updated");
+		redirect("admin/employee_exp_incentive_track");
+	}
+	
+	function add_emp_incentive_det()
+	{
+		$empid = $this->input->post('empid');
+		$name = $this->input->post('name');
+		$amt = $this->input->post('amount');
+		$s = $this->input->post("st_date");
+		$e = $this->input->post("et_date");
+		$remarks = $this->input->post("inc_remarks");
+		
+		$this->db->query("insert into pnh_t_emp_incentives(emp_id,emp_name,start_date,end_date,amount,remarks,is_active) values ('".$empid."','".$name."','".$s."','".$e."','".$amt."','".$remarks."','1')");
+		$this->session->set_flashdata("erp_pop_info","Incentive Updated");
+		redirect("admin/employee_exp_incentive_track");
+	}
 	
 	/*function jx_pnh_getmemvoucherdet()
 	{
@@ -9476,27 +9631,26 @@ group by g.product_id ");
 		$data['prods']=$this->db->query("select p.product_id,p.product_name,l.qty from m_product_deal_link l join m_product_info p on p.product_id=l.product_id where l.itemid=?",$data['deal']['id'])->result_array();
 		$pnh_Deal_upd_log=$this->erpm->get_pnh_deal_update_log($id);
 		
-		$data['ttl_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
+		$data['ttl_fran'] =$this->db->query("select c.franchise_id,franchise_name,sum(a.quantity) as sold_qty,sum((a.i_orgprice-(a.i_discount+a.i_coup_discount))*a.quantity) as ttl_sales_value
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
 										group by b.franchise_id
 										order by franchise_name asc ",$id)->result_array(); 
-		$data['most_sold_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid
+		$data['most_sold_fran'] =$this->db->query("select c.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
 										group by b.franchise_id
 										order by sold_qty desc limit 10 ",$id)->result_array();
-		$data['latest_fran'] =$this->db->query("select b.franchise_id,franchise_name,sum(a.quantity) as sold_qty,b.transid,date(from_unixtime(b.init)) as date
+		$data['latest_fran'] =$this->db->query("select c.franchise_id,franchise_name,a.quantity as sold_qty,b.transid,date_format(from_unixtime(b.init),'%d/%m/%y') as date,month(date(from_unixtime(b.init))) as m
 										from king_orders a
 										join king_transactions b on a.transid = b.transid
 										join pnh_m_franchise_info c on c.franchise_id = b.franchise_id
 										where is_pnh = 1 and itemid =? and a.status != 3 
-										group by b.franchise_id
-										order by init desc limit 10",$id)->result_array();  								
+										order by b.init desc limit 20",$id)->result_array();  								
 		
 		$data['pnh_Deal_upd_log']=$pnh_Deal_upd_log;
 		$data['page']="pnh_deal";
@@ -9507,79 +9661,76 @@ group by g.product_id ");
 	 * Ajax function to load yearly deal sales 
 	 * 
 	 */
-	function jx_deal_getsales($yr="",$itemid="")
+	function jx_deal_getsales($s="",$e="",$itemid="")
 	{
-	   if(!$yr)
-		$yr = date('yr');
-		
-	  $sql = "select month(date(from_unixtime(b.init))) as mn,count(*) as t
-			from king_orders a
-			join king_transactions b on a.transid = b.transid
-			where is_pnh = 1 and itemid = '".$itemid."' and year(date(from_unixtime(b.init))) = '".$yr."' and a.status != 3 
-			group by mn  
-			order by mn asc";
-	 $res = $this->db->query($sql);
-	 $deal_on = array();
-	 $deal_summary = array();
-	 for($i=1;$i<=12;$i++)
-	{
-		
-		$deal_on[$i-1] = date('M Y',strtotime($yr.'-'.(($i<10)?'0'.$i:$i).'-01')); 
-		$deal_summary[$deal_on[$i-1]]=array('ttl'=>0);
-	}
-	
-	
-	if($res->num_rows())
-	{
-		foreach($res->result_array() as $row)
-		{
-			$mn = $row['mn'];
-			$deal_summary[$deal_on[$mn-1]]['ttl'] += $row['t']; 
+	   $date_diff = date_diff_days($e,$s);
+	 
+		 if($date_diff <= 31)	
+		 {
+		   $sql = "select date_format(from_unixtime(b.init),'%d-%m-%Y') as mn,sum(a.quantity) as t
+				from king_orders a
+				join king_transactions b on a.transid = b.transid
+				where is_pnh = 1 and itemid = '".$itemid."' and a.status != 3 and date_format(from_unixtime(b.init),'%Y-%m-%d') between '".$s."' and '".$e."'  
+				group by mn  
+				order by mn asc";
 		}
-	}
-	
-	$deals = array();
-	$deals['ttl'] = array();
-	foreach($deal_summary as $dsale)
-	{
-		array_push($deals['ttl'],$dsale['ttl']);
-	}
-	$output = array();
-	$output['month'] = $deal_on;
-	$output['summary'] = $deals;
-	echo json_encode($output);
-	
+		else
+		{
+			 $sql = "select date_format(from_unixtime(b.init),'%m-%Y') as mn,date(from_unixtime(b.init)) as dt,sum(a.quantity) as t
+				from king_orders a
+				join king_transactions b on a.transid = b.transid
+				where is_pnh = 1 and itemid = '".$itemid."' and a.status != 3 and date_format(from_unixtime(b.init),'%Y-%m-%d') between '".$s."' and '".$e."'  
+				group by mn
+				order by dt asc";
+		}	
+		
+		 $res = $this->db->query($sql);
+		 $deal_summary = array();
+		
+		
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($deal_summary,array($row['mn'],$row[t]*1));
+			}
+		}
+		$output = array();
+		$output['date_diff'] = $date_diff;
+		$output['summary'] = $deal_summary;
+		echo json_encode($output);
+		
 	}
 
 	/*
 	 * Ajax function to load territory,quantity details based on deal
 	 * 
 	 */
-	function jx_deal_getsales_by_territory($itemid="")
+	function jx_deal_getsales_by_territory($itemid="",$state_id="")
 	{
 		
-	  $sql = "select c.territory_id,d.territory_name,sum(a.quantity) as ttl_sold 
+		$sql = "select c.territory_id,d.territory_name,sum(a.quantity) as ttl_sold 
 			from king_orders a
 			join king_transactions b on a.transid = b.transid 
 			join pnh_m_franchise_info c on c.franchise_id = b.franchise_id 
-			join pnh_m_territory_info d on c.territory_id = d.id 
-			where itemid = '".$itemid."' and a.status != 3 
+			join pnh_m_territory_info d on d.id = c.territory_id  
+			join pnh_m_states e on e.state_id=d.state_id
+			where itemid = '".$itemid."' and a.status != 3 and e.state_id='".$state_id."'
 			group by territory_id 
 			order by territory_name";
-	 $res = $this->db->query($sql); 
-	 $deals=array();	
-	
-	if($res->num_rows())
-	{
-		foreach($res->result_array() as $row)
+		 $res = $this->db->query($sql); 
+		 $deals=array();	
+		if($res->num_rows())
 		{
-			array_push($deals,array($row['territory_name'],$row['ttl_sold']*1,$row['territory_id'])); 
+			foreach($res->result_array() as $row)
+			{
+				array_push($deals,array($row['territory_name'],$row['ttl_sold']*1,$row['territory_id'])); 
+			}
 		}
-	}
-	
-	$output = array();
-	$output['result'] = $deals;
-	echo json_encode($output);	
+		
+		$output = array();
+		$output['result'] = $deals;
+		echo json_encode($output);	
 	}
 	
 	/*
@@ -9588,7 +9739,7 @@ group by g.product_id ");
 	 */
 	function jx_deal_getfranchise_by_territory($terr_id="",$itemid="")
 	{
-		$fran =$this->db->query("select b.franchise_name,c.territory_name,c.id,ki.itemid
+		$fran =$this->db->query("select b.franchise_name,b.franchise_id,c.territory_name,c.id,ki.itemid
 		from king_transactions a
 		join king_orders ki on ki.transid = a.transid
 		join pnh_m_franchise_info b on b.franchise_id = a.franchise_id
@@ -9603,11 +9754,9 @@ group by g.product_id ");
 		else
 		{
 			$output['status']="error";
-	
 		}
 		echo json_encode($output);	
 	}
-	
 	
 	function pnh_update_description()
 	{
@@ -14329,7 +14478,7 @@ order by action_date";
 			}
 			$franchise_list = $this->db->query("SELECT franchise_id,franchise_name
 					FROM `pnh_m_franchise_info`
-					WHERE is_suspended=0 and town_id in ($twn_id) ");
+					WHERE is_suspended=0 and town_id in ($twn_id) order by franchise_name ");
 			$output=array();
 			if($franchise_list ->num_rows())
 			{
@@ -19783,17 +19932,20 @@ order by action_date";
 				$tm_mobno=array();
 				$tm_mobno=$tm_info['contact_no'];
 				$tm_mobno=explode(',',$tm_mobno);
-				$grp_msg="Dear $franchise_name ,cheque $cheque_number,for amount Rs.$fran_amount,is bounced and penalty for this is $amount ,arrange for payment immediately.";
+				//$grp_msg="Dear $franchise_name ,cheque $cheque_number,for amount Rs.$fran_amount,is bounced and penalty for this is $amount ,arrange for payment immediately.";
+				
+				//$grp_msg="Dear $franchise_name ,cheque $cheque_number,for amount Rs.$fran_amount,is bounced and penalty for this is $amount ,arrange for payment immediately.";
+				$grp_msg="Dear $franchise_name,cheque $cheque_number,for amount Rs.$fran_amount,is returned un paid by the banker and the penalty for this is Rs.$amount ,arrange for payment immediately to avoid hold up in further supplies.";
 				
 				if($sms && $cancel_status==2)
 				{
-					$this->erpm->pnh_sendsms($login_mobile1,"Dear $franchise_name ,cheque $cheque_number,for amount $fran_amount,is bounced and penalty for this is $amount ,arrange for payment immediately.",$fid,0,$sms_type);
+					$this->erpm->pnh_sendsms($login_mobile1,$grp_msg,$fid,0,$sms_type);
 				}
 				if($tm_sms && $cancel_status==2)
 				{
 					foreach($tm_mobno as $mob_no)
 					{
-						$this->erpm->pnh_sendsms($mob_no,"Dear $franchise_name ,cheque $cheque_number,for amount $fran_amount,is bounced and penalty for this is $amount ,arrange for payment immediately.",$fid,$empid,$sms_type);
+						$this->erpm->pnh_sendsms($mob_no,$grp_msg,$fid,$empid,$sms_type);
 						$this->db->query("insert into pnh_employee_grpsms_log(emp_id,contact_no,type,grp_msg,created_on)values(?,?,?,?,now())",array($empid,$mob_no,$sms_type,$grp_msg));
 					}
 					$this->erpm->flash_msg("Account statement corrected");
@@ -22313,7 +22465,7 @@ die; */
 		if(!$is_shiped)
 			die("<div class='invoice_not_shipped' style='background:purple;'>AWB/Invoice/Order No:{$invoice_no} not Shipped</div>");
 		
-		$is_delivered=$this->db->query("select count(*) as ttl from pnh_invoice_transit_log where invoice_no=? and status in (3,5)",$invoice_no)->row()->ttl;
+				$is_delivered=$this->db->query("select count(*) as ttl from pnh_invoice_transit_log where invoice_no=? and status in (3,5)",$invoice_no)->row()->ttl;
 		
 		if(!$is_delivered)
 			die("<div class='invoice_not_delivered' style='background:orange;'>AWB/Invoice/Order No:{$invoice_no} not Delivered</div>");
@@ -22791,6 +22943,93 @@ die; */
 		$this->erpm->flash_msg("Member Scheme disabled");
 		redirect($_SERVER['HTTP_REFERER']);
 	}
+	/*
+	function jx_load_all_shipped_mobimei($pg=0)
+	{
+		$this->erpm->auth();
+		
+		$fid = $this->input->post('fid');
+		$imei_active_ondate = $this->input->post('active_ondate');
+		$imei_active_endate = $this->input->post('active_ondate_end');
+		$imei_srch_kwd = $this->input->post('imei_srch_kwd');
+		$imei_status = $this->input->post('imei_status');
+		$imei_cre_type=array();
+		$imei_cre_type[0]='Rs';
+		$imei_cre_type[1]='%';
+		
+		$limit=50;
+		$cond = ' ';
+		if($fid)
+			$cond.= 'and t.franchise_id='.$fid;
+		if($imei_srch_kwd)
+				$cond .= '  and ( inv.invoice_no = "'.$imei_srch_kwd.'" or imei_no = "'.$imei_srch_kwd.'") ';
+		if($imei_active_ondate && $imei_active_endate)
+			$cond .= ' and (date(imei_activated_on) >= date("'.$imei_active_ondate.'") and date(imei_activated_on) <= date("'.$imei_active_endate.'"))';
+
+		if($imei_status>=1)
+		{
+			if($imei_status == 1 )
+				$cond .= ' and i.is_imei_activated=0';
+			else 
+				$cond .= ' and i.is_imei_activated=1';
+		}
+			
+		
+		$output=array();
+		$total_rows="SELECT count(distinct i.id) as ttl
+						FROM t_imei_no i 
+								Join king_orders o on o.id = i.order_id 
+								JOIN king_transactions t ON t.transid=o.transid
+								JOIN m_product_deal_link p ON p.itemid=o.itemid
+								JOIN m_product_info l ON l.product_id=p.product_id
+								JOIN king_invoice inv ON inv.order_id=o.id and inv.invoice_status = 1 
+								JOIN imei_m_scheme r ON r.id=o.imei_scheme_id
+								left join pnh_member_info b on b.pnh_member_id=i.activated_member_id 
+								left join t_invoice_credit_notes tcr on tcr.invoice_no = inv.invoice_no 
+								JOIN shipment_batch_process_invoice_link bi ON bi.invoice_no = inv.invoice_no 
+						WHERE o.status in (1,2) and o.imei_scheme_id > 0 $cond 
+						ORDER BY l.product_name ASC";
+		$ttl_count=$this->db->query($total_rows)->row()->ttl;
+		$output['total']=$ttl_count;
+		
+		$shipped_imei_fr_res=$this->db->query("SELECT o.imei_reimbursement_value_perunit as imei_activation_credit,i.is_imei_activated,imei_activated_on,imei_no,p.product_id,date_format(from_unixtime(o.time),'%d %M %Y') as orderd_on,l.product_name,o.quantity,o.imei_reimbursement_value_perunit,o.id,inv.invoice_no,t.paid,r.scheme_type,r.credit_value,b.pnh_member_id
+								FROM t_imei_no i 
+								Join king_orders o on o.id = i.order_id 
+								JOIN king_transactions t ON t.transid=o.transid
+								JOIN m_product_deal_link p ON p.itemid=o.itemid
+								JOIN m_product_info l ON l.product_id=p.product_id
+								JOIN king_invoice inv ON inv.order_id=o.id and inv.invoice_status = 1 
+								JOIN imei_m_scheme r ON r.id=o.imei_scheme_id
+								left join pnh_member_info b on b.pnh_member_id=i.activated_member_id 
+								left join t_invoice_credit_notes tcr on tcr.invoice_no = inv.invoice_no 
+								JOIN shipment_batch_process_invoice_link bi ON bi.invoice_no = inv.invoice_no 
+								WHERE o.status in (1,2) and o.imei_scheme_id > 0 $cond
+								GROUP BY i.id
+								ORDER BY l.product_name ASC limit $pg,$limit");
+		
+		if($shipped_imei_fr_res->num_rows())
+		{
+			$output['status']='success';
+			$output['ship_imei_det']=$shipped_imei_fr_res->result_array();
+			$output['imei_cre_type']=$imei_cre_type;
+			$this->load->library('pagination');
+			
+			$config['base_url'] = site_url('admin/jx_load_all_shipped_mobimei');
+			$config['total_rows'] = $ttl_count;
+			$config['per_page'] = $limit;
+			$config['uri_segment'] = 3;
+				
+			$this->config->set_item('enable_query_strings',false);
+			$this->pagination->initialize($config);
+			$output['shipped_imeilist_pagi'] = $this->pagination->create_links();
+			$this->config->set_item('enable_query_strings',true);
+		}else 
+		{
+			$output['ship_imei_det']=array();
+			$output['status']='success';
+		}
+			echo json_encode($output);
+	}*/
 
 	/**
 	 * function to check member id / mobileno for imeino activation 
@@ -23506,13 +23745,13 @@ die; */
 	/**
 	 * function for manage the franchise receipts
 	 */
-	function jx_pnh_franchise_reports($fid,$type,$pg=0)
+	function jx_pnh_franchise_reports($fid,$type,$limit=10,$pg=0)
 	{
 		$this->erpm->auth();
 		$output=array();
 		$data['type']=$type;
 		$output['type']=$type;
-		$limit=10;
+		
 		$total_records=0;
 	
 		if($type=='pending')
@@ -23618,7 +23857,7 @@ die; */
 		}
 	
 		$data['total_records']=$total_records;
-		$data['pagination']=$this->_prepare_pagination("admin/jx_pnh_franchise_reports/$fid/$type",$total_records,$limit,5);
+		$data['pagination']=$this->_prepare_pagination("admin/jx_pnh_franchise_reports/$fid/$type/$limit",$total_records,$limit,6);
 		$output['page']=$this->load->view('admin/body/jx_pnh_franchise_receipts',$data,true);
 	
 		echo json_encode($output);
@@ -23654,7 +23893,7 @@ die; */
 								join king_transactions c on b.transid = c.transid 
 								join pnh_m_franchise_info d on d.franchise_id = c.franchise_id 
 								join king_dealitems e on e.id = b.itemid 
-								join king_invoice f on f.order_id = a.order_id  
+								join king_invoice f on f.order_id = a.order_id 
 								join m_product_info g on g.product_id = a.product_id  
 								where a.imei_no = ? ";
 								
@@ -23968,7 +24207,7 @@ die; */
 			$output['status']='error';
 
 		}
-	echo json_encode($output);		
+		echo json_encode($output);		
 		
 	}
 
@@ -24342,7 +24581,7 @@ die; */
 			}
 		}else
 		{
-			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($imei));	//$p_invno,$orderid,
+			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($p_invno,$orderid,$imei));	
 		}
 		
 		$output=array();
@@ -24829,5 +25068,210 @@ die; */
         $data['page']='towns_courier_priority';
         $this->load->view("admin",$data);
     }
+	//--------sit image currection-------------
+	function deal_img_currection($cat_id=0,$brand_id=0,$pg=0)
+	{
+		$this->erpm->auth();
+		$limit=10;
+		$ttl_data=0;
+		$cond='';
+		$param=array();
+		
+		if($cat_id && $brand_id)
+		{
+			$cond=" and a.catid =? and a.brandid=?";
+			$param[]=$cat_id;
+			$param[]=$brand_id;
+		}
+		
+		$sql="select i.name as deal_name,i.favs,m.name as menu,i.slots,a.dealtype,a.tagline,a.dealid,a.catid,a.brandid,a.startdate,a.enddate,a.pic,a.publish,b.name 
+					from king_deals as a 
+					join king_categories as b on b.id=a.catid 
+					join king_menu as m on m.id=a.menuid 
+					join king_dealitems as i on i.dealid=a.dealid
+				where i.is_pnh=0 ".$cond;
+		$sql.=" order by i.created_on desc";
+		$ttl_data=$this->db->query($sql,$param)->num_rows();
+		$sql.=" limit $pg,$limit";
+		
+		$data["deals_list"]=$this->db->query($sql,$param)->result_array();
+		$data["pagination"] = $this->_prepare_pagination(site_url("admin/deal_img_currection/".$cat_id."/".$brand_id),$ttl_data,$limit,5);
+		$data['ttl_data']=$ttl_data;
+		$data['page']='deal_img_currection';
+		$this->load->view("admin",$data);
+	}
+	
+	
+	function image_currection_process()
+	{
+		$this->erpm->auth();
+		if(!$_POST)	
+			die();
+		$dealid=$this->input->post("deal_id");
+		$imgname = randomChars ( 15 );
+		
+		if (isset ( $_FILES ['pic'] ) && $_FILES ['pic'] ['error'] == 0)
+		{
+			$this->load->library("thumbnail");
+			$img=$_FILES['pic']['tmp_name'];
+			
+			if($this->thumbnail->check($img))
+			{
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/300/$imgname.jpg","width"=>300));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/small/$imgname.jpg","width"=>200));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/thumbs/$imgname.jpg","width"=>50,"max_height"=>50));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/$imgname.jpg","width"=>400));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/big/$imgname.jpg","width"=>1000));
+			}
+		}
+		else
+			$imgname=null;
+		
+		if(!$imgname)
+		{
+			show_error("No valid image uploaded");
+		}else
+		{ 
+			$this->db->query("update king_deals set pic=? where dealid=? limit 1",array($imgname,$dealid));
+			echo $this->db->last_query();
+			$this->session->set_flashdata("erp_pop_info","Image updated");
+		}
+		
+		redirect($_SERVER['HTTP_REFERER']);
+	}
+	//--------sit image currection-------------
 
+
+	/**
+	 * function to upload partner settelment details
+	 */
+	function uplaod_partner_settelment_details()
+	{
+		$user=$this->auth(PARTNER_ORDERS_ROLE);
+		if($_FILES)
+			$this->erpm->do_upload_partner_settelment_details();
+		$data['page'] = 'upload_partner_settelment_details';
+		$this->load->view("admin",$data);
+	}
+	
+	function view_partner_settelment_log($partnrid=0,$st_dt=0,$en_dt=0,$pg=0)
+	{
+		$user=$this->auth(PARTNER_ORDERS_ROLE);
+		$pagetitle='';
+		$cond='';
+		if($partnrid!=0)
+			$cond.=' and p.id='.$partnrid;
+		if($st_dt!=0 && $en_dt!=0)
+			$cond.=" and DATE(FROM_UNIXTIME(m.updated_on)) between '$st_dt' and '$en_dt'";
+		$limit=5;
+		$ttl=$this->db->query("SELECT count(*) as ttl FROM m_partner_settelment_details m JOIN king_orders o ON o.id=m.order_id JOIN king_transactions t ON t.transid=o.transid JOIN partner_info p ON p.id=t.partner_id join king_admin a on a.id=m.updated_by ")->row()->ttl;
+		$partners=$this->db->query("SELECT p.id,p.name FROM m_partner_settelment_details m  JOIN king_orders o ON o.id=m.order_id  JOIN king_transactions t ON t.transid=o.transid  JOIN partner_info p ON p.id=t.partner_id  JOIN king_admin a ON a.id=m.updated_by  GROUP BY p.id")->result_array();
+		//$partner_settelment_log=$this->db->query("SELECT m.*,t.transid,t.amount,p.name,a.name as updatedby FROM m_partner_settelment_details m JOIN king_orders o ON o.id=m.order_id JOIN king_transactions t ON t.transid=o.transid JOIN partner_info p ON p.id=t.partner_id join king_admin a on a.id=m.updated_by where 1 $cond GROUP BY o.id ORDER BY m.updated_on DESC limit $pg,$limit");
+		$partner_settelment_log=$this->db->query("SELECT *,p.name AS partner,GROUP_CONCAT(k.orderid) AS orderids,a.name AS updated_by,m.payment_date,m.payment_amount,m.payment_id,SUM(t.amount) as ttl_amt FROM `king_partner_settelment_filedata` k JOIN partner_info p ON p.id=k.partner_id JOIN king_admin a ON a.id=k.processed_by JOIN `m_partner_settelment_details`m ON m.order_id=k.orderid
+				 									JOIN king_orders o ON o.id=k.orderid JOIN king_transactions t ON t.transid=o.transid WHERE 1 $cond GROUP BY payment_uploaded_id");
+									
+		
+		
+		if($partnrid)
+		$pagetitle.=':   ';
+		$pagetitle.= $this->db->query("select name from partner_info where id=$partnrid")->row()->name;
+		
+		$data['pagination']=$this->_prepare_pagination(site_url("admin/view_partner_settelment_log/".$partnrid.'/'.$st_dt.'/'.$en_dt),$ttl,$limit,6);
+		$data['partner_settelment_log']=$partner_settelment_log;
+		$data['ttl']=$ttl;
+		$data['partners']=$partners;
+		$data['partnrid']=$partnrid;
+		$data['page']='view_partner_payment_log';
+		$data['pagetitle']=$pagetitle;
+		$this->load->view('admin',$data);
+		
+	}
+	
+	function jx_get_partner_payment_order_details($uploaded_id)
+	{
+		$output=array();
+		$prtner_paymnt_order_det=$this->db->query("SELECT s.*,o.transid,DATE_FORMAT(FROM_UNIXTIME(o.time),'%d/%m/%Y') AS orderd_on,o.quantity,t.amount FROM `king_partner_settelment_filedata` s  JOIN king_orders o ON o.id=s.orderid JOIN king_transactions t ON t.transid=o.transid WHERE payment_uploaded_id=?",$uploaded_id);
+		if($prtner_paymnt_order_det->num_rows())
+		{
+			$output['status']='success';
+			$output['payment_order_details']=$prtner_paymnt_order_det->result_array();
+		}else 
+		{
+			$output['status']='error';
+			
+			$output['msg']='No Data Found';
+		}
+		
+		echo json_encode($output);
+	}
+	
+	
+	function to_download_franstat_exl_format($fid,$frm_dt,$to_dt)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		$receipts_types=array("Deposit","Topup");
+		$invoice_status=array("Invoice Cancelled","Invoice");
+		$receipt_status=array("Processed","Topup","Receipt Bounced"," Receipt Reversed");
+		$action_types=array(" ","Invoice","Deposit","Topup","Member Ship","Account Correction");
+
+		$frm_dt = $frm_dt.' 00:00:00';
+		$to_dt = $to_dt.' 23:59:59';
+
+		$sql="SELECT a.statement_id,a.franchise_id,f.franchise_name,action_type,a.invoice_no,r.receipt_id,r.receipt_type,cheque_no,debit_amt,credit_amt,a.created_on,a.status,inv.invoice_status,r.instrument_no,r.status AS receipt_status,a.remarks
+				FROM pnh_franchise_account_summary a
+				JOIN pnh_m_franchise_info f ON f.franchise_id=a.franchise_id
+				LEFT JOIN king_invoice inv ON inv.invoice_no=a.invoice_no
+				LEFT JOIN pnh_t_receipt_info r ON r.receipt_id=a.receipt_id
+				WHERE a.franchise_id=? and a.created_on between ? and ?
+				GROUP BY statement_id
+				ORDER BY a.created_on asc";
+		$fran_acc_stat_details=$this->db->query($sql,array($fid,$frm_dt,$to_dt))->result_array();
+
+		$objPHPExcel = new PHPExcel();
+		$F=$objPHPExcel->getActiveSheet();
+		$Line=2;
+		$objPHPExcel->getActiveSheet()->getStyle("A1:I1")->getFont()->setBold(true);
+		$objPHPExcel->setActiveSheetIndex(0);
+		$objPHPExcel->getActiveSheet()->setCellValue('A1', 'Franchise ID');
+		$objPHPExcel->getActiveSheet()->setCellValue('B1', 'Franchise Name');
+		$objPHPExcel->getActiveSheet()->setCellValue('C1', 'Date');
+		$objPHPExcel->getActiveSheet()->setCellValue('D1', 'Document Type');
+		$objPHPExcel->getActiveSheet()->setCellValue('E1', 'Document refno');
+		$objPHPExcel->getActiveSheet()->setCellValue('F1', 'Value (Rs)');
+		$objPHPExcel->getActiveSheet()->setCellValue('G1', 'Remarks');
+
+
+		$objPHPExcel->getActiveSheet()->getCellByColumnAndRow(A1)->getValue();
+
+		foreach($fran_acc_stat_details as $i=>$Trs)
+		{
+
+			$doc_refno=$Trs['invoice_no']!=0?$Trs['invoice_no']:$Trs['receipt_id'] ;
+
+			$value = $Trs['credit_amt']!=0 ? $Trs['credit_amt']:"-".$Trs['debit_amt'] ;
+
+			if($Trs['action_type']<=3)
+				$doc_status =$Trs['invoice_status']!=null?$invoice_status[$Trs['invoice_status']]:$receipt_status[$Trs['receipt_status']] ;
+			if($Trs['action_type']==7)
+				$doc_status ='IMEI Activation Credit';
+			if($Trs['action_type']==5)
+				$doc_status ='Account Correction';
+			$F->setCellValue('A'.$Line, $Trs['franchise_id'])
+				->setCellValue('B'.$Line, $Trs['franchise_name'])//write in the sheet
+				->setCellValue('C'.$Line,format_datetime($Trs['created_on']))
+				->setCellValue('D'.$Line, $doc_status)
+				->setCellValue('E'.$Line,$doc_refno)
+				->setCellValue('F'.$Line,$value)
+				->setCellValue('G'.$Line, $Trs['remarks']);
+			++$Line;
+		}
+		$today_date=$this->db->query("SELECT DATE_FORMAT(CURDATE(),'%d %b %Y') AS today_dt")->row()->today_dt;
+		header('Content-Type: application/vnd.ms-excel');
+		header('Content-Disposition: attachment;filename="Franchise_account_stat.xls"');
+		header('Cache-Control: max-age=0');
+
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5');
+		$objWriter->save('php://output');
+		exit;
+	}
 }

@@ -1,6 +1,6 @@
 <style type="text/css">
 h2 {    width: 60%;    float: left; }
-.filter_used_for { float:right;margin-top: 15px;}
+.filter_used_for {float:right;margin-top: 15px;}
 .datagrid td { padding: 7px; }
 .datagrid th { background: #443266;color: #C3C3E5; }
 .hide { display: none; }

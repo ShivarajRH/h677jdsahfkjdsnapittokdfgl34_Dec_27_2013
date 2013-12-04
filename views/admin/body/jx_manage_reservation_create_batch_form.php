@@ -4,7 +4,7 @@
             <tr>
                 <td>Batch Type: <span class="mark">*</span></td>
                 <td>
-                    <select name="batch_group_name" id="batch_group_name" style="width: 204px;">
+                    <select name="batch_group_id" id="batch_group_id" style="width: 204px;">
                         <option value="00">Choose</option>
                         <?php
                         foreach ($batch_conf as $conf) {?>
@@ -24,7 +24,7 @@
                     </select>
                 </td>
             </tr>
-            <tr>
+<?php/*            <tr>
                 <td>Select Town</td>
                 <td>
                     <select id="dlg_sel_town" name="dlg_sel_town" style="width: 204px;">
@@ -34,7 +34,7 @@
                         <?php endforeach; ?>
                     </select>
                 </td>
-            </tr>
+            </tr>*/ ?>
             <tr>
                 <td>Number of orders:</td>
                 <td>

@@ -5,7 +5,6 @@ h2 {    width: 60%;    float: left; }
 .datagrid th { background: #443266;color: #C3C3E5; }
 .hide { display: none; }
 .show { display: block; }
-.datagridsort
 </style>
 <div class="container">
 <h2>Couriers</h2>

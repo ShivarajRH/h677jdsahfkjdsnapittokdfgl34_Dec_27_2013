@@ -27,7 +27,7 @@ function show_orders_list(franid,from,to,batch_type) {
             $(".orders_info_block_"+franid).toggle("slow").html("");
         }
         else {
-            $.post(site_url+"admin/get_franchise_orders/"+franid+"/"+from+"/"+to+"/"+batch_type, {}, function(rdata){
+            $.post(site_url+"admin/jx_get_franchise_orders/"+franid+"/"+from+"/"+to+"/"+batch_type, {}, function(rdata){
                 $(".orders_info_block_"+franid).html(rdata).toggle("slow");
             }).fail(fail);
         }
@@ -43,14 +43,14 @@ $("#dlg_create_group_batch_block").dialog({
                 buttons: {
                     "Create Batch":function() {
                             //$("form",this).submit();
-                            var batch_group_name = $("#batch_group_name").find(":selected").val();
+                            var batch_group_id = $("#batch_group_id").find(":selected").val();
                             var assigned_menuids = $("#assigned_menuids").val();
                             var batch_size = $("#batch_size").val();
                             var assigned_uid = $("#assigned_uid").find(":selected").val();
                             var territory_id = $("#dlg_sel_territory").find(":selected").val();
-                            var townid = $("#dlg_sel_town").find(":selected").val();
+                            var townid = 0;//$("#dlg_sel_town").find(":selected").val();
 
-                            if(batch_group_name == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
+                            if(batch_group_id == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
                             if(assigned_uid == '00') { 
                                 if(!confirm("Warning :\n Are you sure you do not want to assign user for this batch?")) {
                                     show_output("Warning :\n Batch will not assign to any user.");
@@ -61,10 +61,11 @@ $("#dlg_create_group_batch_block").dialog({
                             if(territory_id == '00') {territory_id=0;  }
                             if(townid == '00') {townid=0;  }
                             
-                            var postData = {batch_group_name:batch_group_name,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid,territory_id:territory_id,townid:townid};
+                            var postData = {batch_group_id:batch_group_id,assigned_menuids:assigned_menuids,batch_size:batch_size,assigned_uid:assigned_uid,territory_id:territory_id,townid:townid};
+                            console.log(postData);
                             $.post(site_url+"admin/create_batch_by_group_config",postData,function(rdata) {
                                     show_output(rdata);
-                                    $("#batch_group_name").val($("#batch_group_name option:nth-child(0)").val());
+                                    $("#batch_group_id").val($("#batch_group_id option:nth-child(0)").val());
 
                             }).fail(fail);
                     },
@@ -132,8 +133,8 @@ $("#dlg_sel_territory").live("change",function() {
     return false;
 });
 
-//ONCHANGE batch_group_name
-$("#batch_group_name").live("change",function() {
+//ONCHANGE batch_group_id
+$("#batch_group_id").live("change",function() {
     var batch_group_id=$(this).find(":selected").val();
 //        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
     $.post(site_url+"admin/jx_suggest_menus_groupid/"+batch_group_id,function(resp) { 
@@ -145,7 +146,7 @@ $("#batch_group_name").live("change",function() {
             //$("#assigned_uid").val(resp.assigned_uid);
             //var getlist = getlist(resp.assigned_uid);
             
-            var parse_assigned_uid = jQuery.parseJSON(resp.assigned_uid);
+            var parse_assigned_uid = jQuery.parseJSON(resp.group_assigned_uid);
             console.log(parse_assigned_uid);
             
                 $("#assigned_uid").html(objToOptions_users(parse_assigned_uid));
@@ -167,7 +168,7 @@ $("#show_picklist_block").dialog({
     open:function() {
         
         
-      $("form",this).submit();  
+      //$("form",this).submit();  
     },
     height: 650,
     width:950,
@@ -187,8 +188,13 @@ function chkall_fran_orders(franid) {
     
 }
 function process_picklist_by_fran(elt,franchise_id) {
-    $("#picklist_by_fran_form_"+franchise_id).submit();
+    //$("#picklist_by_fran_form_"+franchise_id).submit();
+    var p_invoice_ids_str = $("#picklist_by_fran_all_"+franchise_id).val();
+    var postData = {pick_list_trans:p_invoice_ids_str};
     
+    $.post(site_url+"admin/p_invoice_for_picklist",postData,function(resp) {
+            $("#show_picklist_block").html(resp).dialog("open").dialog('option', 'title', 'Pick List');
+    });
 }
 
 
@@ -214,9 +220,8 @@ $("#btn_generate_pick_list").live("click",function(){
                 var p_invoice_ids=[];
                 //var pick_list_trans=$("input[name='chk_pick_list_by_fran']:checked").length;
                 var pick_list_trans=$("input#chk_pick_list_by_fran:checked").length;
-                //alert(pick_list_trans);
+                
                // alert($("input.chk_pick_list_by_fran:checked").val());
-               //  return false;
                 if(pick_list_trans==0) { alert("Please select any of fransachise transaction to generate pick list."); return false;}
                 
                  
@@ -263,12 +268,6 @@ $("#btn_generate_pick_list").live("click",function(){
         }
 });
 
-$(".print_link").click(function() {
-    
-
-    $('#show_picklist_block').printElement();
-
-});
 
 /* end picklist code ========================================================================== */
 

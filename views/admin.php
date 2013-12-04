@@ -42,7 +42,7 @@ if(!defined("APL_VER"))
 
 ?>
 
-<link type="text/css" rel="stylesheet" href="<?=base_url()?>/min/index.php?g=erp_css&<?php echo strtotime(date('Y-m-d'));?>&1=2">
+<link type="text/css" rel="stylesheet" href="<?=base_url()?>/min/index.php?g=erp_css&<?php echo strtotime(date('Y-m-d'));?>&1=1">
 <script type="text/javascript" src="<?=base_url()?>/min/index.php?g=erp_js&<?php echo strtotime(date('Y-m-d'));?>&1=1"></script>
 
 
@@ -230,7 +230,7 @@ table{font-size:inherit;}
 <?php }?>
 <style>
 	.network_status{display: none;background: #ffffa0;padding:5px;font-weight: bold;font-size: 18px;text-align: center;position: fixed;top: 0px;width: 100%;}
-	.network_offline{background: tomato !important;color: #FFF !important; }
+	.network_offline{background: tomato !important;color: #FFF; !important}
 	.network_offline a{color: #222;font-size: 12px;}
 	#strip_itemlist_wrap{padding:8px 1%;position: fixed;bottom:0px;width:98%;left:0px;background: #FFFFCC;color:#000}
 	#strip_itemlist_wrap a{font-size: 11px;color: maroon}
