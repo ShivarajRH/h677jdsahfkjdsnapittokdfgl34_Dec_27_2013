@@ -5,6 +5,51 @@
  */
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
+    
+    function jx_terr_batch_group_status($territory_id) {
+            $resp=$arr_resp=array();
+            $cond = ' and f.territory_id = '.$territory_id.' ';
+        
+            $global_batch_id=GLOBAL_BATCH_ID;
+
+            $rslt = $this->db->query("select distinct o.itemid,d.menuid,mn.name as menuname,f.territory_id,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) as init from king_transactions tr
+                                    join king_orders as o on o.transid=tr.transid
+                                    join proforma_invoices as `pi` on pi.order_id = o.id and pi.invoice_status=1
+                                    join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
+                                    join king_dealitems dl on dl.id = o.itemid
+                                    join king_deals d on d.dealid = dl.dealid # and d.menuid in (?)
+                                    join pnh_menu mn on mn.id=d.menuid
+                                    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id and f.is_suspended = 0
+                                    where sd.batch_id=$global_batch_id $cond
+                                    order by tr.init asc")->result_array(); //,array($assigned_menuids)
+            if(count($rslt)>0) {
+                $resp['status'] = 'success';
+                
+                foreach($rslt as $row) {
+                    $arr_resp[$row['menuid']][] = $row;
+                    
+                    
+                }
+                $total=0;
+                foreach($arr_resp as $r) {
+                    $r_count[$r['menuid']][] = count($r);
+                    $total+=count($r);
+                }
+                
+                $total_categories= count($arr_resp);
+                
+                $resp["total_count_msg"]= 'Therse are '.$total." orders of ".$total_categories.' category.';
+                
+                $resp["response"]= ($arr_resp);
+            }
+            else {
+                $resp['status'] = 'fail';
+                $resp['response'] = 'No orders found.';
+            }
+            echo json_encode($resp);
+        
+    }
+    
     function pack_invoice_by_fran() {
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
         

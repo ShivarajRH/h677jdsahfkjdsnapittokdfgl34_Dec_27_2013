@@ -59,7 +59,7 @@ if($terrid!=0) {
  }
 
 $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid']); //,$oldest_newestecho '<pre>'.count($arr_trans_set['result']);die();
-
+//echo '<pre>'.$arr_trans_set['last_query'];print_r($arr_trans_set['result']);die();
 if(count($arr_trans_set['result']) == 0 ) {
     $output.='<h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
 }
@@ -85,7 +85,7 @@ else
                     join king_deals dl on dl.dealid=di.dealid
                     join pnh_menu m on m.id = dl.menuid
                     join king_brands bs on bs.id = o.brandid
-            join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id and f.is_suspended = 0
+            join pnh_m_franchise_info  f on f.franchise_id=tr.franchise_id  and f.is_suspended = 0
             join pnh_m_territory_info ter on ter.id = f.territory_id 
             join pnh_towns twn on twn.id=f.town_id
                     left join king_invoice i on o.id = i.order_id and i.invoice_status = 1

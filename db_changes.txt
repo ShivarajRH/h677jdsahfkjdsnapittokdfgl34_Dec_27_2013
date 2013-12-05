@@ -1004,6 +1004,8 @@ CREATE TABLE `pnh_town_courier_priority_link` (
 	  PRIMARY KEY (`id`)
 	);
 
+alter table `pnh_town_courier_priority_link` add column `delivery_type_priority1` int (3) DEFAULT '0' NULL  after `delivery_hours_3`, add column `delivery_type_priority2` int (3) DEFAULT '0' NULL  after `delivery_type_priority1`, add column `delivery_type_priority3` int (3) DEFAULT '0' NULL  after `delivery_type_priority2`;
+
 alter table `m_courier_info` add column `ref_partner_id` int (11) DEFAULT '0' NULL  after `remarks`;
 
 alter table `shipment_batch_process_invoice_link` add column `assigned_userid` int (11) DEFAULT '0' NOT NULL  after `delivered_by`;

@@ -453,7 +453,7 @@ order by name;
 select * from `pnh_town_courier_priority_link`;
 
 #========================================
-alter table `snapittoday_db_oct`.`pnh_town_courier_priority_link` add column `delivery_type_priority1` int (3) DEFAULT '0' NULL  after `delivery_hours_3`, add column `delivery_type_priority2` int (3) DEFAULT '0' NULL  after `delivery_type_priority1`, add column `delivery_type_priority3` int (3) DEFAULT '0' NULL  after `delivery_type_priority2`
+alter table `pnh_town_courier_priority_link` add column `delivery_type_priority1` int (3) DEFAULT '0' NULL  after `delivery_hours_3`, add column `delivery_type_priority2` int (3) DEFAULT '0' NULL  after `delivery_type_priority1`, add column `delivery_type_priority3` int (3) DEFAULT '0' NULL  after `delivery_type_priority2`
 #========================================
 
 insert into `pnh_town_courier_priority_link` (`town_id`,`courier_priority_1`,`courier_priority_2`,`courier_priority_3`

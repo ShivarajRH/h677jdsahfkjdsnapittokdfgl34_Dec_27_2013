@@ -1,6 +1,20 @@
 <div>
     <form method="post" action="">
         <table width="100%" border="0" cellspacing="4">
+           <tr>
+               <td>Select Territory</td>
+               <td>
+                    <select id="dlg_sel_territory" name="dlg_sel_territory" style="width: 204px;">
+                        <option value="00">All Territory</option>
+                        <?php  foreach($pnh_terr as $terr): ?>
+                                <option value="<?php echo $terr['id'];?>"><?php echo $terr['territory_name'];?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <td>Territory Batch Group status :</td><td> <div class="terr_batch_group_status"></div></td>
+            </tr>
             <tr>
                 <td>Batch Type: <span class="mark">*</span></td>
                 <td>
@@ -10,17 +24,6 @@
                         foreach ($batch_conf as $conf) {?>
                             <option value="<?=$conf['id'];?>"><?=$conf['batch_grp_name'];?></option>
                         <? } ?>
-                    </select>
-                </td>
-            </tr>
-           <tr>
-               <td>Select Territory</td>
-               <td>
-                    <select id="dlg_sel_territory" name="dlg_sel_territory" style="width: 204px;">
-                        <option value="00">All Territory</option>
-                        <?php  foreach($pnh_terr as $terr): ?>
-                                <option value="<?php echo $terr['id'];?>"><?php echo $terr['territory_name'];?></option>
-                        <?php endforeach; ?>
                     </select>
                 </td>
             </tr>

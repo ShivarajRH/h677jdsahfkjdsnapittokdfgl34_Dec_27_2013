@@ -37,8 +37,8 @@ function show_orders_list(franid,from,to,batch_type) {
 
 $("#dlg_create_group_batch_block").dialog({
                 autoOpen: false,
-                height: 400,
-                width:450,
+                height: 550,
+                width:650,
                 modal: true,
                 buttons: {
                     "Create Batch":function() {
@@ -65,7 +65,7 @@ $("#dlg_create_group_batch_block").dialog({
                             console.log(postData);
                             $.post(site_url+"admin/create_batch_by_group_config",postData,function(rdata) {
                                     show_output(rdata);
-                                    $("#batch_group_id").val($("#batch_group_id option:nth-child(0)").val());
+                                    //$("#batch_group_id").val($("#batch_group_id option:nth-child(0)").val());
 
                             }).fail(fail);
                     },
@@ -118,7 +118,7 @@ $("#dlg_sel_town").live("change",function() {
 $("#dlg_sel_territory").live("change",function() {
     var terrid=$(this).find(":selected").val();
 //        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
-    $.post(site_url+"admin/jx_suggest_townbyterrid/"+terrid,function(resp) {
+    /*$.post(site_url+"admin/jx_suggest_townbyterrid/"+terrid,function(resp) {
         if(resp.status=='success') {
              //print(resp.towns);
             var obj = jQuery.parseJSON(resp.towns);
@@ -129,7 +129,22 @@ $("#dlg_sel_territory").live("change",function() {
             $("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
                         //$(".sel_status").html(resp.message);
         }
-    },'json').done(done).fail(fail);
+    },'json').done(done).fail(fail);*/
+    if(terrid != 00) {
+            $.post(site_url+"admin/jx_terr_batch_group_status/"+terrid,function(resp) {
+                if(resp.status=='success') {
+                     $(".terr_batch_group_status").html(resp.total_count_msg);
+                     //$(".terr_batch_group_status").append(resp);
+                     
+                    //var obj = jQuery.parseJSON(resp.towns);
+                    //$("#dlg_sel_town").html(objToOptions_terr(obj));
+                }
+                else {
+                    $(".terr_batch_group_status").html(resp.response);
+                }
+            },"json").done(done).fail(fail);
+    }
+    
     return false;
 });
 
