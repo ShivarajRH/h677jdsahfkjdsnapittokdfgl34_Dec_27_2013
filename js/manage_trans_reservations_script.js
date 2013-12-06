@@ -50,7 +50,7 @@ $("#dlg_create_group_batch_block").dialog({
                             var territory_id = $("#dlg_sel_territory").find(":selected").val();
                             var townid = 0;//$("#dlg_sel_town").find(":selected").val();
 
-                            if(batch_group_id == '00') { show_output("ERROR : Please Select Batch Type"); return false; }
+                            if(batch_group_id == '00') { show_output("ERROR : Please Select Menu"); return false; }
                             if(assigned_uid == '00') { 
                                 if(!confirm("Warning :\n Are you sure you do not want to assign user for this batch?")) {
                                     show_output("Warning :\n Batch will not assign to any user.");
@@ -97,6 +97,7 @@ function show_output(rdata) {
 function fail(rdata) {
     console.log(rdata);
 }
+/*
 $("#dlg_sel_town").live("change",function() { 
     var townid=$(this).find(":selected").val();
     var terrid=$("#dlg_sel_territory").find(":selected").val();
@@ -111,9 +112,10 @@ $("#dlg_sel_town").live("change",function() {
         },'json').done(done).fail(fail);
 
     return false;
-});
+});*/
 
-
+ var arr_batch_size=[];
+ 
 //ONCHANGE Territory
 $("#dlg_sel_territory").live("change",function() {
     var terrid=$(this).find(":selected").val();
@@ -133,14 +135,22 @@ $("#dlg_sel_territory").live("change",function() {
     if(terrid != 00) {
             $.post(site_url+"admin/jx_terr_batch_group_status/"+terrid,function(resp) {
                 if(resp.status=='success') {
-                     $(".terr_batch_group_status").html(resp.total_count_msg);
-                     //$(".terr_batch_group_status").append(resp);
-                     
-                    //var obj = jQuery.parseJSON(resp.towns);
-                    //$("#dlg_sel_town").html(objToOptions_terr(obj));
+//                    $(".terr_batch_group_status").html("<div>There are <b>"+resp.total_orders+"</b> orders from <b>"+resp.total_categories+"</b> menu.</div>");
+
+                    $(".terr_batch_group_status").html("<table class='datagrid'><th>Menu</th><th>Orders</th>"+resp.detail_category_msg+"</table>");
+                            
+                    $("#batch_group_id").html(objToOptions_menus(resp.arr_menus));
+                    
+                   arr_batch_size=[];
+                    $.each(resp.arr_menus,function(ii,row){
+                             arr_batch_size.push({ototal:row.ocount,menuid:row.menuid});
+                    });
+                    
                 }
                 else {
                     $(".terr_batch_group_status").html(resp.response);
+                    $("#batch_group_id").html('<option value="00">No menu found</option>\n');
+                    $("#batch_size").val("");
                 }
             },"json").done(done).fail(fail);
     }
@@ -151,28 +161,36 @@ $("#dlg_sel_territory").live("change",function() {
 //ONCHANGE batch_group_id
 $("#batch_group_id").live("change",function() {
     var batch_group_id=$(this).find(":selected").val();
-//        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
-    $.post(site_url+"admin/jx_suggest_menus_groupid/"+batch_group_id,function(resp) { 
-        if(resp.status == "success") {
-             //print(resp.towns);
-             //var obj = jQuery.parseJSON(resp.towns);
-            $("#assigned_menuids").val(resp.assigned_menuid);
-            $("#batch_size").val(resp.batch_size);
-            //$("#assigned_uid").val(resp.assigned_uid);
-            //var getlist = getlist(resp.assigned_uid);
-            
-            var parse_assigned_uid = jQuery.parseJSON(resp.group_assigned_uid);
-            console.log(parse_assigned_uid);
-            
-                $("#assigned_uid").html(objToOptions_users(parse_assigned_uid));
-              
-        }
-        else {
-            //$("#dlg_sel_town").val($("#dlg_sel_town option:nth-child(0)").val());
-            //$("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
-            //console.log(resp);
-        }
-    },'json').done(done).fail(fail);
+//        if(batch_group_id=='00') {          $(".sel_status").html("Please select territory."); return false;        }
+    if(batch_group_id!='00') {
+        $.each(arr_batch_size,function(i,val) {
+            if(batch_group_id == val.menuid) {
+                // print(batch_group_id+"="+val.menuid);
+                $("#batch_size").val(val.ototal);
+                return false;
+            }
+            else {
+                $("#batch_size").val("");
+            }
+        });
+    }
+        /*
+        $.post(site_url+"admin/jx_suggest_menus_groupid/"+batch_group_id,function(resp) { 
+            if(resp.status == "success") {
+                 //print(resp.towns);
+                 //var obj = jQuery.parseJSON(resp.towns);
+                $("#assigned_menuids").val(resp.assigned_menuid);
+                $("#batch_size").val(resp.batch_size);
+                //$("#assigned_uid").val(resp.assigned_uid);
+                //var getlist = getlist(resp.assigned_uid);
+                var parse_assigned_uid = jQuery.parseJSON(resp.group_assigned_uid);
+                    $("#assigned_uid").html(objToOptions_users(parse_assigned_uid));
+            } else {
+                //$("#dlg_sel_town").val($("#dlg_sel_town option:nth-child(0)").val());
+                //$("#dlg_sel_franchise").val($("#dlg_sel_franchise option:nth-child(0)").val());
+                //console.log(resp);
+            }
+        },'json').done(done).fail(fail);*/
     return false;
 });
 
@@ -180,10 +198,7 @@ $("#batch_group_id").live("change",function() {
 /****PICKLIST 2 *****/
 $("#show_picklist_block").dialog({
     autoOpen: false,
-    open:function() {
-        
-        
-      //$("form",this).submit();  
+    open:function() {      //$("form",this).submit();  
     },
     height: 650,
     width:950,
@@ -191,17 +206,15 @@ $("#show_picklist_block").dialog({
     modal: true
 });
 function chkall_fran_orders(franid) {
-    
         var checkBoxes=$(".chk_pick_list_by_fran_"+franid);
-        
         if($("#pick_all_fran_"+franid).is(":checked")) {
             checkBoxes.attr("checked", !checkBoxes.attr("checked"));
         }
         else {
             checkBoxes.removeAttr("checked", checkBoxes.attr("checked"));
         }
-    
 }
+
 function process_picklist_by_fran(elt,franchise_id) {
     //$("#picklist_by_fran_form_"+franchise_id).submit();
     var p_invoice_ids_str = $("#picklist_by_fran_all_"+franchise_id).val();
@@ -212,10 +225,7 @@ function process_picklist_by_fran(elt,franchise_id) {
     });
 }
 
-
-
 //****PICKLIST 1 *****/
-
 
 $("#pick_all").live("change",function() {
     var checkBoxes=$(".pick_list_trans_ready");
@@ -229,8 +239,6 @@ $("#pick_all").live("change",function() {
 
 
 $("#btn_generate_pick_list").live("click",function(){
-        
-        
         if($("#show_by_group").is(":checked")) {
                 var p_invoice_ids=[];
                 //var pick_list_trans=$("input[name='chk_pick_list_by_fran']:checked").length;
@@ -305,16 +313,14 @@ function reallot_stock_for_all_transaction(userid,pg) {
     $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
     $.post(site_url+"admin/jx_reserve_avail_stock_all_transaction/"+updated_by,"",function(resp) {
             if(resp.status == 'fail') {
-                        rdata = resp.response+"4";
+                        rdata = resp.response+"|";
             }
             else {
-                
                 $.each(resp.result,function(i,val_arr){
                         $.each(val_arr,function(i,row){
                                 rdata += row;
                         });
                 });
-                
             }
             loadTransactionList(pg);
             $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
@@ -576,6 +582,17 @@ function objToOptions_users(obj) {
             output += "<option value='"+elt.userid+"'>"+elt.username+"</option>\n";
         }
     });
+    return(output);
+}
+function objToOptions_menus(obj) {
+    var output='';
+        output += "<option value='00' selected>Choose</option>\n";
+        $.each(obj,function(key,elt){
+            if(obj.hasOwnProperty(key)) {
+                output += "<option value='"+key+"'>"+elt.menuname+"</option>\n";
+            }
+        });
+
     return(output);
 }
 

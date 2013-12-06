@@ -7,12 +7,18 @@ include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     
     function jx_terr_batch_group_status($territory_id) {
-            $resp=$arr_resp=array();
+            $resp=$arr_resp=$msg_category=$r_count=$arr_category=array();
+            
             $cond = ' and f.territory_id = '.$territory_id.' ';
         
             $global_batch_id=GLOBAL_BATCH_ID;
 
-            $rslt = $this->db->query("select distinct o.itemid,d.menuid,mn.name as menuname,f.territory_id,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) as init from king_transactions tr
+            $rslt = $this->db->query("select distinct 
+                                o.itemid,
+                                d.menuid,mn.name as menuname,f.territory_id
+                                ,sd.id,sd.batch_id,sd.p_invoice_no
+                                ,from_unixtime(tr.init) as init 
+                                    from king_transactions tr
                                     join king_orders as o on o.transid=tr.transid
                                     join proforma_invoices as `pi` on pi.order_id = o.id and pi.invoice_status=1
                                     join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
@@ -25,29 +31,49 @@ class Reservation extends Voucher {
             if(count($rslt)>0) {
                 $resp['status'] = 'success';
                 
+                $c=0;
                 foreach($rslt as $row) {
-                    $arr_resp[$row['menuid']][] = $row;
-                    
-                    
-                }
-                $total=0;
-                foreach($arr_resp as $r) {
-                    $r_count[$r['menuid']][] = count($r);
-                    $total+=count($r);
+                    $arr_resp[$row['menuid']][++$c] = $row;
                 }
                 
-                $total_categories= count($arr_resp);
+                $total_orders=0;
+                foreach($arr_resp as $i=>$r) {
+                    $count = count($r);
+                    $r_count["total"][$i] =$count;
+                    
+                        foreach($arr_resp[$i] as $j=>$inner) {
+                            $r_count['menuname'][$i] = $inner['menuname'];
+                            $msg_category[$i]  = '<tr><td><b>'.$inner['menuname'].'</b></td><td><b>'.$count.'</b></td></tr>';
+                            
+                            $arr_menus[$i]["menuid"] =$i;
+                            $arr_menus[$i]["menuname"] =$inner['menuname'];
+                            $arr_menus[$i]["ocount"]=$count;
+                            
+                            //array_push($arr_category,array("menuid"=>$i,"menuname"=>$inner['menuname'],"ocount"=>$count) );
+
+                        }
+                        
+                    $total_orders+=count($r);
+
+                }
                 
-                $resp["total_count_msg"]= 'Therse are '.$total." orders of ".$total_categories.' category.';
-                
-                $resp["response"]= ($arr_resp);
+                        $total_categories= count($arr_resp);
+                        
+                        $resp["total_orders"]= $total_orders;
+                        $resp["total_categories"]= $total_categories;
+                        $resp["arr_menus"]= $arr_menus;
+                        
+                                //$resp["total_count_msg"]= 'There are <b>'.$total_orders."</b> orders of <b>".$total_categories.'</b> category.';
+                        
+                        $resp["total_count_msg"]= 'There are <b>'.$total."</b> orders of <b>".$total_categories.'</b> category.';
+                        $resp["detail_category_msg"]= ''.implode('',$msg_category);
+
             }
             else {
                 $resp['status'] = 'fail';
                 $resp['response'] = 'No orders found.';
             }
             echo json_encode($resp);
-        
     }
     
     function pack_invoice_by_fran() {
@@ -60,10 +86,14 @@ class Reservation extends Voucher {
         
         foreach(array("p_invoice_ids","franchise_id") as $i) 
             $$i=$this->input->post($i);
+        
+        //die($p_invoice_ids);
+        
             //$result = $this->reservations->do_pack_invoice_by_fran();$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
             $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
 
         //$data['batch']=$this->erpm->getbatch($bid);$data['invoices']=$this->erpm->getbatchinvoices($bid);$data['bid']=$bid;
+            
         $data['page']="pack_invoice";
         $this->load->view("admin",$data);
     }
@@ -84,9 +114,9 @@ class Reservation extends Voucher {
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
         
          if($from!=0 and $to != 0) {
-            $cond .= '  and tr.actiontime between '.$from.' and '.$to.' ';
+            //$cond .= '  and tr.actiontime between '.$from.' and '.$to.' ';
          }else {
-             $from=$to=0;
+             //$from=$to=0;
          }
         $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,$franchise_id);
        
@@ -105,7 +135,7 @@ class Reservation extends Voucher {
                                 left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no 
                                 join king_dealitems di on di.id = o.itemid 
                                 where f.franchise_id = ? $cond and i.id is null and tr.transid in ($str_all_trans)
-                                order by tr.init desc",array($franchise_id,$from,$to))->result_array();
+                                order by tr.init desc",array($franchise_id))->result_array();//,$from,$to
                                             #,di.name
         $output = '<table width="100" class="subdatagrid">
                             <thead>
@@ -135,6 +165,7 @@ class Reservation extends Voucher {
                     }
                     else {
                             if($batch_id != GLOBAL_BATCH_ID) {
+                                
                                 $invoice_action = '<a class="proceed_link clear" href="pack_invoice/'.$row['p_invoice_no'].'" target="_blank">Generate invoice</a>
                                     <a class="danger_link clear" href="javascript:void(0)" onclick="cancel_proforma_invoice(\''.$row['p_invoice_no'].'\','.$user['userid'].',0)" class="">De-Allot</a>';
                                 $picklist_btn_msg = '<input type="checkbox" value="'.$row['p_invoice_no'].'" name="chk_pick_list_by_fran[]" id="chk_pick_list_by_fran" class="chk_pick_list_by_fran_'.$franchise_id.'" title="Select this for picklist" />';
@@ -146,7 +177,18 @@ class Reservation extends Voucher {
                     
                     $transid_msg=' --||--';//'-second</a>';
                 }
-                if(isset($batch_id)) $batch_id_msg = '<a href="'.site_url("admin/batch/".$batch_id).'" target="_blank">B'.$batch_id.'</a>';
+                //if(isset($batch_id)) $batch_id_msg = '<a href="'.site_url("admin/batch/".$batch_id).'" target="_blank">B'.$batch_id.'</a>';
+                
+                if($batch_id != '') { 
+                    //$batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
+                    if($batch_id == GLOBAL_BATCH_ID) {
+                        $batch_id_msg = '<div class="ungrouped_item">Un-Grouped</div>';
+                    }
+                    else {
+                        $batch_id_msg = '<a href="'.site_url("admin/batch/".$batch_id).'" target="_blank">B'.$batch_id.'</a>';
+                    }
+                }
+                
                 $output .= '<tr>
                                 <td>'.++$i.'</td>
                                 <td align="center">'.$transid_msg.'</td>
@@ -198,6 +240,7 @@ class Reservation extends Voucher {
         $data['batch_conf']=  $this->reservations->getBatchGroupConfig();
         $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
         $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+        $data['userslist']=$this->db->query("select id,username from king_admin where account_blocked=0")->result_array();
         $this->load->view("admin/body/jx_manage_reservation_create_batch_form",$data);
     }
     /**

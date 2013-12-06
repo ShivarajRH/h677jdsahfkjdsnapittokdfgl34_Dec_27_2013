@@ -146,7 +146,15 @@ else
 
                         $arr_fran = $this->reservations->fran_experience_info($trans_arr['f_created_on']);
 
-                        if($trans_arr['batch_id'] != '') $batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
+                        if($trans_arr['batch_id'] != '') { 
+                            //$batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
+                            if($trans_arr['batch_id'] == GLOBAL_BATCH_ID) {
+                                $batch_id_msg = '<div class="ungrouped_item">Un-Grouped</div>';
+                            }
+                            else {
+                                $batch_id_msg = '<a href="'.site_url("admin/batch/".$trans_arr['batch_id']).'" target="_blank">B'.$trans_arr['batch_id'].'</a>';
+                            }
+                        }
 
                         $output .= '<tr class="'.$batch_type.'_ord">
                             <td>'.++$c.'</td>

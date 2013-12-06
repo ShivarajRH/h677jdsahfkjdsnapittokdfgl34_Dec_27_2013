@@ -178,4 +178,32 @@ CREATE TABLE `pnh_m_states` (
                 `created_on` datetime DEFAULT NULL,                    
                 `created_by` int(11) DEFAULT '0',                      
                 PRIMARY KEY (`state_id`)                               
-              )
+              );
+
+#Dec_05_2013
+select id,username from king_admin where account_blocked=0
+
+select * from shipment_batch_process_invoice_link where p_invoice_no='114299';
+
+select count(*) as ttl from proforma_invoices where p_invoice_no='114299'
+
+
+select distinct d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.transid,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+									from proforma_invoices i 
+									join king_orders o on o.id=i.order_id and i.transid = o.transid 
+									join m_product_deal_link pl on pl.itemid=o.itemid 
+									join m_product_info p on p.product_id=pl.product_id 
+									join king_dealitems d on d.id=o.itemid 
+									join king_deals e on e.dealid=d.dealid 
+									join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
+									where i.p_invoice_no='114299' and i.invoice_status=1 order by o.sno
+
+select d.pic,d.is_pnh,e.menuid,i.discount,i.discount,p.product_id,p.mrp,i.transid,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+from proforma_invoices i 
+join king_orders o on o.id=i.order_id and i.transid = o.transid 
+join products_group_orders pgo on pgo.order_id=o.id 
+join m_product_group_deal_link pl on pl.itemid=o.itemid 
+join m_product_info p on p.product_id=pgo.product_id 
+join king_dealitems d on d.id=o.itemid join king_deals e on e.dealid=d.dealid 
+join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
+where i.p_invoice_no='114299' and i.invoice_status=1 order by o.sno 

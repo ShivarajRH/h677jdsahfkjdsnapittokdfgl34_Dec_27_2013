@@ -15870,7 +15870,7 @@ order by action_date";
 		echo json_encode($output);
 	}
 
- /*
+ 
 	function jx_load_all_shipped_mobimei($pg=0)
 	{
 		$this->erpm->auth();
@@ -15959,7 +15959,7 @@ order by action_date";
 			$output['status']='success';
 		}
 			echo json_encode($output);
-	} */
+	}
 	
 	/**
 	 * function to mark return product as packed for processing for shipping
@@ -22943,7 +22943,7 @@ die; */
 		$this->erpm->flash_msg("Member Scheme disabled");
 		redirect($_SERVER['HTTP_REFERER']);
 	}
-	/*
+	
 	function jx_load_all_shipped_mobimei($pg=0)
 	{
 		$this->erpm->auth();
@@ -23029,7 +23029,7 @@ die; */
 			$output['status']='success';
 		}
 			echo json_encode($output);
-	}*/
+	}
 
 	/**
 	 * function to check member id / mobileno for imeino activation 

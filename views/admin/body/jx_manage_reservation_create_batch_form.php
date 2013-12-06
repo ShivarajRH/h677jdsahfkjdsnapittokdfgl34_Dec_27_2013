@@ -2,7 +2,7 @@
     <form method="post" action="">
         <table width="100%" border="0" cellspacing="4">
            <tr>
-               <td>Select Territory</td>
+               <td>Select Territory:</td>
                <td>
                     <select id="dlg_sel_territory" name="dlg_sel_territory" style="width: 204px;">
                         <option value="00">All Territory</option>
@@ -13,10 +13,10 @@
                 </td>
             </tr>
             <tr>
-                <td>Territory Batch Group status :</td><td> <div class="terr_batch_group_status"></div></td>
+                <td>Un-Group Orders status :</td><td> <div class="terr_batch_group_status"></div></td>
             </tr>
             <tr>
-                <td>Batch Type: <span class="mark">*</span></td>
+                <td>Select Menu: <span class="mark">*</span></td>
                 <td>
                     <select name="batch_group_id" id="batch_group_id" style="width: 204px;">
                         <option value="00">Choose</option>
@@ -49,7 +49,13 @@
             <tr>
                 <td>Assigned to:</td>
                 <td>
-                        <select name="assigned_uid" id="assigned_uid" style="width: 204px;"></select>
+                        <select name="assigned_uid" id="assigned_uid" style="width: 204px;">
+                            <option value="00">Choose</option>
+                            <?php
+                            foreach ($userslist as $user) {?>
+                                <option value="<?=$user['id'];?>"><?=$user['username'];?></option>
+                            <? } ?>
+                        </select>
                 </td>
             </tr>
             <tr>

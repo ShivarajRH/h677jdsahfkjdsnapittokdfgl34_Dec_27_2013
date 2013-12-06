@@ -89,7 +89,7 @@ class Admin extends Erp {
 		if ($this->form_validation->run () !== FALSE) {
 			//print_r($user);echo '<br>';
 			$userid = md5 ( strtolower ( $user ) );
-			print_r($userid);echo '<br>';
+			//print_r($userid);echo '<br>';
 			$userdetails = $this->adminmodel->getUser ( $userid );
 			//print_r($userdetails);
 			//print_r(md5($pass));exit;
@@ -104,7 +104,7 @@ class Admin extends Erp {
 				//print_r($usertype);echo 'sd';exit;
 				$sessionData = array ("userid"=>$userdetails->id,'username' => $userdetails->name, 'login_flag' => true, 'usertype' => $usertype, 'brandid' => $brandid ,'access'=>$userdetails->access);
 				$this->session->set_userdata ( array("admin_user" => $sessionData) );
-                                    
+
 				redirect("admin");
 
 				//echo '<div align=left><a href="">logout</a>';
@@ -2393,7 +2393,7 @@ class Admin extends Erp {
 		}*/
 
 
-	function invoice_old($invoice_no,$inv_type='customer')
+	function invoice($invoice_no,$inv_type='customer')
 	{
 		$this->erpm->auth();
 		
@@ -2442,57 +2442,6 @@ where (b.dispatch_id = ? or c.ref_dispatch_id = ? )
 		$data['inv_type'] = $inv_type;
 		$this->load->view("admin",$data);
 	}
-        
-        
-        function invoice($invoice_no,$inv_type='customer') 
-        {
-            $this->erpm->auth();
-		
-
-		$inv_bygrpno = $this->db->query("select distinct split_inv_grpno 
-	from shipment_batch_process_invoice_link a 
-	join proforma_invoices b on a.p_invoice_no = b.p_invoice_no 
-	join king_invoice c on c.invoice_no = a.invoice_no  
-where (b.dispatch_id = ? or c.ref_dispatch_id = ? ) 
-	
-",array($invoice_no,$invoice_no))->row()->split_inv_grpno;
-
-	if($inv_bygrpno)
-		$invoice_no = $inv_bygrpno;
-		 
-		
-//		$batch=$this->db->query("select * from shipment_batch_process_invoice_link where invoice_no=?",$invoice_no)->row_array();
-//		if(!empty($batch) && $batch['packed']==0 && $this->db->query("select invoice_status as s from king_invoice where invoice_no=?",$invoice_no)->row()->s==1)
-//			show_error("Invoice is not available for printing until its packed");
-		
-		$sql="select in.invoice_no,item.nlc,item.phc,ordert.*,
-							item.service_tax_cod,item.name,in.invoice_no,
-							brand.name as brandname,
-							in.mrp,in.tax as tax,
-							in.discount,
-							in.phc,in.nlc,
-							in.service_tax,
-							item.pnh_id,f.*
-						from king_orders as ordert
-						join king_dealitems as item on item.id=ordert.itemid 
-						join king_deals as deal on deal.dealid=item.dealid 
-						left join king_brands as brand on brand.id=deal.brandid
-						left join pnh_m_offers f on f.id= ordert.offer_refid
-						join king_invoice `in` on in.transid=ordert.transid and in.order_id=ordert.id  
-						where (in.invoice_no=? or split_inv_grpno = ? or ref_dispatch_id = ? )
-						group by in.invoice_no  
-				";
-		$q=$this->db->query($sql,array($invoice_no,$invoice_no,$invoice_no));
-		
-	 
-		$data['page']="../../body/invoice";
-		$data['invoice_list']=$orders=$q->result_array();
-		$data['invoice_no']=$invoice_no;
-		$data['trans']=$this->db->query("select * from king_transactions where transid=?",$orders[0]['transid'])->row_array();
-		
-		$data['inv_type'] = $inv_type;
-		$this->load->view("admin",$data);
-        }
 	
 	
 	
