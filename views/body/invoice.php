@@ -44,11 +44,6 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 						}
 					} 
 				?>
-				
-				<?php if($is_pnh){ ?>
-					<input type="button" value="Print Acknowledgement" onclick="print_tax_acknowledgement()" >
-				<?php } ?>
-				
 			</td>
 			<td align="center" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Partner Order Form" onclick='printpartorderform(this)'></td>
 			<td align="right" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Invoice and Partner Order Form" onclick='printinvpartorderform(this)'></td>
@@ -115,7 +110,6 @@ table{
 			$fid=$this->db->query("select t.franchise_id as fid from king_transactions t where transid=?",$trans['transid'])->row()->fid;
 			$mem_det = $this->db->query("select pnh_member_id as mid,mobile,concat(first_name,' ',last_name) as mem_name from pnh_member_info where user_id=?",$orders[0]['userid'])->row_array();
 		}
-
 
 
 		$batch=$this->db->query("select courier_id,awb from shipment_batch_process_invoice_link where invoice_no=?",$invoice_no)->row_array();
@@ -496,8 +490,6 @@ table{
 			<?php 		
 				}
 			}
-
-
 	
 			$trans_total=$this->db->query("select amount as t,cod,ship from king_transactions where transid=?",$order['transid'])->row_array();
 			$cod_ship_charges = 0;
@@ -523,8 +515,6 @@ table{
 			$stax_tot = ($sship+$ccod+$sgc); 
 		 	$s_tax_apl = ($stax_tot*$pstax/100); 
 ?>
-
-
 			<tr style="font-weight: bold;">
 				<td colspan="<?=($is_pnh&&$inv_type =='auditing')?"5":($is_pnh?"5":"4")?>" align="right">
 					&nbsp; 
@@ -1266,7 +1256,7 @@ table{
 									{
 										$p_order_no_bc = generate_barcode($p_order_no,500,70,2);
 								?>
-										<b><?php echo $this->db->query("select * from partner_info where id = ? ",$part_order_det['partner_id'])->row()->name; ?></b>
+										<b>Homeshop18</b>
 										<div><img src="data:image/png;base64,<?=base64_encode($p_order_no_bc);?>" /></div>
 										<b><?php echo $part_order_det['order_no'] ?></b>
 								<?php 		
@@ -1572,18 +1562,18 @@ myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
 		
 		
 		//inv_html += '<div style="margin-top:30px;">'+$("#invoice").html()+'</div>';
-		$('#tax_inv_ack_copy').hide();
-		//inv_html += '<div style="margin-top:0px;">';
-		//inv_html += $('#tax_inv_ack_copy').html();
-		//inv_html += '</div>';
+		$('#tax_inv_ack_copy').show();
+		inv_html += '<div style="margin-top:0px;">';
+		inv_html += $('#tax_inv_ack_copy').html();
+		inv_html += '</div>';
 		
 		
 		
 		
-		$('.customer_ship_details').hide();
-		//inv_html += '<div style="margin-top:0px;">';
-		//inv_html += $('#customer_acknowlegment').html();
-		//inv_html += '</div>';
+		$('.customer_ship_details').show();
+		inv_html += '<div style="margin-top:0px;">';
+		inv_html += $('#customer_acknowlegment').html();
+		inv_html += '</div>';
 		inv_html += '</div>';
 		
 		if($('#gate_pass_copy').length)
@@ -1612,22 +1602,6 @@ myWindow.document.write($("#invoice").html());
 <?php } ?>
 myWindow.focus();
 myWindow.print();
-}
-
-
-
-
-function print_tax_acknowledgement(ele)
-{
-	myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-	var inv_html = $('#tax_inv_ack_copy').html();
-		inv_html += '<div style="margin-top:0px;">';
-		inv_html += $('#customer_acknowlegment').html();
-		inv_html += '</div>';
-	
-	myWindow.document.write(inv_html);
-	myWindow.focus();
-	myWindow.print();
 }
 
 

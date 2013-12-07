@@ -59,7 +59,7 @@ if($terrid!=0) {
  }
 
 $arr_trans_set = $this->reservations->get_trans_list($batch_type,$from,$to,0,$user['userid']); //,$oldest_newestecho '<pre>'.count($arr_trans_set['result']);die();
-//echo '<pre>'.$arr_trans_set['last_query'];die();
+//echo '<pre>'.$arr_trans_set['last_query'];print_r($arr_trans_set['result']);die();
 if(count($arr_trans_set['result']) == 0 ) {
     $output.='<h3 class="heading_no_results">No transactions found for selected criteria.</h3>';
 }

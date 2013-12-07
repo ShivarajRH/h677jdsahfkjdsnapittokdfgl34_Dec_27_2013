@@ -264,6 +264,7 @@ class reservation_model extends Model
      * @return type array
      */
     function fran_experience_info($f_created_on) {
+        //$f_created_on =$f_created_on; //$f['f_created_on'];
         $fr_reg_diff = ceil((time()-$f_created_on)/(24*60*60));
 	 
         if($fr_reg_diff <= 30)

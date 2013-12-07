@@ -8,7 +8,7 @@
 if($notify_grn){?>
 <div style="background:#ff9900;padding:5px;color:#fff;" align="center"><h3><?php echo $notify_grn;?></h3></div>
 <?php }?>
-<span style="float: right"> Min PO Date:<input type="text" size="8" style="padding;2px;" name="min_po_date" value="<?php echo $min_po_date; ?>"> </span>
+<span style="float: right;"> Min PO Date:<input type="text" size="8" style="padding:2px;" name="min_po_date" value="<?php echo $min_po_date; ?>"> </span>
 <h2>Stock In</h2>
 <h4>Stock Intake No : <?=$this->db->query("select grn_id from t_grn_info order by grn_id desc")->row()->grn_id+1?></h4>
 
@@ -148,18 +148,25 @@ Vendor : <select id="grn_vendor">
 			<tr class="barcode%bcode% barcodereset " >
 			<td>%sno%</td>
 			<td>
-				<input type="hidden" name="imei%prodid%" class="imeisvvv imei%prodid%" value="">
+				<input type="text" name="imei%prodid%" class="imeisvvv imei%prodid%" value="">
 				<span style="font-size:80%"><span class="name">%name%</span><input type="hidden" name="pid%pid%[]" class="prod_addcheck" value="%prodid%"></span>
 				<div class="imei_cont"></div>
 				<div style="padding:5px;background: #ccc;">
 					<input type="hidden" style="padding:2px;font-size: 9px;width: 95%;" class="scan_pbarcode pbcodecls%prodid%" value="" name="pbarcode%pid%[]" />
 					<span style="font-size:70%;"><a href="javascript:void(0)"  onclick='show_add_barcode(event,"%pid%","%prodid%")'>%update_barcode%</a></span>
 				</div>
-				<span style="font-size:70%"><a href="javascript:void(0)" style="color:red" onclick='show_add_imei(event,"%prodid%")'>%add_serial%</a></span>
+				
 			</td>
 			<td class="poqty">%qty%<input type="hidden" class="popqty" value="%qty%"></td>
 			<td><input type="text" class="inp iqty" name="oqty%pid%[]" size=3 value="%pqty%"></td>
-			<td><input type="text" class="inp rqty qtychange" name="rqty%pid%[]" size=3 value="%pqty%"></td>
+			<td>
+                            <input type="text" class="inp rqty qtychange" name="rqty%pid%[]" size=3 value="%pqty%" prodid="%prodid%">
+                            <div class="imei_nos prodid_%prodid%">%imei_nos%</div>
+                            
+                            <!--<span style="font-size:70%"><a href="javascript:void(0)" style="color:red;" onclick='show_add_imei(event,"%prodid%")'>%add_serial%</a></span>-->
+                            
+                            
+                        </td>
 			<td>%po_mrp%</td>
 			<td><input type="text" class="inp prod_mrp" name="mrp%pid%[]" size=5 pmrp="%mrp%" value="%mrp%">
 				<div class="upd_pmrp_blk" align="center"> 
@@ -445,7 +452,9 @@ $(function(){
 		if(q<0)
 			q="("+(q*-1)+")";
 		$(".pqty",$p).html(q);
+                
 	});
+        
 	$("#grn .datagrid .pprice, #grn .datagrid .rqty").live("change",function(){
 		calc_rec_value();
 	});
@@ -612,13 +621,20 @@ function loadpo(pid)
 				update_barcode="Update barcode";
 				need_scan = 1;
 			}
-			var add_imei='';
+			var add_imei='';var imei_out='';
+                        var tot_rqty = parseInt(poi.order_qty)-parseInt(poi.received_qty);
 			if(poi.is_serial_required==1)
 			{
 				add_imei="add serial no.";
 				grow=grow.replace(/imeisvvv/g,"imeis");
-			}
 
+                                //============
+                                
+                                imei_out = print_imei_inputs(tot_rqty,poi.product_id);
+                                
+			}
+                        grow=grow.replace(/%imei_nos%/g,imei_out);
+                        
 			var prodbcodes = '';
 				if(poi.barcode)
 					poi.bcodes.push(poi.barcode);
@@ -637,7 +653,8 @@ function loadpo(pid)
 			grow=grow.replace(/%name%/g,'<a href="'+site_url+'/admin/product/'+poi.product_id+'" target="_blank">'+poi.product_name+'</a>');
 			grow=grow.replace(/%qty%/g,poi.order_qty);
 			
-			grow=grow.replace(/%pqty%/g,parseInt(poi.order_qty)-parseInt(poi.received_qty));
+			grow=grow.replace(/%pqty%/g,tot_rqty);
+                        
 			grow=grow.replace(/%po_mrp%/g,poi.mrp);
 			
 			grow=grow.replace(/%mrp%/g,poi.prod_mrp);
@@ -713,6 +730,7 @@ function show_add_imei(e,pid)
 {
 	x=e.clientX;
 	y=e.clientY;
+        
 	$("#add_barcode_dialog").hide();
 	$("#add_imei_dialog").css("top",y+"px").css("left",x+"px").show();
 	$("#aid_imei").focus().val("");
@@ -729,8 +747,91 @@ function show_add_barcode(e,pid,prodid)
 	$("#abd_pid").val(pid);
 	$("#abd_pid").data('prodid',prodid);
 }
+function print_imei_inputs(tot_rqty,prodid) {
+    var imei_out ='<ul><span>Enter IMEI No : <br></span>';
+    var c=0;
+    for(i=0; i<tot_rqty; i++) {
+            c +=1; //<input type="text" value="" id="aid_pid">
+            imei_out +='<li>';
+            imei_out +='<input type="text" class="inp imei_input_submit" style="width:200px;" id="aid_imei_'+prodid+'" value=""></li>';
+    }
+    imei_out+='</ul>';
+    return imei_out;
+}
 
+$(".datagrid .rqty").live("keyup",function(){
+    var tot_rqty = $(this).val();
+    var prodid = $(this).attr('prodid');
+    
+    if($(".prodid_"+prodid).html() != '') { //only if product is serial
+        if(!confirm("Warning:\nYou have changed quantity all old IMEIs will be cleared.\nDo you want to proceed?")) { return false; }
+        var imei_out = print_imei_inputs(tot_rqty,prodid);
+        $(".prodid_"+prodid).html(imei_out);
+    }
+    
+    
+});
+var imeis=[];
 
+$(".imei_input_submit").live("change keypress",function(e) { //
+    if( e.which == '13' || e.which == '9' || e.which == undefined) {
+    e.preventDefault();
+    var imei_no=$(this).val();
+        var imei_inp = this.id;
+        
+    print(e.type + ": " +  e.which +" = "+ imei_no + " = "+imei_inp);
+    
+        var imei_no=$(this).val();
+        var imei_inp = this.id;
+        
+        if(imei_no=='') 
+                return;
+        
+        if(!check_dup_imei(imei_no)) 
+                return;
+        
+        var pid=$(".datagrid .rqty").attr('prodid');
+        print(imei_no+"="+imei_inp+"="+pid);
+        
+        
+        //================
+        //imei=$("#aid_imei").val();
+	//if(imei.length==0)
+	//	return;
+	//if(!check_dup_imei(imei))
+	//	return;
+	//pid=$("#aid_pid").val();
+	var c_imei=$(".imei"+pid).val();
+	if(c_imei.length==0)
+		imeis=[];
+	else
+		imeis=c_imei.split(",");
+        
+	imeis.push(imei_no);
+        
+	c=imeis.join(",");
+        
+	$(".imei"+pid).val(c);
+        
+        
+        /*
+	$("#aid_imei").val("").focus();
+	p=$($(".imei"+pid).parents("tr").get(0));
+	h="";
+	for(i=0;i<imeis.length;i++)
+	{
+		h=h+' <span onclick="remove_imei(\''+imeis[i]+'\','+pid+')" style="cursor:pointer;"> '+(i+1)+') '+imeis[i]+'</span>';
+	}
+	$(".imei_cont",p).html(h).show();
+        
+        */
+        //================
+        
+        
+        
+   }
+
+});
 </script>
 
 <div id="add_barcode_dialog">
@@ -738,10 +839,10 @@ function show_add_barcode(e,pid,prodid)
 Enter Barcode : <input type="text" class="inp" style="width:200px;" id="abd_barcode">
 </div>
 
-<div id="add_imei_dialog">
-<input type="hidden" value="" id="aid_pid">
-Enter IMEI No : <input type="text" class="inp" style="width:200px;" id="aid_imei">
-</div>
+<!--<div id="add_imei_dialog">
+    <input type="hidden" value="" id="aid_pid">
+    Enter IMEI No : <input type="text" class="inp" style="width:200px;" id="aid_imei">
+</div>-->
 
 <style>
 #add_barcode_dialog,#add_imei_dialog{
@@ -782,6 +883,9 @@ display:block;
 background:#f90;
 padding:0px 2px;
 margin:3px;
+}
+.imei_nos ul li {
+    list-style-type:none;
 }
 </style>
 

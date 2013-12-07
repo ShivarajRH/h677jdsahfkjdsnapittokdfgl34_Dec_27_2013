@@ -5780,6 +5780,7 @@ order by p.product_name asc
 		*/
 	}
 	
+	
 	function do_po_prodwise()
 	{
 		error_reporting(E_ALL);
@@ -5870,48 +5871,49 @@ order by p.product_name asc
 		$this->session->set_flashdata("erp_pop_info","POs created");
 		redirect("admin/viewpo/$poid");
 	}
+        
 	/**
-        * funciton to update DP price
-        *  Check if the product has serial no and 1:1 link to Deal. 
-        */
-       function _update_dp_byproductid($pid,$val=0,$grn_id=0)
-       {
-               if(!$val)
-                       return false;
-       
-               $user = $this->erpm->auth();
-                               
-               // check if the product is serial product 
-               if($this->db->query("select is_serial_required from m_product_info where product_id = ? ",$pid)->row()->is_serial_required)
-               {
-                       // check if dp has changed and update DP for item
-                       $deal_det_res  = $this->db->query("select a.dealid,orgprice,c.itemid,price from king_deals a join king_dealitems b on a.dealid = b.dealid join m_product_deal_link c on c.itemid = b.id where product_id = ? and c.is_active = 1 order by c.id desc limit 1 ",$pid);
-                       if($deal_det_res->num_rows())
-                       {
-                               $deal_det = $deal_det_res->row_array();
-                               if($deal_det['price'] != $val)
-                               {
-                                       // Update DP price to deals 
-                                       $this->db->query("update king_dealitems set price = ?,modified_on=now() where id = ? and price = ? ",array($val,$deal_det['itemid'],$deal_det['price']));
-                                       
-                                       // update to deal price change log
-                                       $price_upt_prm=array();
-                                       $price_upt_prm['itemid']=$deal_det['itemid'];
-                                       $price_upt_prm['old_mrp']=$deal_det['orgprice'];
-                                       $price_upt_prm['new_mrp']=$deal_det['orgprice'];
-                                       $price_upt_prm['new_price']=$val;
-                                       $price_upt_prm['old_price']=$deal_det['price'];
-                                       $price_upt_prm['created_by']=$user['userid'];
-                                       $price_upt_prm['created_on']=time();
-                                       $price_upt_prm['reference_grn']=$grn_id;
-                                       
-                                       $this->db->insert('deal_price_changelog',$price_upt_prm);
-                                       return true;
-                               }        
-                       }
-               }
-               return false;
-       }
+	 * funciton to update DP price
+	 *  Check if the product has serial no and 1:1 link to Deal. 
+	 */
+	function _update_dp_byproductid($pid,$val=0,$grn_id=0)
+	{
+		if(!$val)
+			return false;
+	
+		$user = $this->erpm->auth();
+				
+		// check if the product is serial product 
+		if($this->db->query("select is_serial_required from m_product_info where product_id = ? ",$pid)->row()->is_serial_required)
+		{
+			// check if dp has changed and update DP for item
+			$deal_det_res  = $this->db->query("select a.dealid,orgprice,c.itemid,price from king_deals a join king_dealitems b on a.dealid = b.dealid join m_product_deal_link c on c.itemid = b.id where product_id = ? and c.is_active = 1 order by c.id desc limit 1 ",$pid);
+			if($deal_det_res->num_rows())
+			{
+				$deal_det = $deal_det_res->row_array();
+				if($deal_det['price'] != $val)
+				{
+					// Update DP price to deals 
+					$this->db->query("update king_dealitems set price = ?,modified_on=now() where id = ? and price = ? ",array($val,$deal_det['itemid'],$deal_det['price']));
+					
+					// update to deal price change log
+					$price_upt_prm=array();
+					$price_upt_prm['itemid']=$deal_det['itemid'];
+					$price_upt_prm['old_mrp']=$deal_det['orgprice'];
+					$price_upt_prm['new_mrp']=$deal_det['orgprice'];
+					$price_upt_prm['new_price']=$val;
+					$price_upt_prm['old_price']=$deal_det['price'];
+					$price_upt_prm['created_by']=$user['userid'];
+					$price_upt_prm['created_on']=time();
+					$price_upt_prm['reference_grn']=$grn_id;
+					
+					$this->db->insert('deal_price_changelog',$price_upt_prm);
+					return true;
+				}	
+			}
+		}
+		return false;
+	}
 	
 	function getlinkeddealsforproduct($pid)
 	{

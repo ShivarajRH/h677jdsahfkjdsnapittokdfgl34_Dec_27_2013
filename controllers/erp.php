@@ -15871,96 +15871,6 @@ order by action_date";
 	}
 
  
-	function jx_load_all_shipped_mobimei($pg=0)
-	{
-		$this->erpm->auth();
-		
-		$fid = $this->input->post('fid');
-		$imei_active_ondate = $this->input->post('active_ondate');
-		$imei_active_endate = $this->input->post('active_ondate_end');
-		$imei_srch_kwd = $this->input->post('imei_srch_kwd');
-		$imei_status = $this->input->post('imei_status');
-		$imei_cre_type=array();
-		$imei_cre_type[0]='Rs';
-		$imei_cre_type[1]='%';
-		
-		$limit=10;
-		$cond = ' ';
-		if($fid)
-			$cond.= 'and t.franchise_id='.$fid;
-		if($imei_srch_kwd)
-				$cond .= '  and ( inv.invoice_no = "'.$imei_srch_kwd.'" or imei_no = "'.$imei_srch_kwd.'") ';
-		if($imei_active_ondate && $imei_active_endate)
-			$cond .= ' and (date(imei_activated_on) >= date("'.$imei_active_ondate.'") and date(imei_activated_on) <= date("'.$imei_active_endate.'"))';
-
-		if($imei_status>=1)
-		{
-			if($imei_status == 1 )
-				$cond .= ' and i.is_imei_activated=0';
-			else 
-				$cond .= ' and i.is_imei_activated=1';
-		}
-			
-		
-		$output=array();
-		$total_rows="SELECT count(distinct i.id) as ttl
-					FROM king_orders o
-					JOIN king_transactions t ON t.transid=o.transid
-					JOIN m_product_deal_link p ON p.itemid=o.itemid
-					JOIN t_imei_no i ON i.order_id=o.id
-					JOIN king_dealitems d ON d.id=o.itemid
-					JOIN king_deals s ON s.dealid=d.dealid
-					JOIN m_product_info l ON l.product_id=p.product_id
-					JOIN king_invoice inv ON inv.transid=o.transid
-					JOIN imei_m_scheme r ON r.id=o.imei_scheme_id
-					left join t_invoice_credit_notes tcr on tcr.invoice_no = inv.invoice_no
-					JOIN shipment_batch_process_invoice_link bi ON bi.invoice_no = inv.invoice_no AND bi.shipped = 1
-					WHERE o.status in (1,2) and o.imei_scheme_id > 0 $cond
-					ORDER BY l.product_name ASC";
-		$ttl_count=$this->db->query($total_rows)->row()->ttl;
-		$output['total']=$ttl_count;
-		
-		$shipped_imei_fr_res=$this->db->query("SELECT o.imei_reimbursement_value_perunit as imei_activation_credit,i.is_imei_activated,imei_activated_on,imei_no,p.product_id,date_format(from_unixtime(o.time),'%d %M %Y') as orderd_on,l.product_name,o.quantity,o.imei_reimbursement_value_perunit,o.id,inv.invoice_no,t.paid,r.scheme_type,r.credit_value,b.pnh_member_id
-								FROM king_orders o
-								JOIN king_transactions t ON t.transid=o.transid
-								JOIN m_product_deal_link p ON p.itemid=o.itemid
-								JOIN t_imei_no i ON i.order_id=o.id
-								JOIN king_dealitems d ON d.id=o.itemid
-								JOIN king_deals s ON s.dealid=d.dealid
-								JOIN m_product_info l ON l.product_id=p.product_id
-								JOIN king_invoice inv ON inv.transid=o.transid
-								JOIN imei_m_scheme r ON r.id=o.imei_scheme_id
-								left join pnh_member_info b on b.mobile=i.activated_mob_no
-								left join t_invoice_credit_notes tcr on tcr.invoice_no = inv.invoice_no
-								JOIN shipment_batch_process_invoice_link bi ON bi.invoice_no = inv.invoice_no AND bi.shipped = 1
-								WHERE o.status in (1,2) and o.imei_scheme_id > 0 $cond
-								GROUP BY i.id
-								ORDER BY l.product_name ASC limit $pg,$limit");
-		
-		if($shipped_imei_fr_res->num_rows())
-		{
-			$output['status']='success';
-			$output['ship_imei_det']=$shipped_imei_fr_res->result_array();
-			$output['imei_cre_type']=$imei_cre_type;
-			$this->load->library('pagination');
-			
-			$config['base_url'] = site_url('admin/jx_load_all_shipped_mobimei');
-			$config['total_rows'] = $ttl_count;
-			$config['per_page'] = $limit;
-			$config['uri_segment'] = 3;
-				
-			$this->config->set_item('enable_query_strings',false);
-			$this->pagination->initialize($config);
-			$output['shipped_imeilist_pagi'] = $this->pagination->create_links();
-			$this->config->set_item('enable_query_strings',true);
-		}else 
-		{
-			$output['ship_imei_det']=array();
-			$output['status']='success';
-		}
-			echo json_encode($output);
-	}
-	
 	/**
 	 * function to mark return product as packed for processing for shipping
 	 */
@@ -22943,7 +22853,7 @@ die; */
 		$this->erpm->flash_msg("Member Scheme disabled");
 		redirect($_SERVER['HTTP_REFERER']);
 	}
-	/*
+	
 	function jx_load_all_shipped_mobimei($pg=0)
 	{
 		$this->erpm->auth();
@@ -23029,7 +22939,7 @@ die; */
 			$output['status']='success';
 		}
 			echo json_encode($output);
-	}*/
+	}
 
 	/**
 	 * function to check member id / mobileno for imeino activation 

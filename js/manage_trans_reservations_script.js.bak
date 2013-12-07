@@ -313,7 +313,7 @@ function reallot_stock_for_all_transaction(userid,pg) {
     $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
     $.post(site_url+"admin/jx_reserve_avail_stock_all_transaction/"+updated_by,"",function(resp) {
             if(resp.status == 'fail') {
-                        rdata = resp.response+"";
+                        rdata = resp.response+"|";
             }
             else {
                 $.each(resp.result,function(i,val_arr){
