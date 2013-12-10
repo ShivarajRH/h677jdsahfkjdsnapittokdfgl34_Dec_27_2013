@@ -148,8 +148,11 @@ Vendor : <select id="grn_vendor">
 			<tr class="barcode%bcode% barcodereset " >
 			<td>%sno%</td>
 			<td>
-				<input type="text" name="imei%prodid%" class="imeisvvv imei%prodid%" value="">
-				<span style="font-size:80%"><span class="name">%name%</span><input type="hidden" name="pid%pid%[]" class="prod_addcheck" value="%prodid%"></span>
+                            <input type="hidden" name="imei%prodid%" class="imeisvvv imei%prodid%" id="list_imei_%prodid%" value="">
+				<span style="font-size:80%"><span class="name">%name%</span>
+                                    <input type="hidden" name="pid%pid%[]" class="prod_addcheck" value="%prodid%">
+                                    <input type="hidden" name="prodid[]" class="prod_addcheck" value="%prodid%">
+                                </span>
 				<div class="imei_cont"></div>
 				<div style="padding:5px;background: #ccc;">
 					<input type="hidden" style="padding:2px;font-size: 9px;width: 95%;" class="scan_pbarcode pbcodecls%prodid%" value="" name="pbarcode%pid%[]" />
@@ -158,10 +161,17 @@ Vendor : <select id="grn_vendor">
 				
 			</td>
 			<td class="poqty">%qty%<input type="hidden" class="popqty" value="%qty%"></td>
-			<td><input type="text" class="inp iqty" name="oqty%pid%[]" size=3 value="%pqty%"></td>
 			<td>
-                            <input type="text" class="inp rqty qtychange" name="rqty%pid%[]" size=3 value="%pqty%" prodid="%prodid%">
+                            <input type="text" class="inp iqty" name="oqty%pid%[]" id="oqty_%prodid%" size=3 value="%pqty%">
+                        </td>
+			<td>
+                            
+                            
+                            <input type="text" class="inp rqty qtychange" name="rqty%pid%[]" id="rqty_%prodid%" size=3 value="%pqty%" prodid="%prodid%">
+                            
                             <div class="imei_nos prodid_%prodid%">%imei_nos%</div>
+                            
+                            <input type="hidden" value="%prodid%" name="prodid_%prodid%" id="prodid_%prodid%"/>
                             
                             <!--<span style="font-size:70%"><a href="javascript:void(0)" style="color:red;" onclick='show_add_imei(event,"%prodid%")'>%add_serial%</a></span>-->
                             
@@ -334,6 +344,9 @@ $(function(){
 	
 	var chk_for_vendor_ids = 1;
 	$("#apply_grn_form").submit(function(){
+                
+                
+                
 		flag=true;
 		if($(".prod_addcheck").length==0)
 		{
@@ -354,12 +367,15 @@ $(function(){
 			alert("Please choose rackbin");
 			return false;
 		}
-			
+		
 		
 		$(".invno,.invdate,.invamount").each(function(){
 			if($(this).val().length==0)
 			{
 				alert("Enter invoice details");
+                                
+                                $(".invno").focusin();
+                                
 				flag=false;
 				return false;
 			}
@@ -378,10 +394,13 @@ $(function(){
 		
 		
 		
-		$(".imeis").each(function(){
+		$(".imeisvvv").each(function(){
+                    
 			o=$(this);
+                        
 			p=$($(this).parents("tr").get(0));
-			if(o.val().length==0 && $(".rqty",p).val()!="0")
+		
+                        if(o.val().length==0 && $(".rqty",p).val()!="0")
 			{
 				alert("Serial no is required for '"+$(".name",p).text()+"'");
 				flag=false;
@@ -511,6 +530,7 @@ function remove_imei(imei,pid)
 	$(".imei_cont",p).html(h).show();
 }
 
+
 function check_dup_imei(imei)
 {
 	var imeis=[];
@@ -629,7 +649,6 @@ function loadpo(pid)
 				grow=grow.replace(/imeisvvv/g,"imeis");
 
                                 //============
-                                
                                 imei_out = print_imei_inputs(tot_rqty,poi.product_id);
                                 
 			}
@@ -753,85 +772,167 @@ function print_imei_inputs(tot_rqty,prodid) {
     for(i=0; i<tot_rqty; i++) {
             c +=1; //<input type="text" value="" id="aid_pid">
             imei_out +='<li>';
-            imei_out +='<input type="text" class="inp imei_input_submit" style="width:200px;" id="aid_imei_'+prodid+'" value=""></li>';
+            imei_out +='<input type="text" class="inp imei_input" name="imei_input_'+prodid+'[]" id="imei_input_'+prodid+'_'+c+'"  style="width:200px;" onchange="return imei_input_actions(this,'+prodid+');" value="">\n\
+                        <span class="imei_remove" onclick="remove_input_imei('+prodid+','+c+');" id="imei_remove_'+prodid+'_'+c+'">&nbsp; X </span>\n\
+                        </li><span class="append_imei_items_'+prodid+'_'+c+'"></span>';
     }
-    imei_out+='</ul>';
+    imei_out+='</ul><span class="imei_add" onclick="add_input_imei('+prodid+');" id="imei_add_'+prodid+'">&nbsp; Add </span>';
     return imei_out;
 }
 
-$(".datagrid .rqty").live("keyup",function(){
+$(".datagrid .rqty").live("change",function(){
     var tot_rqty = $(this).val();
     var prodid = $(this).attr('prodid');
+    var str_imei=$("#list_imei_"+prodid).val();
     
     if($(".prodid_"+prodid).html() != '') { //only if product is serial
-        if(!confirm("Warning:\nYou have changed quantity all old IMEIs will be cleared.\nDo you want to proceed?")) { return false; }
+        if(str_imei != '') {
+            if(!confirm("Warning:\nYou have changed quantity all old IMEIs will be cleared.\nDo you want to proceed?")) { return false; }
+        }
         var imei_out = print_imei_inputs(tot_rqty,prodid);
         $(".prodid_"+prodid).html(imei_out);
+        $("#oqty_"+prodid).val(tot_rqty);
+        $("#list_imei_"+prodid).val("");
     }
-    
-    
 });
-var imeis=[];
 
-$(".imei_input_submit").live("change keypress",function(e) { //
-    if( e.which == '13' || e.which == '9' || e.which == undefined) {
-    e.preventDefault();
-    var imei_no=$(this).val();
-        var imei_inp = this.id;
-        
-    print(e.type + ": " +  e.which +" = "+ imei_no + " = "+imei_inp);
+function remove_input_imei(prodid,count)
+{
+    var imei_no = $("#imei_input_"+prodid+"_"+count).val();
     
-        var imei_no=$(this).val();
-        var imei_inp = this.id;
+	str_imei=$("#list_imei_"+prodid).val();
         
-        if(imei_no=='') 
-                return;
-        
-        if(!check_dup_imei(imei_no)) 
-                return;
-        
-        var pid=$(".datagrid .rqty").attr('prodid');
-        print(imei_no+"="+imei_inp+"="+pid);
-        
-        
-        //================
-        //imei=$("#aid_imei").val();
-	//if(imei.length==0)
-	//	return;
-	//if(!check_dup_imei(imei))
-	//	return;
-	//pid=$("#aid_pid").val();
-	var c_imei=$(".imei"+pid).val();
-	if(c_imei.length==0)
-		imeis=[];
-	else
-		imeis=c_imei.split(",");
-        
-	imeis.push(imei_no);
-        
+	imeis=str_imei.split(",");
+	t=imeis;
+	imeis=[];
+	for(i=0;i<t.length;i++)
+		if(imei_no!=t[i])
+			imeis.push(t[i]);
 	c=imeis.join(",");
+	$("#list_imei_"+prodid).val(c);
         
-	$(".imei"+pid).val(c);
+        $("#imei_input_"+prodid+"_"+count).remove();
+        $("#imei_remove_"+prodid+"_"+count).remove();
+        $("#oqty_"+prodid).val($("#oqty_"+prodid).val()-1);
+        $("#rqty_"+prodid).val($("#rqty_"+prodid).val()-1);
+       
+            //$("#aid_imei").val("").focus();
+            //p=$($(".imei"+prodid).parents("tr").get(0));
+            //h="";
+            //for(i=0;i<imeis.length;i++)
+            //{
+            //	h=h+'<span onclick="remove_imei(\''+imeis[i]+'\','+prodid+')" style="cursor:pointer;"> '+(i+1)+') '+imeis[i]+'</span>';
+            //}
+            //$(".imei_cont",p).html(h).show();
+}
+function add_input_imei(prodid)
+{
+    //var imei_no = $("#imei_input_"+prodid).val();
+    
+	var rqty=$("#rqty_"+prodid).val();
         
+        //var imeis=[];
+	//imeis=str_imei.split(",");
         
-        /*
-	$("#aid_imei").val("").focus();
-	p=$($(".imei"+pid).parents("tr").get(0));
-	h="";
-	for(i=0;i<imeis.length;i++)
-	{
-		h=h+' <span onclick="remove_imei(\''+imeis[i]+'\','+pid+')" style="cursor:pointer;"> '+(i+1)+') '+imeis[i]+'</span>';
-	}
-	$(".imei_cont",p).html(h).show();
+//	t=imeis;
+//	imeis=[];
+        //var total=imeis.length;
         
-        */
-        //================
+//	for(i=0;i<t.length;i++)
+//		if(imei_no!=t[i])
+//			imeis.push(t[i]);
+//	c=imeis.join(",");
         
+        var c = parseInt(rqty) + 1;
+        print(c+"="+rqty);
+	$(".append_imei_items_"+prodid+"_"+rqty).append('<input type="text" class="inp imei_input" name="imei_input_'+prodid+'[]" id="imei_input_'+prodid+'_'+c+'"  style="width:200px;" onchange="return imei_input_actions(this,'+prodid+');" value="">\n\
+                        <span class="imei_remove" onclick="remove_input_imei('+prodid+','+c+');" id="imei_remove_'+prodid+'_'+c+'">&nbsp; X </span>\n\
+                        </li><span class="append_imei_items_'+prodid+','+c+'"></span>');
         
+        //$("#imei_input_"+prodid+"_"+count).remove();
+        //$("#imei_remove_"+prodid+"_"+count).remove();
+        $("#oqty_"+prodid).val(parseInt($("#oqty_"+prodid).val())+1);
+        $("#rqty_"+prodid).val(parseInt($("#rqty_"+prodid).val())+1);
+       
+            //$("#aid_imei").val("").focus();
+            //p=$($(".imei"+prodid).parents("tr").get(0));
+            //h="";
+            //for(i=0;i<imeis.length;i++)
+            //{
+            //	h=h+'<span onclick="remove_imei(\''+imeis[i]+'\','+prodid+')" style="cursor:pointer;"> '+(i+1)+') '+imeis[i]+'</span>';
+            //}
+            //$(".imei_cont",p).html(h).show();
+}
+    function imei_input_actions(e) {
         
-   }
+                var imei_no=$(e).val();
+                var imei_inp = e.id;
+                if(isNaN(imei_no)) {
+                    alert("Only Numbers allowed"); $(e).focus().val(""); return false;
+                }
+                print(e.type + ": " +  e.which +" = "+ imei_no + " = "+imei_inp);
 
+                //return false;
+
+                var arr_imei_input = imei_inp.split("_");
+                var prodid = arr_imei_input[2];
+                var rqty = $("#rqty_"+prodid).val();
+
+                if(imei_no=='') 
+                        return;
+
+                if(!check_dup_imei(imei_no)) 
+                        return;
+
+                print(imei_no+"="+imei_inp+"="+prodid);
+                $(e).attr('disabled',true);
+                
+                var c=[];
+
+                var str_imei=$("#list_imei_"+prodid).val();
+                if(str_imei.length==0)
+                        var imeis=[];
+                else
+                        imeis=str_imei.split(",");
+
+                imeis.push(imei_no);
+
+                c=imeis.join(",");
+
+                $("#list_imei_"+prodid).val(c);
+
+
+                var count = arr_imei_input[3];
+                var count = parseInt(count);
+                //alert(count +"="+ rqty);
+                if(count <= rqty) {
+                    ++count;
+                   // alert("#imei_input_"+prodid+"_"+count);
+                    $("#imei_input_"+prodid+"_"+count).focusin();
+                }
+                return false;
+      
+    }
+/*function imei_input_actions_keydown(event,prodid) {     //change
+    var keycode = (event.keyCode ? event.keyCode : event.which);
+    
+   if( keycode == '13') {
+        imei_input_actions(event);
+   }
+   /*else if(elt.type = "focusout") {
+        imei_input_actions(elt);
+   }
+   // return false;
+}*/
+$(".datagrid .imei_input").live("keydown",function(event){
+    var keycode = (event.keyCode ? event.keyCode : event.which);
+
+    if( keycode == 13) {
+         imei_input_actions(event);
+    }
+    return true;
 });
+
 </script>
 
 <div id="add_barcode_dialog">
@@ -887,6 +988,7 @@ margin:3px;
 .imei_nos ul li {
     list-style-type:none;
 }
+.imei_remove { cursor:pointer; }
 </style>
 
 <?php

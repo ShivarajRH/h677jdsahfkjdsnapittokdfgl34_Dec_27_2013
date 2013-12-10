@@ -1163,6 +1163,8 @@ class Erp extends Stream
 		$user=$this->auth(STOCK_INTAKE_ROLE);
 		if($_POST)
 		{
+                    echo '<pre>'; print_r($_POST);die();
+                    
 			$grn_id = $this->erpm->do_grn();
 			$this->session->set_flashdata("notify_grn","Stock Intake done successfully-#".$grn_id);
 			redirect("admin/apply_grn",'refresh');
