@@ -41,6 +41,20 @@
 	background: #aaa !important;
 	color: #FFF !important;
 }
+.mrp_block {
+    margin: 5px 0 0 2px;
+}
+.subdatagrid th {
+    padding: 4px 0 2px 4px !important;
+    font-size: 11px !important;
+    color: #130C09 !important;
+    background-color: rgba(112, 100, 151, 0.51) !important;
+    vertical-align: middle; width: 30px !important; padding: 2px 4px !important;
+}
+.datagrid th {
+    background: #443266;
+    color: #C3C3E5;
+}
 </style>
 <div class="container">
 <?php 
@@ -107,14 +121,15 @@
 			<th>Deal Picture</th>
 			<?php echo ($mlt)?'<th width="5%">Transactions details</th>':'';?>
 			<th>Product name</th>
-			<th>Deal</th>
-			<th>MRP</th>
-			<th>Order MRP</th>
-			<th>Qty</th>
+			<!--<th>Deal</th>-->
+			<th>Required Qty</th>
+			<th>Scanned Qty</th>
+<!--			<th>MRP</th>
+			<th>Order MRP</th>-->
 			<th style="padding: 0px;">
 			<div style="padding: 5px;">Stock MRPs</div>
 
-			<table class="subgrid" cellpadding="0" cellspacing="0" style="border: 0px !important; width: 100%; background: #fcfcfc !important; font-size: 11px;">
+<!--			<table class="subgrid" cellpadding="0" cellspacing="0" style="border: 0px !important; width: 100%; background: #fcfcfc !important; font-size: 11px;">
 				<tr>
 					<td style="background: #fcfcfc !important; vertical-align: middle; color: #000">
 					<div style="width: 60px; text-align: center;">MRP</div>
@@ -132,13 +147,12 @@
 					<div style="width: 30px; text-align: center;">Scan</div>
 					</td>
 				</tr>
-			</table>
+			</table>-->
 
 			</th>
 			<th>
 			<div style="width: 60px; text-align: center;">Refund Amount</div>
 			</th>
-			<th>Scanned</th>
 			<th>Status</th>
 		</tr>
 	</thead>
@@ -179,7 +193,7 @@
 			
 			<td class="prod"><input type="hidden" class="pid" value="<?=$i['product_id']?>">  
                         
-                        <?php //anchor_popup('admin/product/'.$i['product_id'],'view')?>
+                        
                             
                             <a href="<?=site_url('admin/product/'.$i['product_id'])?>" target="_blank"><?=$i['product_name']?></a>
                             
@@ -199,14 +213,22 @@
 				}
 				echo '</ol>';
 		}?>
-			</td>
-			<td>
-				<?=$i['deal']?>	
-			</td>
 
-			<td><?=(double)$i['mrp']?></td>
-			<td class="ord_mrp"><?=$i['order_mrp']?></td>
+                                <div class="mrp_block">
+                                    <span class="small">MRP: <b><?=(double)$i['mrp']?></b></span> &nbsp;&nbsp;
+                                    <span class="small">Order MRP: <b><?=$i['order_mrp']?></b></span>
+                                </div>
+                        
+                                        
+			</td>
+			<?php /*<td>
+				<?php //$i['deal']?>	
+			</td>*/?>
+
 			<td class="qty prod_req_qty"><?=$i['qty']?></td>
+			<td class="have" style="vertical-align: middle;">0</td>
+			<?php /*<td><?=(double)$i['mrp']?></td>
+			<td class="ord_mrp"><?=$i['order_mrp']?></td>*/?>
 
 			<td style="padding: 0px;">
 			<div style="background: #ccc; padding: 0px; margin: 0px; font-size: 85%;">
@@ -276,7 +298,22 @@
 				if(!round($mrp_list['stk']+$ttl_reserved_qty))
 				continue;
 		?>
-			<table class="subgrid" cellpadding="0" cellspacing="0" style="border: 0px !important; width: 100%; background: #f9f9f9; font-size: 13px;">
+			<table class="subdatagrid" cellpadding="0" cellspacing="0" style="border: 0px !important; width: 100%; background: #f9f9f9; font-size: 13px;">
+                                <tr>
+					<th style="">
+                                            <div style="width: 60px; text-align: center;">MRP</div>
+					</th>
+					
+					<th style="">
+					<div style="width: 30px;">Stock</div>
+					</th>
+					
+					<th style=" " width="10">
+					<div style="width: 30px; text-align: center;">Scan</div>
+					</th>
+                                        <th></th>
+				</tr>
+                                
 				<tr>
 					<td style="vertical-align: middle;">
 					<div style="width: 60px; text-align: center;"><?php echo round($mrp,2);?></div>
@@ -351,7 +388,6 @@
 			</div>
 			</td>
 			
-			<td class="have" style="vertical-align: middle;">0</td>
 			<td class="status" style="vertical-align: middle;">PENDING</td>
 
 		<?php 
@@ -1112,6 +1148,7 @@
 .imeis{width: 250px;}
 .remove_scanned{padding:5px;font-size: 11px;color:#cd0000}
 .imei_inp_list{padding-left:30px;}
+
 </style>
 
 </div>

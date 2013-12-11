@@ -316,22 +316,51 @@ class Reservation extends Voucher {
                     where a.status in (0,1) and tr.batch_enabled=1 and tr.is_pnh=1  #and a.transid=@tid
                     group by a.transid) as ddd
                     where ddd.orders_status=0")->result_array() or die("Error");
+            
+            echo 'Count='.count($rslt_for_trans).'<pre>';
             foreach($rslt_for_trans as $rslt) {
                 $transid = $rslt['transid'];
                 $ttl_num_orders = $rslt['num_order_ids'];
 
                 //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
                 // Process to batch this transaction
-                $output['result'][] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
-                
+                $arr_result[$rslt['transid']] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+               
+               
             }
+            print_r($arr_result); //die();
             
-//                $count_alloted = count($arr_result["alloted"]);
-//                $count_nostock = count($arr_result["nostock"]);
+            foreach ($arr_result as $transid=>$rslt) {
+                    if($rslt["nostock"] == 0 ) {
+                        $arr_result2['nostock'][$transid] = $rslt["nostock"];
+                        
+                        foreach($rslt["products"] as $prodduct_id=>$stock) {
+                            $nostock_msg[$transid] = '<a href="'.site_url("admin/product/".$prodduct_id).'"> '.$prodduct_id.'</a> - '.$stock.'<br>';
+                        }
+                        
+                    }
+                    elseif(isset($rslt["alloted"])) {
+                        $arr_result2['alloted'][$transid] = $rslt["alloted"];
+                        
+                        foreach($rslt["products"] as $product) {
+                            $allotedstock_msg[$transid] = $rslt["nostock"];
+                        }
+                        
+                    }
+                    elseif($rslt["error"] != '') {
+                        $errors[$transid] = $rslt["error"];
+                    }
+            }
+                $count_alloted = count($arr_result2["alloted"]);
+                $count_notalloted = count($arr_result2['nostock']); //count($count_stock['alloted']);count($arr_result2["alloted"]);
+                
 //                $output['result'] =array("alloted"=>$count_alloted);
+                
+                print_r($count_stock);
+                $output = array("status"=>"success","alloted"=>$count_alloted,"alloted_stock_msg"=>$allotedstock_msg,"nostock"=>$count_notalloted,"nostock_msg"=>$nostock_msg,"error"=>$errors);
         }
         else {
-            $output = array("status"=>"fail","resp"=>'You dodn\'t have access permission to do this acation');
+            $output = array("status"=>"fail","resp"=>'You dodn\'t have access permission to do this action');
         }
         //$this->output->set_output($output);
         echo json_encode($output);

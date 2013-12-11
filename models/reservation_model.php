@@ -506,7 +506,10 @@ class reservation_model extends Model
 //            print_r($stock);
 //            exit;
             
-
+            //$output['productids']=$productids;
+            //$output['orders']=$orders;
+            $output['products']=$stock;
+            
             $p_invoices=$this->erpm->do_proforma_invoice($orders);
 
             $batch_id=0;
@@ -561,7 +564,7 @@ class reservation_model extends Model
                     }
             }
 
-
+        $total_qty=0;
             $down_summary = array(); 
             foreach($orders as $o)
             {
@@ -604,7 +607,9 @@ class reservation_model extends Model
                             $alloted_stock2 = array();
 
                             $pen_qty = $total_qty;
-
+                            
+                            
+                            
                             // query to fetch stock product ordered by exact mrp and followed by asc mrp.  	
 
                             $sql = "select product_barcode,stock_id,product_id,available_qty,location_id,rack_bin_id,mrp,if((mrp-$omrp),1,0) as mrp_diff 
@@ -672,12 +677,13 @@ class reservation_model extends Model
                                                 //$output['resp'][] = "<br>".$rdata;
                                                 
                                             }else {
-                                                $output['resp'][] = "<br>Transaction Stock log not updated.";
+                                                $output['error'] = "<br>Transaction Stock log not updated.";
                                             }
-                                             
+
                                     }
                                     
-                                    $output['resp'][] = '<br>STOCK ALLOTED - '.$i_transid.' with '.count($alloted_stock).' product'.$stk_movtype_msg.'';
+                                    $output['alloted'] = count($alloted_stock); //'<br>STOCK ALLOTED - '.$i_transid.' with '.count($alloted_stock).' product'.$stk_movtype_msg.'';
+
                             }
                            
                     }
@@ -699,16 +705,17 @@ class reservation_model extends Model
 					$data = implode('","',$tmp);
 				
                                 
-                                        $output['resp'][] = "<br>Transaction $i_transid with ".$data.'.';
+                                        $output['alloted'] = "Transaction $i_transid with ".$data.'.';
                                 
-		}else
-		{
-			if(!count($batch_inv_link)) {
-				$output['resp'][] ="<br>INSUFFICIENT STOCK - $i_transid";
-                        }
-		}
-                return $output;
+            }else
+            {
+                    if(!count($batch_inv_link)) {
+                            $output['nostock'] = $total_qty;//array("transid"=> $i_transid);
+                    }
+            }
+            return $output;
     }
+    
     
     function reservation_cancel_proforma_invoice($p_invoice,$update_by=1,$msg) {
             $output='';
