@@ -1,6 +1,6 @@
 <style>
 #scanned_summ{
-	width: 224px;background: tomato;border-top:5px solid #FFF;
+	width: 160px;background: tomato;top: 180px;right:10px;position: fixed;border-top:5px solid #FFF;
 	text-align: center;
 	color: #FFF;
 	font-size: 32px;
@@ -8,8 +8,8 @@
 #scanned_summ h3{
 	font-size: 20px;margin-top:10px;margin-bottom: 0px;
 }
-h2 { width: 178px; float: right; color: #020205; margin-right: 272px; }
-h3 { font-size: 18px; }
+h2 { width: 178px; float: right; }
+
 .scanned_summ_total{
 	padding:5px;
 }
@@ -23,9 +23,6 @@ h3 { font-size: 18px; }
 	background: yellow !important;
 	font-weight: bold;
 	text-align: center;
-        float: left;
-        padding: 22px; font-size: 16px;
-        margin-left: 38px;
 }
 
 .scanned {
@@ -47,7 +44,7 @@ h3 { font-size: 18px; }
 	color: #FFF !important;
 }
 .mrp_block {
-    margin: 5px 0 0 2px; color: #A22D2D;
+    margin: 5px 0 0 2px;
 }
 .subdatagrid th {
     padding: 4px 0 2px 4px !important;
@@ -57,44 +54,15 @@ h3 { font-size: 18px; }
     vertical-align: middle; width: 30px !important; padding: 2px 4px !important;
 }
 .datagrid th {
-/*    background: #443266;
-    color: #C3C3E5;*/
-    background: #C3C3E5;
-    color: #130C09;
+    background: #443266;
+    color: #C3C3E5;
 }
 .trans_status {
-    margin: 6px 6px; font-weight: bold; text-align: center;
+    margin: 5px;
 }
-.right_container {
-    float: right;
-    top: 223px;right:10px;position: fixed;
-}
-.img_block { width:120px;float: left; }
-.product_title a { font-size: 17px; text-decoration: none; font-weight: bold; color: #443266; }
-.imei_inp_txt1,.imei_inp_txt2 {
-    color: #888888;
-    background-color: yellow;
-    font-size: 13px;
-    font-weight: bold;
-    padding: 3px 5px;
-}
-.imei_inp_txt1 {
-    background-color: transparent;
-    color: #130C09;
-}
-.process_btn { margin:75px 90px 0 0;float: right; }
-.scan_barcode_block { margin: 100px 0 14px 0; padding: 5px 10px; background:#F7F5FC;  font-weight: bold;}
-.scanbyimei_block { margin: 5px 0 5px 0; padding: 5px 10px; background:#F7F5FC;font-weight: bold; display:none; }
-
 </style>
 <div class="container">
 <?php
-if(!isset($invoice)) {
-    ?>
-    <h3>No orders found</h3>
-    <?php
-    die();
-}
 	$p_invno_list = array();
 	$prod_imei_list = array();
 	$batch_id = $this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? ",$invoice[0]['p_invoice_no'])->row()->batch_id;
@@ -135,6 +103,7 @@ if(!isset($invoice)) {
 			<b>OrderedOn</b> : <?php echo format_datetime(date('Y-m-d H:i:s',$t_order_det['init'])); ?> &nbsp;
 			<b>Ship Details</b> : <?php echo $t_order_det['ship_person'].', '.$t_order_det['ship_city']; ?> &nbsp;
 	<?php   } ?>
+	 
 	
 </span>
 	<?php if($t_order_det['is_pnh']){ ?>
@@ -150,13 +119,13 @@ if(!isset($invoice)) {
     <table class="datagrid" style="margin-top: 20px;float: left;" width="100%">
 	<thead>
 		<tr>
-			<th width="20">#</th>
-			<th width="120">Deal Picture</th>
-                        <th width="150">Trans ID</th>
+			<th>#</th>
+			<th>Deal Picture</th>
+                        <th>Trans ID</th>
 			<?php //echo ($mlt)?'<th width="5%">Transactions details</th>':'';?>
-			<th width="450">Product name</th>
+			<th>Product name</th>
 			<!--<th>Deal</th>-->
-                        <th width="150">Required &AMP; Scanned Qty</th>
+                        <th>Required &AMP; Scanned Qty</th>
 <!--			<th>MRP</th>
 			<th>Order MRP</th>-->
 			<th style="padding: 0px;">
@@ -190,21 +159,21 @@ if(!isset($invoice)) {
 		</tr>
 	</thead>
 	<tbody>
-        <?php
-        $sindx = 1;
-        $has_imei_scan = 0;
-
-
-        foreach($invoice as $i)
-        {
-                        array_push($p_invno_list,$i['p_invoice_no']);
-                        $consider_for_refund = 0;
-                        if($i['is_pnh'])
-                        $consider_for_refund = $this->db->query("select consider_mrp_chng from pnh_menu where id = ? ",$i['menuid'])->row()->consider_mrp_chng;
-
-                        $p_has_imei_scan = $this->db->query("select is_serial_required from m_product_info where product_id = ? ",$i['product_id'])->row()->is_serial_required;
-
-                        $has_imei_scan += $p_has_imei_scan;
+		<?php
+			$sindx = 1;
+			$has_imei_scan = 0;
+			 
+			
+			foreach($invoice as $i)
+			{
+					array_push($p_invno_list,$i['p_invoice_no']);
+					$consider_for_refund = 0;
+					if($i['is_pnh'])
+					$consider_for_refund = $this->db->query("select consider_mrp_chng from pnh_menu where id = ? ",$i['menuid'])->row()->consider_mrp_chng;
+					
+					$p_has_imei_scan = $this->db->query("select is_serial_required from m_product_info where product_id = ? ",$i['product_id'])->row()->is_serial_required;
+					
+					$has_imei_scan += $p_has_imei_scan;
 					
 		?>
 		<tr class="bars bar<?=$i['barcode']?> prod_scan">
@@ -213,7 +182,7 @@ if(!isset($invoice)) {
 				<b><?php echo $sindx++; ?></b>
 			</td>
 			<td>
-				<div class="img_block">
+				<div style="width:120px;height: 100px;float: left">
 					<a target="_blank" href="<?php echo IMAGES_URL.'/items/big/'.$i['pic'].'.jpg'?>"><img width="100%" src="<?php echo IMAGES_URL.'/items/small/'.$i['pic'].'.jpg'?>" /></a>
 				</div>	
 			</td>
@@ -229,7 +198,7 @@ if(!isset($invoice)) {
                         
                         
                             
-                            <div class="product_title"><a href="<?=site_url('admin/product/'.$i['product_id'])?>" target="_blank"><?=$i['product_name']?></a></div>
+                            <a href="<?=site_url('admin/product/'.$i['product_id'])?>" target="_blank"><?=$i['product_name']?></a>
                             
 		
 
@@ -244,13 +213,8 @@ if(!isset($invoice)) {
 				<?php //$i['deal']?>	
 			</td>*/?>
 
-                        <td>
-                            <div class="have" align="center">
-                                <span class="qty prod_req_qty"><?=$i['qty']?></span> / <span class="" style="vertical-align: middle;">0</span>
-                            </div>
-                            <div class="clear"></div>
+                        <td class="have"> <span class="qty prod_req_qty"><?=$i['qty']?></span> / <span class="" style="vertical-align: middle;">0</span>
                             <div class="trans_status">PENDING</div>
-                            
 			<?php /*<td><?=(double)$i['mrp']?></td>
 			<td class="ord_mrp"><?=$i['order_mrp']?></td>*/?>
 
@@ -327,7 +291,7 @@ if(!isset($invoice)) {
                             // IMEI Code:
                             $imeis=$this->db->query("select * from t_imei_no where status=0 and product_id=?",$i['product_id'])->result_array();
                             
-                            if($p_has_imei_scan) {
+                            if($p_has_imei_scan){
 
                                             // prepare imeino list for allotment 
                                             foreach($imeis as $im)
@@ -337,20 +301,11 @@ if(!isset($invoice)) {
                                             for($p=0;$p<$i['qty'];$p++)
                                             {
                             ?>
-                                                    <li>
-                                                        <!--style="width: 100px;padding:2px;font-size: 9px"-->
-                                                        <input type="hidden" readonly="readonly" 
-                                                               itemid="<?php echo $i['itemid'] ?>" 
-                                                               order_id="<?php echo $i['order_id'];?>" 
-                                                               p_invno="<?php echo $i['p_invoice_no']?>" 
-                                                               class="imei<?=$i['product_id']?> imei<?=$i['product_id']?>_unscanned imeis imei_p<?=$p?>" 
-                                                               value="" />
-                                                        <span class="imei_inp_txt1">IMEI Number : </span> <span class="imei_inp_txt2">7824389572893748</span>
-                                                    </li> 
+                                                    <li><input type="text" readonly="readonly" itemid="<?php echo $i['itemid'] ?>" order_id="<?php echo $i['order_id'];?>" p_invno="<?php echo $i['p_invoice_no']?>" class="imei<?=$i['product_id']?> imei<?=$i['product_id']?>_unscanned imeis imei_p<?=$p?>" style="width: 100px;padding:2px;font-size: 9px" value="" ></li> 
                             <?php 
                                             }
                                             echo '</ol>';
-                            } ?>
+                            }?>
 
 			<table class="subdatagrid" cellpadding="0" cellspacing="0" style="border: 0px !important; width: 100%; background: #f9f9f9; font-size: 13px;">
                                 <tr>
@@ -475,75 +430,67 @@ if(!isset($invoice)) {
             });
     </script>
 
-    <!--<div style="margin-top: 20px;"><input type="button" value="Check" style="padding: 7px 10px;" onclick='checknprompt()'>
-	<input type="button" value="Process Invoice" style="float: right; padding: 7px 10px;" onclick='process_invoice(1);'> --> 
+    <!--<div style="margin-top: 20px;"><input type="button" value="Check" style="padding: 7px 10px;" onclick='checknprompt()'>--> 
+	<input type="button" value="Process Invoice" style="float: right; padding: 7px 10px;" onclick='process_invoice(1);'> 
 
 
-    </div>
-    <!--End of content1-->
-        <div class="right_container">
-                <div id="scanned_summ" >
-                        <h3>Scanned Qty</h3>
-                        <div class="scanned_summ_total"><span id="summ_scanned_ttl_qty">0</span> / <span id="summ_ttl_qty">0</span></div>
-                        <div class="scanned_summ_stats"><span style="font-size: 13px;">Products </span> : <span class="ttl_num" id="summ_ttl_scanned_prod">0</span></div>	
-                </div>
-                <div class="scan_barcode_block"><!--position: fixed; top: 406px; right: 10px;-->
-                    <label for="scan_barcode">Scan Barcode :</label><br>
-                    <input class="inp" id="scan_barcode" style="padding: 5px;"> <input type="button" value="Go" onclick='validate_barcode()'>
-                </div>
-                <div class="scanbyimei_block" id="scanbyimei"><!--position: fixed; top: 306px; right: 10px;-->
-                    <label for="scan_imeino">Scan Imeino :</label><br>
-                    <input class="inp" id="scan_imeino" style="padding: 5px;"> <input type="button" value="Go" onclick='validate_imeino()'>
-                </div>
-                
-                
-            <?php 
-                    $trans_id = $this->db->query("select transid from proforma_invoices where p_invoice_no = ? ",$invoice[0]['p_invoice_no'])->row()->transid;
-            ?>
-                        <div>
-                            <table cellpadding="5">
-                                    <tr>
-                                            <td valign="top">
-                                            <div>
-                                            <h4 style="margin: 2px 0px;"></h4>
-                                                    <table class="datagrid">
-                                                            <thead>
-                                                            <tr>
-                                                                    <th>Free Samples with this order</th>
-                                                            </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                    <?php $samps=$this->db->query("select f.name,o.id,o.invoice_no from proforma_invoices i join king_freesamples_order o on o.transid=i.transid join king_freesamples f on f.id=o.fsid where i.p_invoice_no=? order by f.name",$i['p_invoice_no'])->result_array();?>
-                                                                    <?php //$samps=array();$samps[]=array('name'=>'himalaya _shampoo','id'=>2); ?>
-                                                                    <?php if(empty($samps)){?><tr>
-                                                                    <td colspan="100%">No free samples ordered</td>
-                                                            </tr><?php }?>
-                                                                    <?php foreach($samps as $s){?>
-                                                            <tr>
-                                                                    <td class="free-samples-data"><?=$s['name']?></td>
-                                                            </tr>
-                                                                    <?php }?>
-                                                            </tbody>
-                                                    </table>
-                                            </div>
-                                            </td>
-                                    </tr>
-                                    <tr>
-                                            <td valign="top">
+<?php 
+	$trans_id = $this->db->query("select transid from proforma_invoices where p_invoice_no = ? ",$invoice[0]['p_invoice_no'])->row()->transid;
+?>
 
-                                            <h4 style="margin: 2px 0px;">Transaction Notes</h4>
-                                            <div style="padding: 5px; background: #ffffd0; padding: 5px; font-size: 12px;line-height: 20px;">
-                                            <?php $user_msg=$this->db->query("select note from king_transaction_notes where transid=? and note_priority=1 order by id asc limit 1",$trans_id)->row_array();?>
-                                            <?=isset($user_msg['note'])?"<b>".str_replace('update :','<br>update :',$user_msg['note'])."</b>":"<i>no user msg</i>"?>
-                                            </div>
-                                            </td>
-                                    </tr>
-                            </table>
-                        </div>
-                    <div class="process_btn">
-                            <input type="button" value="Process Invoice" style=" padding: 18px 20px; " onclick='process_invoice(1);'/>
-                    </div>
+	<table cellpadding="5">
+		<tr>
+			<td valign="top">
+			<div>
+			<h4 style="margin: 2px 0px;"></h4>
+				<table class="datagrid">
+					<thead>
+					<tr>
+						<th>Free Samples with this order</th>
+					</tr>
+					</thead>
+					<tbody>
+						<?php $samps=$this->db->query("select f.name,o.id,o.invoice_no from proforma_invoices i join king_freesamples_order o on o.transid=i.transid join king_freesamples f on f.id=o.fsid where i.p_invoice_no=? order by f.name",$i['p_invoice_no'])->result_array();?>
+						<?php //$samps=array();$samps[]=array('name'=>'himalaya _shampoo','id'=>2); ?>
+						<?php if(empty($samps)){?><tr>
+						<td colspan="100%">No free samples ordered</td>
+					</tr><?php }?>
+						<?php foreach($samps as $s){?>
+					<tr>
+						<Td class="free-samples-data"><?=$s['name']?></Td>
+					</tr>
+						<?php }?>
+					</tbody>
+				</table>
+			</div>
+			</td>
+			
+			<td valign="top">
+
+			<h4 style="margin: 2px 0px;">Transaction Notes</h4>
+			<div style="padding: 5px; background: #ffffd0; padding: 5px; font-size: 12px;line-height: 20px;">
+			<?php $user_msg=$this->db->query("select note from king_transaction_notes where transid=? and note_priority=1 order by id asc limit 1",$trans_id)->row_array();?>
+			<?=isset($user_msg['note'])?"<b>".str_replace('update :','<br>update :',$user_msg['note'])."</b>":"<i>no user msg</i>"?>
+			</div>
+			</td>
+		</tr>
+	</table>
+</div>
+<!--End of content1-->
+        
+	<div style="padding: 5px 10px; position: fixed; top: 406px; background: #ffaa00; right: 10px;">
+	Scan Barcode : <input class="inp" id="scan_barcode" style="padding: 5px;"> <input type="button" value="Go" onclick='validate_barcode()'></div>
+
+	<div id="scanbyimei" style="padding: 5px 10px; position: fixed; top: 306px; background: #ffaa00; right: 10px;display:none">
+		Scan Imeino : <input class="inp" id="scan_imeino" style="padding: 5px;"> <input type="button" value="Go" onclick='validate_imeino()'>
+	</div>
+
+        <div id="scanned_summ" >
+                <h3>Scanned Qty</h3>
+                <div class="scanned_summ_total"><span id="summ_scanned_ttl_qty">0</span> / <span id="summ_ttl_qty">0</span></div>
+                <div class="scanned_summ_stats"><span style="font-size: 13px;">Products </span> : <span class="ttl_num" id="summ_ttl_scanned_prod">0</span></div>	
         </div>
+
         <div id="mutiple_mrp_barcodes" title="Choose Stock from Multiple Mrps">
             <div id="bc_mrp_list">
                     <table class="datagrid" cellpadding="0" cellspacing="0">
@@ -886,10 +833,10 @@ if(!isset($invoice)) {
 		function validate_imeino()
 		{
 			if($("#scan_imeino").val().length==0)
-                        {
-                                alert("Enter IMEI no");
-                                return;
-                        }
+				{
+					alert("Enter IMEI no");
+					return;
+				}
 			var s_imei = $.trim($("#scan_imeino").val());
 			
 			// check if valid imei no 
@@ -899,16 +846,14 @@ if(!isset($invoice)) {
 					{
 							alert("Imei no already alloted ");
 							return false;
-					}
-                                        else if(prod_imeino_list[s_imei] == undefined)
+					}else if(prod_imeino_list[s_imei] == undefined)
 					{
 						
 						
 						//alert(prod_imeino_stock_det[s_imei]);
-						$.post(site_url+'admin/jx_get_imei_stockdet','imei='+s_imei,function(resp){
-                                                        //print(resp);
+						$.post(site_url+'/admin/jx_get_imei_stockdet','imei='+s_imei,function(resp){
 							if(resp.status == 'success')
-							{
+							{	
 								
 								var i_prod_id = resp.stk.product_id;
 								
@@ -995,17 +940,15 @@ if(!isset($invoice)) {
 
 		function validate_barcode()
 		{
-			if($("#scan_barcode").val().length==0) {
-                                alert("Enter barcode");
-                                return;
-                        }
+			if($("#scan_barcode").val().length==0)
+				{
+					alert("Enter barcode");
+					return;
+				}
 			var sbc = $.trim($("#scan_barcode").val());
 				
-                                
 			var sel_bcstk_ele = $('tr.prod_scan:not(".done") .pbcode_'+sbc);
 			
-                        alert(sel_bcstk_ele);
-                        
 				if(sel_bcstk_ele.length > 1 && sbc.split('_').length == 1)
 				{
 					$('#mutiple_mrp_barcodes').data('m_bc',sbc).dialog("open");
@@ -1127,17 +1070,17 @@ if(!isset($invoice)) {
 
 		$(function(){
 		$(".nobarcode").click(function(){
-                        p=$(this).parents(".bars").get(0);
-                        validate_item($(p));
+		p=$(this).parents(".bars").get(0);
+		validate_item($(p));
 		});
 		$("#scan_barcode").keyup(function(e){
-                        if(e.which==13)
-                            validate_barcode();
+		if(e.which==13)
+			validate_barcode();
 		});
 		
 		$("#scan_imeino").keyup(function(e){
 			if(e.which==13)
-                            validate_imeino();
+			validate_imeino();
 		});	
 		
 	});
@@ -1223,7 +1166,7 @@ if(!isset($invoice)) {
 }
 .imeis{width: 250px;}
 .remove_scanned{padding:5px;font-size: 11px;color:#cd0000}
-.imei_inp_list{padding-left:0px; list-style-type: none;}
+.imei_inp_list{padding-left:30px;}
 
 </style>
 

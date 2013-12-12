@@ -83,15 +83,16 @@ class Reservation extends Voucher {
             $this->erpm->do_pack();
             die();
         }
+        if(!isset($_POST['p_invoice_ids'])) { show_error("Invoices not found"); }
         
         foreach(array("p_invoice_ids","franchise_id") as $i) 
             $$i=$this->input->post($i);
 
-        //$result = $this->reservations->do_pack_invoice_by_fran();$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
-        $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
-
-        //$data['batch']=$this->erpm->getbatch($bid);$data['invoices']=$this->erpm->getbatchinvoices($bid);$data['bid']=$bid;
+            //$result = $this->reservations->do_pack_invoice_by_fran();$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
+            //$data['batch']=$this->erpm->getbatch($bid);$data['invoices']=$this->erpm->getbatchinvoices($bid);$data['bid']=$bid;
             
+        $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
+        
         $data['page']="pack_invoice";
         $this->load->view("admin",$data);
     }
@@ -133,6 +134,7 @@ class Reservation extends Voucher {
                                 left join shipment_batch_process_invoice_link sd on sd.p_invoice_no = pi.p_invoice_no 
                                 join king_dealitems di on di.id = o.itemid 
                                 where f.franchise_id = ? $cond and i.id is null and tr.transid in ($str_all_trans)
+                                group by o.id
                                 order by tr.init desc",array($franchise_id))->result_array();//,$from,$to
                                             #,di.name
         $output = '<table width="100" class="subdatagrid">
@@ -151,7 +153,7 @@ class Reservation extends Voucher {
         //echo '<pre>'.$this->db->last_query(); die();
         $arr_tmp=array();
         foreach ($rslt as $i=>$row) {
-                $invoice_action =$batch_id_msg = '--';
+                $invoice_action =$picklist_btn_msg=$batch_id_msg = '--';
                 $batch_id=$row['batch_id'];
                 
                 if(!in_array($row['transid'],$arr_tmp)) {

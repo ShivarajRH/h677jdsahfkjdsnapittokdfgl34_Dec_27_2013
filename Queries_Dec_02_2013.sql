@@ -207,3 +207,52 @@ join m_product_info p on p.product_id=pgo.product_id
 join king_dealitems d on d.id=o.itemid join king_deals e on e.dealid=d.dealid 
 join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
 where i.p_invoice_no='114299' and i.invoice_status=1 order by o.sno 
+
+
+### Dec_11_2013
+#==============================================================================
+update t_imei_no set status=0 and order_id=0 where imei_no = '356605050227475';
+#==============================================================================
+
+join king_orders o on o.id = rbs.order_id
+                        join king_dealitems dlt on dlt.id = o.itemid
+			join king_deals dl on dl.dealid = dlt.dealid
+			join pnh_menu as mnu on mnu.id = dl.menuid and mnu.status=1
+
+
+
+
+set @inv_no='114077';
+select distinct o.time,e.menuid,mnu.name as menuname,d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.transid,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+									from proforma_invoices i 
+									join king_orders o on o.id=i.order_id and i.transid = o.transid 
+									join m_product_deal_link pl on pl.itemid=o.itemid 
+									join m_product_info p on p.product_id=pl.product_id 
+									join king_dealitems d on d.id=o.itemid 
+									join king_deals e on e.dealid=d.dealid
+									left join pnh_menu as mnu on mnu.id = e.menuid and mnu.status=1
+									join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
+									where i.invoice_status=1 
+											and i.p_invoice_no in (@inv_no) 
+									order by o.sno;
+==> 187 rows
+==> 152 rows
+
+
+
+set @inv_no='114077';
+select d.pic,d.is_pnh,e.menuid,i.discount,i.discount,p.product_id,p.mrp,i.transid,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+									from proforma_invoices i 
+									join king_orders o on o.id=i.order_id and i.transid = o.transid 
+									join products_group_orders pgo on pgo.order_id=o.id 
+									join m_product_group_deal_link pl on pl.itemid=o.itemid 
+									join m_product_info p on p.product_id=pgo.product_id 
+									join king_dealitems d on d.id=o.itemid 
+									join king_deals e on e.dealid=d.dealid 
+									left join pnh_menu as mnu on mnu.id = e.menuid and mnu.status=1
+									join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
+									where i.invoice_status=1 and i.p_invoice_no in (@inv_no) 
+									order by o.sno;
+
+select * from king_orders
+desc king_orders;

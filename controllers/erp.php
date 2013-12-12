@@ -24488,8 +24488,7 @@ die; */
 										where imei_no = ? 
 									) as a 
 									join t_stock_info b on a.product_id = b.product_id 
-									where a.mrp = b.mrp and a.location_id = b.location_id and a.rack_bin_id = b.rack_bin_id 
-				",$imei);
+									where a.mrp = b.mrp and a.location_id = b.location_id and a.rack_bin_id = b.rack_bin_id",$imei);
 			}
 		}else
 		{
@@ -24507,7 +24506,6 @@ die; */
 			}else
 			{
 				$output['status'] = 'success';
-				
 			}
 		}else
 		{

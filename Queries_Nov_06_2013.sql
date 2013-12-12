@@ -1162,7 +1162,7 @@ select * from king_orders
 
 select * from t_imei_no where 
 ##############TO RESET THE IMEI NUMBER FOR MOBILE ##############################
-update t_imei_no set status=0 and order_id=0 where imei_no = '911236607179148';
+update t_imei_no set status=0 and order_id=0 where imei_no = '358956054359626';
 #############################################################################
 desc proforma_invoices;
 desc king_invoice;
