@@ -12,6 +12,151 @@ class reservation_model extends Model
             parent::__construct();
     }
     /**
+     * Function to get transaction id by p_invoice_no
+     * @param type $p_invoice_no
+     * @return type string
+     */
+    function get_transid_by_invoice($p_invoice_no) {
+        return $this->db->query("select transid from proforma_invoices where p_invoice_no = ? ",$p_invoice_no)->row()->transid;
+    }
+    
+    /**
+     * Function to note info of a transaction
+     * @param type $trans_id
+     * @return type array
+     */
+    function get_transactions_note($trans_id) {
+        return $this->db->query("select note from king_transaction_notes where transid=? and note_priority=1 order by id asc limit 1",$trans_id)->row_array();
+    }
+
+    /**
+     * By invoice no get the free sample info
+     * @param type $p_invoice_no
+     * @return type array
+     */
+    function get_free_samples($p_invoice_no) {
+        return $this->db->query("select f.name,o.id,o.invoice_no from proforma_invoices i join king_freesamples_order o on o.transid=i.transid join king_freesamples f on f.id=o.fsid where i.p_invoice_no=? order by f.name",$p_invoice_no)->result_array();
+    }
+    
+    /**
+     * Function to check is product have serial number.
+     * @param type $product_id
+     * @return type int
+     */
+    function is_product_have_serial($product_id) {
+        return $this->db->query("select is_serial_required from m_product_info where product_id = ? ",$product_id)->row()->is_serial_required;
+    }
+
+    /**
+     * check if menu mrp is changed or not
+     * 0 - no
+     * 1 - yes
+     * @param type $menuid
+     * @return type int
+     */
+    function is_menu_mrp_changed($menuid) {
+        return $this->db->query("select consider_mrp_chng from pnh_menu where id = ? ",$menuid)->row()->consider_mrp_chng;
+    }
+    /**
+     * Get imei list for a product
+     * @param type $product_id
+     * @return type array
+     */
+    function get_imeis_by_product($product_id) {
+        return $this->db->query("select * from t_imei_no where status=0 and product_id=?",$product_id)->result_array();
+    }
+
+    /**
+     * Function to get franchise details
+     * @param type $franchise_id
+     * @return type array
+     */
+    function get_franchise_details($franchise_id) {
+        return $this->db->query("select franchise_id,franchise_name,territory_name,town_name 
+                                from pnh_m_franchise_info a 
+                                join pnh_m_territory_info b on a.territory_id = b.id 
+                                join pnh_towns c on c.id = a.town_id
+                                where franchise_id = ?  ",$franchise_id)->row_array();
+    }
+    
+    /**
+     * Get partner name
+     * @param type $partner_id
+     * @return type string
+     */
+    function get_partner_name($partner_id) {
+        return $this->db->query("select name from partner_info where id = ? ",$partner_id)->row()->name;
+    }
+    
+    /**
+     * Get transaction info by orderid
+     * @param type $order_id
+     * @return type Resultset
+     */
+    function get_order_transaction($order_id) {
+        return $this->db->query("select a.init,a.franchise_id,a.is_pnh,a.partner_id,a.transid,b.ship_person,b.ship_city from king_transactions a join king_orders b on a.transid = b.transid where b.id = ? ",$order_id)->row_array();  
+    }
+    
+    /**
+     * Get batch id from proforma invoice no
+     * @param type $p_invoice_no
+     * @return type int
+     */
+    function get_batch_id_by_invoiceno($p_invoice_no) {
+        return $this->db->query("select batch_id from shipment_batch_process_invoice_link where p_invoice_no = ? ",$p_invoice_no)->row()->batch_id;
+    }
+    
+    /**
+     * 
+     * @param type $order_id
+     * @param type $p_invoice_no
+     * @return type int
+     */
+    function get_reserved_stock_orders($order_id,$p_invoice_no) {
+        return $this->db->query("select count(*) as t from t_reserved_batch_stock where order_id = ? and p_invoice_no = ? ",array($order_id,$p_invoice_no))->row()->t;
+    }
+    
+    /**
+     * Function to get stock reservation details
+     * @param type $order_id
+     * @param type $p_invoice_no
+     * @param type $stock_id
+     * @return type
+     */
+    function get_stock_reservation_details($order_id,$p_invoice_no,$stock_id) {
+        $res = $this->db->query("select qty from t_reserved_batch_stock where order_id = ? and p_invoice_no = ? and stock_info_id = ? ",array($order_id,$p_invoice_no,$stock_id));
+        return $res;
+    }
+    
+    /**
+     * Function to get all mrp related info for packing process
+     * @param type $batch_id
+     * @param type $order_id
+     * @param type $product_id
+     * @param type $p_invoice_no
+     * @param type $stock_id
+     * @return type resultset
+     */
+    function get_mrp_alloted($batch_id,$order_id,$product_id,$p_invoice_no,$stock_id) {
+        $arr_resp = $this->db->query("select rack_name,bin_name,ifnull(a.qty,0) as qty 
+                                            from m_rack_bin_info c
+                                            join t_stock_info b on c.id = b.rack_bin_id 
+                                            left join t_reserved_batch_stock a on a.stock_info_id = b.stock_id 
+                                            and a.batch_id = ? and a.order_id = ? and a.product_id = ?  and a.p_invoice_no = ?  
+                                            where b.stock_id = ? ",array($batch_id,$order_id,$product_id,$p_invoice_no,$stock_id));
+        return $arr_resp;
+    }
+    
+    /**
+     * get packing info like stock,product,location & rackbinids
+     * @return type
+     */
+    function get_paking_info($product_id) {
+        $s = $this->db->query("select stock_id,product_id,location_id,rack_bin_id,concat(location_id,'-',rack_bin_id) as rbid,product_barcode,sum(available_qty) as s,mrp from t_stock_info where product_id={$product_id} group by rbid,mrp,product_barcode,stock_id having sum(available_qty)>=0 order by mrp asc")->result_array();
+        return $s;
+    }
+    
+    /**
      * transaction creator name info
      * @param type $transid
      * @return type string
@@ -20,7 +165,11 @@ class reservation_model extends Model
         $username=@$this->db->query("select username from king_admin a join king_transactions b on a.id = b.trans_created_by where transid = ? ",$transid)->row()->username;
         return $username;
     }
-    
+    /**
+     * Function to get stock info by orderid
+     * @param type $orderid
+     * @return array
+     */
     function get_stock_from_orderid($orderid) {
    
             $order_itemid=$this->db->query("select o.itemid from  king_orders o where o.id=? ",array($orderid))->row()->itemid;

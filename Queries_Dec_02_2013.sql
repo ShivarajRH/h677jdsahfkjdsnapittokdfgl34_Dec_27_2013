@@ -256,3 +256,6 @@ select d.pic,d.is_pnh,e.menuid,i.discount,i.discount,p.product_id,p.mrp,i.transi
 
 select * from king_orders
 desc king_orders;
+
+#Dec_12_2013
+select consider_mrp_chng from pnh_menu
