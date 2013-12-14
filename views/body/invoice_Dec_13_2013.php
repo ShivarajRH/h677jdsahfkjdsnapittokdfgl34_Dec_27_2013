@@ -1,6 +1,3 @@
-<style type="text/css">
-    .leftcont { display: none; }
-</style>
 <?php
 $this->load->plugin('barcode');
 
@@ -45,16 +42,15 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 						<input type="button" value="Print Credit Note" onclick='printcreditnote(this)'> 
 				<?php 			
 						}
-					}
+					} 
 				?>
 			</td>
-                        <td><input type="button" value="Print Invoice Acknowledment Copy" onclick="print_taxinv_acknowledgement(this)" ></td>
 			<td align="center" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Partner Order Form" onclick='printpartorderform(this)'></td>
 			<td align="right" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Invoice and Partner Order Form" onclick='printinvpartorderform(this)'></td>
 		</tr>
 	</table>
 	</div>
-	<?php } ?>
+	<?php }?>
 
 <div id="invoice">
 <style>
@@ -800,9 +796,8 @@ table{
 <?php 
 
 	$ttl_inv_amt += $cod_ship_charges+$total_item_amount;
-	array_push($ttl_inv_list,$invoice_no);
+	array_push($ttl_inv_list,$invoice_no); 
 }
-//die("TESTING"); ============================ 22222 ====================
 ?>
 
 </div>
@@ -826,8 +821,8 @@ table{
 		display:none;
 	}
 	.showinprint{
-                display:block;
-        }
+					display:block;
+				}
 }
 </style>
 
@@ -917,7 +912,7 @@ table{
 		</tr>
 		<?php 
 			$k1=0;
-			foreach($orderslist_byproduct as $itmid=>$itm_ord) {
+			foreach($orderslist_byproduct as $itmid=>$itm_ord){ 
 			?>
 		<tr>
 			<td><?php echo ++$k1; ?></td>
@@ -972,7 +967,7 @@ table{
 	<br><br>
 	Gate Pass  
 	</div>
-                            <table width="100%" style="margin-top:10px">
+	<table width="100%" style="margin-top:10px">
 				<tr>
 					<td valign="top">
 					<?php 
@@ -1475,7 +1470,7 @@ table{
 					<tbody>
 						<tr>
 							<td><p>For membership registration for this month </p></td>
-                                                        <td align="right"><b><?php echo formatInIndianStyle($invoice_credit_note_det['amount']);?></b></td>
+							<td align="right"><b><?php echo $invoice_credit_note_det['amount'];?></b></td>
 						</tr>
 					</tbody>
 				</table>
@@ -1603,10 +1598,10 @@ myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
 		$('#gate_pass_copy').hide();
 		
 <?php }else { ?>
-    myWindow.document.write($("#invoice").html());
+myWindow.document.write($("#invoice").html());
 <?php } ?>
-    myWindow.focus();
-    myWindow.print();
+myWindow.focus();
+myWindow.print();
 }
 
 
@@ -1632,31 +1627,22 @@ function printcreditnote(ele)
 	myWindow.print();
 }
 
-function printpartorderform(ele){
-        ele.value="RePrint Partner Order Form";
-        log_printcount();
-        myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#partner_order_form").html());
-        myWindow.focus();
-        myWindow.print();
+function printpartorderform(ele){ 
+ele.value="RePrint Partner Order Form";
+log_printcount();
+myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+myWindow.document.write($("#partner_order_form").html());
+myWindow.focus();
+myWindow.print();
 }
 
 function printinvpartorderform(ele){ 
-        ele.value="RePrint Invoice and Partner Order Form";
-        log_printcount();
-        myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#invoice").html()+'<div style="page-break-before:always"></div>'+$("#partner_order_form").html());
-        myWindow.focus();
-        myWindow.print();
-}
-
-function print_taxinv_acknowledgement(ele){ 
-        ele.value="RePrint Invoice Acknowledgement Copy";
-        log_printcount();
-        myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#tax_inv_ack_copy").html());
-        myWindow.focus();
-        myWindow.print();
+ele.value="RePrint Invoice and Partner Order Form";
+log_printcount();
+myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+myWindow.document.write($("#invoice").html()+'<div style="page-break-before:always"></div>'+$("#partner_order_form").html());
+myWindow.focus();
+myWindow.print();
 }
 
 function log_printcount()

@@ -7,6 +7,8 @@ include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     
     function jx_terr_batch_group_status($territory_id) {
+            $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+        
             $resp=$arr_resp=$msg_category=$r_count=$arr_category=array();
             
             $cond = ' and f.territory_id = '.$territory_id.' ';
@@ -90,10 +92,10 @@ class Reservation extends Voucher {
 
             //$result = $this->reservations->do_pack_invoice_by_fran();$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
             //$data['batch']=$this->erpm->getbatch($bid);$data['invoices']=$this->erpm->getbatchinvoices($bid);$data['bid']=$bid;
-            
+            //$p_invoice_ids='49483';
         $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
         
-        $data['page']="pack_invoice";
+        $data['page']="pack_invoice2";
         $this->load->view("admin",$data);
     }
     
@@ -109,8 +111,8 @@ class Reservation extends Voucher {
     }
     
     function jx_get_franchise_orders($franchise_id,$from=0,$to=0,$batch_type) {
-        $output = $picklist_btn_msg= '';
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+        $output = $picklist_btn_msg= '';
         
          if($from!=0 and $to != 0) {
             //$cond .= '  and tr.actiontime between '.$from.' and '.$to.' ';

@@ -24465,7 +24465,7 @@ die; */
 		$imei = $this->input->post('imei');
 		$p_invno = $this->input->post('p_invno');
 		$orderid = $this->input->post('order_id');
-		
+		//echo '='.$imei."=".$p_invno."=".$orderid;
 		if($p_invno)
 		{
 			$imei_stkdet_res = $this->db->query("select c.status,a.product_id,product_barcode,mrp,location_id,rack_bin_id,b.stock_id 
@@ -24492,9 +24492,10 @@ die; */
 			}
 		}else
 		{
-			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($p_invno,$orderid,$imei));	
+			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($imei));	
 		}
-		
+		//echo $this->db->last_query();
+                
 		$output=array();
 		if($imei_stkdet_res->num_rows())
 		{

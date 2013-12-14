@@ -211,7 +211,7 @@ where i.p_invoice_no='114299' and i.invoice_status=1 order by o.sno
 
 ### Dec_11_2013
 #==============================================================================
-update t_imei_no set status=0 and order_id=0 where imei_no = '356605050227475';
+update t_imei_no set status=0 and order_id=0 where imei_no = '356631059543977';
 #==============================================================================
 
 join king_orders o on o.id = rbs.order_id
@@ -259,3 +259,50 @@ desc king_orders;
 
 #Dec_12_2013
 select consider_mrp_chng from pnh_menu
+
+#Dec_13_2013
+select note from king_transaction_notes where transid=? and note_priority=1 order by id asc limit 1;
+select transid from proforma_invoices where p_invoice_no in ($p_invno_list);
+
+select note from king_transaction_notes tnote
+join proforma_invoices `pi` on pi.transid=tnote.transid
+where tnote.note_priority=1 and pi.p_invoice_no in ('10004')
+order by tnote.id asc limit 1;
+
+select * from proforma_invoices where invoice_status=1
+
+
+select c.status,a.product_id,product_barcode,mrp,location_id,rack_bin_id,b.stock_id 
+			from t_reserved_batch_stock a 
+			join t_stock_info b on a.stock_info_id = b.stock_id 
+			join t_imei_no c on c.product_id = b.product_id 
+	#where a.p_invoice_no = ? and a.order_id = ? and imei_no = ?
+#==> 7880888 rows / 374ms
+
+select a.status,a.product_id,b.product_barcode,b.mrp,b.location_id as location_id,
+										b.rack_bin_id as rack_bin_id,
+										b.stock_id from (
+									select a.status,a.product_id,b.product_barcode,ifnull(b.mrp,c.mrp) as mrp,ifnull(b.location_id,c.location_id) as location_id,
+										ifnull(b.rack_bin_id,c.rack_bin_id) as rack_bin_id,
+										b.stock_id
+										from t_imei_no a 
+										left join t_stock_info b on a.stock_id = b.stock_id and a.product_id = b.product_id
+										join t_grn_product_link c on c.grn_id = a.grn_id and a.product_id = c.product_id 
+										where imei_no = '356631059543977' 
+									) as a 
+									join t_stock_info b on a.product_id = b.product_id 
+									where a.mrp = b.mrp and a.location_id = b.location_id and a.rack_bin_id = b.rack_bin_id
+
+select status,product_id from t_imei_no where imei_no = '358956056763247';
+
+
+select distinct o.time,e.menuid,mnu.name as menuname,d.pic,d.is_pnh,i.discount,p.product_id,p.mrp,p.barcode,i.transid,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+									from proforma_invoices i 
+									join king_orders o on o.id=i.order_id and i.transid = o.transid 
+									join m_product_deal_link pl on pl.itemid=o.itemid 
+									join m_product_info p on p.product_id=pl.product_id 
+									join king_dealitems d on d.id=o.itemid 
+									join king_deals e on e.dealid=d.dealid
+                                                                        left join pnh_menu as mnu on mnu.id = e.menuid and mnu.status=1
+                                                                        join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
+									where i.invoice_status=1 order by e.menuid DESC # and i.p_invoice_no in ($inv_no)
