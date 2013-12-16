@@ -5,7 +5,45 @@
  */
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
-    
+    /**
+    * function to generate bulk invoice acknowledgement by date range 
+    * 
+    */
+    function print_invoice_acknowledgementbydate($sdate='',$edate='')
+    {
+            $this->erpm->auth();
+
+            if($sdate == '' || $edate == '')
+                    show_error("Input date range");
+
+            $sdate = '2013-10-20';
+            $edate = '2013-11-07';
+
+            $dispatch_list_res = $this->db->query("select dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs 
+                                                                                                    from pnh_m_manifesto_sent_log a
+                                                                                                    join shipment_batch_process_invoice_link b on find_in_set(b.invoice_no,a.sent_invoices) and b.invoice_no != 0 
+                                                                                                    join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+                                                                                                    join king_transactions d on d.transid = c.transid 
+                                                                                                    where date(sent_on) between ? and ? and dispatch_id != 0  
+                                                                                            group by d.franchise_id  ",array($sdate,$edate));
+
+            if($dispatch_list_res->num_rows())
+            {
+                    $data['dispatch_list'] = $dispatch_list_res->result_array();
+                    
+                    $data['page']="gen_invoice_acknowledgement";
+                    $this->load->view("admin",$data);
+            }
+            else
+            {
+                    echo '<script type="text/javascript">alert("No invoices found for the selected dates")</script>';
+            }
+    }
+
+    /**
+     * Get Ungrouped transaction details 
+     * @param type $territory_id  int
+     */
     function jx_terr_batch_group_status($territory_id) {
             $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
         
@@ -77,7 +115,9 @@ class Reservation extends Voucher {
             }
             echo json_encode($resp);
     }
-    
+    /**
+     * Function to process GROUP of invoices for packing, Group based on franchise
+     */
     function pack_invoice_by_fran() {
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
         
@@ -92,13 +132,16 @@ class Reservation extends Voucher {
 
             //$result = $this->reservations->do_pack_invoice_by_fran();$data['invoice'] = $invoices = $this->reservations->get_packing_details($franchise_id,$p_invoice_ids);
             //$data['batch']=$this->erpm->getbatch($bid);$data['invoices']=$this->erpm->getbatchinvoices($bid);$data['bid']=$bid;
-            //$p_invoice_ids='49483';
+//            $p_invoice_ids='49483';
         $data['invoice'] = $invoices = $this->erpm->getinvoiceforpacking($p_invoice_ids);
         
-        $data['page']="pack_invoice2";
+        $data['page']="pack_invoice";
         $this->load->view("admin",$data);
     }
-    
+    /**
+     * Process the batch by franchise
+     * @param type $bid int
+     */
     function process_batch_by_fran($bid)
     {
         
@@ -109,7 +152,13 @@ class Reservation extends Voucher {
         $data['page']="process_batch_by_fran";
         $this->load->view("admin",$data);
     }
-    
+    /**
+     * Get all perticular franchise orders
+     * @param type $franchise_id int
+     * @param type $from int
+     * @param type $to int
+     * @param type $batch_type string
+     */
     function jx_get_franchise_orders($franchise_id,$from=0,$to=0,$batch_type) {
         $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
         $output = $picklist_btn_msg= '';
@@ -321,7 +370,7 @@ class Reservation extends Voucher {
                     group by a.transid) as ddd
                     where ddd.orders_status=0")->result_array() or die("Error");
             
-            echo 'Count='.count($rslt_for_trans).'<pre>';
+//            echo 'Count='.count($rslt_for_trans).'<pre>';
             foreach($rslt_for_trans as $rslt) {
                 $transid = $rslt['transid'];
                 $ttl_num_orders = $rslt['num_order_ids'];
@@ -332,22 +381,22 @@ class Reservation extends Voucher {
                
                
             }
-            print_r($arr_result); //die();
+//            print_r($arr_result); //die();
             
             foreach ($arr_result as $transid=>$rslt) {
                     if($rslt["nostock"] == 0 ) {
                         $arr_result2['nostock'][$transid] = $rslt["nostock"];
                         
                         foreach($rslt["products"] as $prodduct_id=>$stock) {
-                            $nostock_msg[$transid] = '<a href="'.site_url("admin/product/".$prodduct_id).'"> '.$prodduct_id.'</a> - '.$stock.'<br>';
+                            $nostock_msg[$transid][] = array("product_id"=>$prodduct_id,"stock"=>$stock);
                         }
                         
                     }
                     elseif(isset($rslt["alloted"])) {
                         $arr_result2['alloted'][$transid] = $rslt["alloted"];
                         
-                        foreach($rslt["products"] as $product) {
-                            $allotedstock_msg[$transid] = $rslt["nostock"];
+                        foreach($rslt["products"] as $prodduct_id=>$stock) {
+                            $allotedstock_msg[$transid][] = array("product_id"=>$prodduct_id,"stock"=>$stock);;
                         }
                         
                     }
@@ -358,10 +407,9 @@ class Reservation extends Voucher {
                 $count_alloted = count($arr_result2["alloted"]);
                 $count_notalloted = count($arr_result2['nostock']); //count($count_stock['alloted']);count($arr_result2["alloted"]);
                 
-//                $output['result'] =array("alloted"=>$count_alloted);
-                
-                print_r($count_stock);
-                $output = array("status"=>"success","alloted"=>$count_alloted,"alloted_stock_msg"=>$allotedstock_msg,"nostock"=>$count_notalloted,"nostock_msg"=>$nostock_msg,"error"=>$errors);
+//                $output['result'] = array("alloted"=>$count_alloted);
+//                print_r($count_stock);
+                $output = array("status"=>"success","alloted"=>$count_alloted,"alloted_msg"=>$allotedstock_msg,"nostock"=>$count_notalloted,"nostock_msg"=>$nostock_msg,"error"=>$errors);
         }
         else {
             $output = array("status"=>"fail","resp"=>'You dodn\'t have access permission to do this action');
@@ -455,7 +503,14 @@ class Reservation extends Voucher {
      */
     function cancel_reserved_proforma_invoice($p_invoice,$update_by=1,$msg="Proforma cancelled by reservation system")
     {
-        echo $this->reservations->reservation_cancel_proforma_invoice($p_invoice,$update_by,$msg);
+        $arr_out = $this->reservations->reservation_cancel_proforma_invoice($p_invoice,$update_by,$msg);
+        if($arr_out['status'] == 'success') {
+            $output = array("status"=>"success","response"=>$arr_out);
+        }
+        else  {
+            $output = array("status"=>"fail","response"=>$arr_out['response']);
+        }
+        echo json_encode($output);
     }
 
     /********End Orders Reservation**************/

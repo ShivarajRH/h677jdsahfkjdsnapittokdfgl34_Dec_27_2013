@@ -22,7 +22,7 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 	<div style="margin:10px;" class="hideinprint">
 	<table width="100%">
 		<tr>
-			<td align="left" width="33%">
+			<td align="left" width="53%">
 				<input type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> invoice" onclick='printinv(this)'>
 				<?php
 					$dispatch_id = @$this->db->query("
@@ -47,15 +47,16 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 						}
 					}
 				?>
-			</td>
-                        <td><input type="button" value="Print Invoice Acknowledment Copy" onclick="print_taxinv_acknowledgement(this)" ></td>
+                                <input type="button" value="Print Invoice Acknowledment Copy" onclick="print_taxinv_acknowledgement(this)" >
+                        </td>
 			<td align="center" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Partner Order Form" onclick='printpartorderform(this)'></td>
 			<td align="right" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Invoice and Partner Order Form" onclick='printinvpartorderform(this)'></td>
 		</tr>
 	</table>
 	</div>
 	<?php } ?>
-
+</div>
+    
 <div id="invoice">
 <style>
 table{
@@ -626,15 +627,15 @@ table{
 					</div>
 				</td>
 				<td width="50%">
-					<?php 
-						$offer_det_res = $this->db->query("select b.invoice_no,has_offer,offer_refid,b.invoice_no,c.offer_text,c.immediate_payment 
-	from king_orders a
-	join king_invoice b on a.id = b.order_id
-	join pnh_m_offers c on c.id = a.offer_refid and is_active = 1 
-	where b.invoice_no != 0 and b.invoice_no = ? and has_offer = 1  ",$invoice_no);
+                                <?php 
+                                        $offer_det_res = $this->db->query("select b.invoice_no,has_offer,offer_refid,b.invoice_no,c.offer_text,c.immediate_payment 
+                                                                            from king_orders a
+                                                                            join king_invoice b on a.id = b.order_id
+                                                                            join pnh_m_offers c on c.id = a.offer_refid and is_active = 1 
+                                                                            where b.invoice_no != 0 and b.invoice_no = ? and has_offer = 1  ",$invoice_no);
 					if($offer_det_res->num_rows()){
 						$offer_det  = $offer_det_res->row_array();
-					?>
+                                ?>
 						<div style="margin-left:10px;border: 2px solid rgb(0, 0, 0);font-size: 110%;margin-bottom: 10px;padding: 5px;margin-top:-40px">
 							<b><?php echo $offer_det['offer_text'] ;?>
 							<?php echo $offer_det['immediate_payment']?'<br />Require Immediate Payment':'';?>
@@ -1545,11 +1546,14 @@ table{
 
 <script type="text/javascript">
 var inv_no = '<?php echo $invoice_no;?>';
+/**
+ * Function to print invoice
+ */
 function printinv(ele){
-ele.value="RePrint Invoice";
-log_printcount(); 
-myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-<?php if($is_pnh) { ?>
+    ele.value="RePrint Invoice";
+    log_printcount(); 
+    myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+    <?php if($is_pnh) { ?>
 		
 		$('.top_tax_inv_bar').hide();
 		
@@ -1566,21 +1570,19 @@ myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
 		$('.eoe_txt').hide();
 		
 		
-		//inv_html += '<div style="margin-top:30px;">'+$("#invoice").html()+'</div>';
-		$('#tax_inv_ack_copy').show();
+		// Acknowledgement Copy
+		/*$('#tax_inv_ack_copy').show();
 		inv_html += '<div style="margin-top:0px;">';
 		inv_html += $('#tax_inv_ack_copy').html();
 		inv_html += '</div>';
-		
-		
-		
-		
+				
 		$('.customer_ship_details').show();
 		inv_html += '<div style="margin-top:0px;">';
 		inv_html += $('#customer_acknowlegment').html();
 		inv_html += '</div>';
 		inv_html += '</div>';
-		
+		*/
+               
 		if($('#gate_pass_copy').length)
 		{
 			inv_html += '<div style="page-break-before:always">';
@@ -1654,7 +1656,7 @@ function print_taxinv_acknowledgement(ele){
         ele.value="RePrint Invoice Acknowledgement Copy";
         log_printcount();
         myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#tax_inv_ack_copy").html());
+        myWindow.document.write($("#tax_inv_ack_copy").html()+''+$("#customer_acknowlegment").html());
         myWindow.focus();
         myWindow.print();
 }
@@ -1669,7 +1671,7 @@ function log_printcount()
 
 
 <STYLE TYPE="text/css">
-     H2.page_break{page-break-before: always}
+     h2.page_break{ page-break-before: always }
      .note{margin-bottom:5px;border-bottom:1px solid #e3e3e3;}
 </STYLE> 
 <h2>&nbsp;</h2>

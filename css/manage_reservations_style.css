@@ -212,9 +212,17 @@ input[type="submit"] { height: 30px; }
     color: #E0260D;
 }
 .show_by_group_block {padding: 5px 33px; float: left;}
+.total_trans { float: left; font-weight: bold; margin: 0 0 0 38px; }
 .view_all_orders a {
-    margin-top: 5px; font-size: 11px;
+    margin: 70px; font-size: 11px;
+    text-decoration: none;
+    color: #130C09;
+    background-color: #E0DFDF;
+    border: 1px solid #D1C9C9;
+    padding: 4px 3px;
+    border-radius: 4px;
 }
+.orders_info_block { margin-top: 5px; float: left; }
 .order_status_yes {
     /*background-color: #C3C3E5;*/
 }
@@ -249,3 +257,4 @@ input[type="submit"] { height: 30px; }
     background-color: #7D7683;color: whitesmoke; text-align:center;
     padding: 5px; font-weight: bold;
 }
+.block_info { padding: 5px; background: #ffffd0; padding: 5px; font-size: 12px;line-height: 20px;}

@@ -18,7 +18,7 @@
             <tr>
                 <td>Select Menu: <span class="mark">*</span></td>
                 <td>
-                    <select name="batch_group_id" id="batch_group_id" style="width: 204px;">
+                    <select name="sel_batch_menu" id="sel_batch_menu" style="width: 204px;">
                         <option value="00">Choose</option>
                         <?php
                         foreach ($batch_conf as $conf) {?>
@@ -41,7 +41,7 @@
             <tr>
                 <td>Number of orders:</td>
                 <td>
-                    <input type="hidden" name="assigned_menuids" id="assigned_menuids" value="" />
+                    <!--<input type="hidden" name="assigned_menuids" id="assigned_menuids" value="" />-->
                     <input type="text" name="batch_size" id="batch_size" value="" style="width: 30px;margin:10px 0 5px 5px" />
                     <!--<input type="hidden" name="assigned_uid" id="assigned_uid" value="" />-->
                 </td>

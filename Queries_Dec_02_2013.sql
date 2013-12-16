@@ -306,3 +306,34 @@ select distinct o.time,e.menuid,mnu.name as menuname,d.pic,d.is_pnh,i.discount,p
                                                                         left join pnh_menu as mnu on mnu.id = e.menuid and mnu.status=1
                                                                         join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
 									where i.invoice_status=1 order by e.menuid DESC # and i.p_invoice_no in ($inv_no)
+
+# Dec_14_2013
+
+select territory_name from pnh_m_territory_info where id='3';
+
+select distinct o.itemid,d.menuid,mn.name as menuname,f.territory_id,sd.id,sd.batch_id,sd.p_invoice_no,from_unixtime(tr.init) from king_transactions tr
+                                join king_orders as o on o.transid=tr.transid
+                                join proforma_invoices as `pi` on pi.order_id = o.id and pi.invoice_status=1
+                                join shipment_batch_process_invoice_link sd on sd.p_invoice_no =pi.p_invoice_no
+                                join king_dealitems dl on dl.id = o.itemid
+                                join king_deals d on d.dealid = dl.dealid # and d.menuid in ('')
+                                
+                                join pnh_menu mn on mn.id=d.menuid
+                                join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id #and f.is_suspended = 0
+                                
+                                where sd.batch_id=5000  and f.territory_id = 3 
+                                order by tr.init asc
+                                limit 0,1;
+
+select dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs 
+                                                                                                    from pnh_m_manifesto_sent_log a
+                                                                                                    join shipment_batch_process_invoice_link b on find_in_set(b.invoice_no,a.sent_invoices) and b.invoice_no != 0 
+                                                                                                    join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+                                                                                                    join king_transactions d on d.transid = c.transid 
+                                                                                                    where date(sent_on) between '2013-11-01' and '2013-11-07' and dispatch_id != 0  
+                                                                                            group by franchise_id;
+select * from pnh_m_manifesto_sent_log
+
+select unix_timestamp('2013-10-20') as utime;
+select from_unixtime(1382207400) as time;
+

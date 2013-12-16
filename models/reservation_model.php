@@ -19,7 +19,7 @@ class reservation_model extends Model
         return $this->db->query("select tnote.note,pi.transid from king_transaction_notes tnote
                                     join proforma_invoices `pi` on pi.transid=tnote.transid
                                     where tnote.note_priority=1 and pi.p_invoice_no in ($p_invno_list)
-                                    group by pi.transid order by tnote.id asc limit 5",$trans_id)->result_array();
+                                    group by pi.transid order by tnote.id asc limit 0,6",$trans_id)->result_array();
     }
 
     /**
@@ -312,13 +312,16 @@ class reservation_model extends Model
     function do_create_batch_by_group_config () {
         $output = $cond = '';
 
-        foreach(array("batch_group_id","assigned_menuids","batch_size","assigned_uid","territory_id","townid") as $i) {
+        foreach(array("sel_batch_menu","batch_size","assigned_uid","territory_id","townid") as $i) {
             $$i=$this->input->post($i);
-            //echo $i.'=>'.$$i."<br>";
+            //echo $i.'=>'.$$i."<br>";,"assigned_menuids"
         }
         if($territory_id != 0) {
             $cond .= ' and f.territory_id = '.$territory_id.' ';
         }
+        $territory_name=$this->db->query("select territory_name from pnh_m_territory_info where id=?",$territory_id)->row()->territory_name;
+        $username=$this->db->query("select username from king_admin where id=?",$assigned_uid)->row()->username;
+        
         //die();
             $global_batch_id=GLOBAL_BATCH_ID;
 
@@ -334,13 +337,11 @@ class reservation_model extends Model
                                 
                                 where sd.batch_id=$global_batch_id $cond
                                 order by tr.init asc
-                                limit 0,$batch_size",array($assigned_menuids))->result_array();
+                                limit 0,$batch_size",array($sel_batch_menu))->result_array();
 
             $batch_remarks = 'By Transaction Reservation System';
             $ttl_inbatch = count($rslt);
             
-            $username=$this->db->query("select username from king_admin where id=?",$assigned_uid)->row()->username;
-            $territory_name=$this->db->query("select territory_name from pnh_m_territory_info where id=?",$territory_id)->row()->territory_name;
             
             if($ttl_inbatch>0) {
                         $output .= '<h3>Group created</h3>
@@ -348,18 +349,17 @@ class reservation_model extends Model
                                     <tr>
                                         <th>Menu Name</th>
                                         <th>Territory</th>
-                                        <th>orderid</th>
+                                        <th>OrderID</th>
                                         <th>Batch_id</th>
-                                        <th>p_invoice_no</th>
+                                        <th>Proforma Invoice#</th>
                                         <th>New BatchID</th>
                                         <th>Assign to</th>
                                     </tr>';
-                        
-                        $this->db->query("insert into shipment_batch_process(num_orders,assigned_userid,territory_id,batch_configid,batch_remarks,created_on) values(?,?,?,?,?,?)",array($ttl_inbatch,$assigned_uid,$territory_id,$batch_group_id,$batch_remarks,date('Y-m-d H:i:s') ));
+
+                        $this->db->query("insert into shipment_batch_process(num_orders,assigned_userid,territory_id,batch_configid,batch_remarks,created_on) values(?,?,?,?,?,?)",array($ttl_inbatch,$assigned_uid,$territory_id,$sel_batch_menu,$batch_remarks,date('Y-m-d H:i:s') ));
                         $new_batch_id = $this->db->insert_id();
                 
                 foreach($rslt as $row ) {
-                        
                                 $output .= '<tr>
                                                 <td>'.$row['menuname'].'</td>
                                                 <td>'.$territory_name.'</td>
@@ -372,23 +372,18 @@ class reservation_model extends Model
                         }
                         $output .= '<table>';
                         
-                        
-                        
-
                 foreach ($rslt as $row) {
                         $arr_set = array("batch_id"=>$new_batch_id);
                         $arr_where =array("id"=>$row['id']);
 
                         $this->db->update("shipment_batch_process_invoice_link",$arr_set,$arr_where);
-
                         //$output.= "Batch ". $new_batch_id.' is created and assigned to  '.$username.'.<br>'; //$this->db->last_query(); //
                 }
-                
                               
                 $output.= '<br>Batch created with '.$ttl_inbatch.' orders.';
             }
             else {
-                $output.= 'No transactions found.'.'<br>';
+                $output.= 'No transactions found.'.'<br>';//$this->db->last_query()
             }
             return '<pre>'.$output.'</pre>';
     }
@@ -878,11 +873,11 @@ class reservation_model extends Model
     
     
     function reservation_cancel_proforma_invoice($p_invoice,$update_by=1,$msg) {
-            $output='';
+            $output=array();
             $invoice=$this->db->query("select transid,order_id,p_invoice_no,p_invoice_no as invoice_no from proforma_invoices where p_invoice_no=? and invoice_status=1",$p_invoice)->result_array();
             
             if(empty($invoice)) {
-                    return "Proforma Invoice not found or Invoice already cancelled"; 
+                    return array("status"=> "fail", "response" => "Proforma Invoice not found or Invoice already cancelled"); 
             }
                     
                     
@@ -1020,7 +1015,10 @@ class reservation_model extends Model
                     else
                             $this->db->query("update shipment_batch_process set status=2 where batch_id=? limit 1",$bid);
             
-            $output .= "Proforma Invoice-$p_invoice cancelled under $transid transaction";
+            $output['status'] = "success";
+            $output['p_invoice_no'] = $p_invoice;
+            $output['transid'] = $transid;
+            $output['response'] = "Proforma Invoice-$p_invoice cancelled under $transid transaction";
             return $output;
             //redirect("admin/proforma_invoice/$p_invoice");
     }

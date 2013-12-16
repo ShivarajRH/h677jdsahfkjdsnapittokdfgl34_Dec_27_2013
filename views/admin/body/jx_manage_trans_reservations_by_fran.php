@@ -157,8 +157,9 @@ else
                                            </form> ';
 
                                     $output .= '</td>
-                                        <td>'.$trans_arr['ttl_trans'].'
+                                        <td>    <span class="total_trans">'.$trans_arr['ttl_trans'].'</span>
                                                 <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>
+                                                    <div class="clear">&nbsp;</div>
                                                 <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
                                         </td>';
 
