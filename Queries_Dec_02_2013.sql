@@ -327,13 +327,71 @@ select distinct o.itemid,d.menuid,mn.name as menuname,f.territory_id,sd.id,sd.ba
 
 select dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs 
                                                                                                     from pnh_m_manifesto_sent_log a
-                                                                                                    join shipment_batch_process_invoice_link b on find_in_set(b.invoice_no,a.sent_invoices) and b.invoice_no != 0 
+                                                                                                    join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 
                                                                                                     join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
                                                                                                     join king_transactions d on d.transid = c.transid 
                                                                                                     where date(sent_on) between '2013-11-01' and '2013-11-07' and dispatch_id != 0  
                                                                                             group by franchise_id;
+
+#100rows/93ms
+
 select * from pnh_m_manifesto_sent_log
 
 select unix_timestamp('2013-10-20') as utime;
 select from_unixtime(1382207400) as time;
 
+
+#Dec_16_2013
+
+select dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,f.territory_id
+				    from pnh_m_manifesto_sent_log a
+				    join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 
+				    join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+				    join king_transactions d on d.transid = c.transid 
+				    join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
+				    where date(sent_on) between '2013-11-01' and '2013-11-07' and dispatch_id != 0 #and f.territory_id='3'
+			    group by d.franchise_id
+#100 rows/187ms
+
+select * from shipment_batch_process_invoice_link
+
+desc shipment_batch_process_invoice_link;
+
+select f.territory_id,d.franchise_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs 
+	from pnh_m_manifesto_sent_log a 
+	join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 
+	join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1 join king_transactions d on d.transid = c.transid 
+	join pnh_m_franchise_info f on f.franchise_id = d.franchise_id where date(sent_on) between '2013-11-01' and '2013-12-16' and dispatch_id != 0 and f.territory_id='3' group by d.franchise_id;
+
+
+set @invs='20141014918,20141014287,20141014389';
+select a.transid,a.createdon as invoiced_on,b.bill_person,b.bill_address,b.bill_landmark,b.bill_city,b.bill_state,b.bill_pincode,d.init,b.itemid,c.name,if(c.print_name,c.print_name,c.name) as print_name,c.pnh_id,group_concat(distinct a.invoice_no) as invs,
+                                                        sum((i_orgprice-(i_discount+i_coup_discount))*a.invoice_qty) as amt,
+                                                        sum(a.invoice_qty) as qty 
+                                                from king_invoice a 
+                                                join king_orders b on a.order_id = b.id 
+                                                join king_dealitems c on c.id = b.itemid
+                                                join king_transactions d on d.transid = a.transid
+                                                where a.invoice_no in (@invs) 
+                                group by itemid
+
+
+
+####################################################################
+alter table `shipment_batch_process_invoice_link` add column `is_acknowlege_printed` int (11) DEFAULT '0' NULL  after `delivered_by`;
+####################################################################
+
+select * from pnh_m_territory_info where id=3
+
+select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,count(distinct b.invoice_no) as ttl_invs
+                                                            from pnh_m_manifesto_sent_log a
+                                                            join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 and b.is_acknowlege_printed = 0
+                                                            join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+                                                            join king_transactions d on d.transid = c.transid 
+                                                            join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
+                                                            where date(sent_on) between '2013-11-01' and '2013-12-16' and dispatch_id != 0  and f.territory_id=16
+                                                    group by d.franchise_id order by f.territory_id asc;
+
+update `shipment_batch_process_invoice_link` set `is_acknowlege_printed`='1' where 
+
+select * from shipment_batch_process_invoice_link where is_acknowlege_printed>1

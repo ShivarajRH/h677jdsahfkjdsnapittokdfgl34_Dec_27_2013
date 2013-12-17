@@ -25185,4 +25185,80 @@ die; */
 		$objWriter->save('php://output');
 		exit;
 	}
+        
+        /**
+        * Updating the acknowledgement printed log into invoices
+        */
+       function jx_update_acknowledge_print_log()
+       {
+               $all_inv_list = $this->input->post('all_inv_list');
+               if($all_inv_list) {
+                   $all_inv_list_arr=explode(',',$all_inv_list);
+                   foreach($all_inv_list_arr as $invno) {
+                           //update to process_invoice table
+                           $this->db->query('update shipment_batch_process_invoice_link set is_acknowlege_printed = `is_acknowlege_printed` + 1 where invoice_no = ? limit 1',$invno);
+                   }
+               }
+               echo 'Log updated.';
+       }
+
+       /**
+       * function to generate bulk invoice acknowledgement by date range 
+       */
+       function print_invoice_acknowledgementbydate()
+       {
+               $this->erpm->auth();
+
+               if(isset($_POST['date_from'])) {
+   //                echo '<pre>';print_r($_POST); die();
+                   $sdate=$_POST['date_from']; //'2013-10-20';
+                   $edate=$_POST['date_to']; //'2013-11-07';
+                   $territory_id=$_POST['sel_territory'];
+                   $consider_printed_ack=$_POST['consider_printed_ack'];
+
+                       if($sdate == '' || $edate == '')
+                               show_error("Input date range");
+
+                       $cond=$cond_join='';
+                       if($territory_id!='00') {
+                           $cond =' and f.territory_id='.$territory_id;
+                               //$terr = $this->reservations->get_territory_info($territory_id);
+                               //$data['territory_name']=$terr['territory_name'];
+                       }
+
+                       if($consider_printed_ack != 'y') {
+                           $cond_join = ' and b.is_acknowlege_printed = 0 ';
+                       }
+
+                       $dispatch_list_res = $this->db->query("select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,count(distinct b.invoice_no) as ttl_invs
+                                                               from pnh_m_manifesto_sent_log a
+                                                               join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 $cond_join
+                                                               join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+                                                               join king_transactions d on d.transid = c.transid 
+                                                               join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
+                                                               where date(sent_on) between ? and ? and dispatch_id != 0 $cond
+                                                       group by d.franchise_id order by f.territory_id asc ",array($sdate,$edate));
+
+                       if($dispatch_list_res->num_rows()) {
+                               $data['dispatch_list'] = $dispatch_list_res->result_array();
+   //                            echo '<pre>'.$this->db->last_query().'</pre>';die();
+                               $data['sdate']=$sdate;
+                               $data['edate']=$edate;
+
+                               $data['page']="print_invoice_acknowledgement";
+                               $this->load->view("admin",$data);
+                       }
+                       else {
+                               echo '<script type="text/javascript">alert("Warning:\nNo invoices found for the selected dates and territory!")</script>';
+                               redirect('admin/print_invoice_acknowledgementbydate','refresh');
+                       }
+               }
+               else {
+                   $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+                   $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+
+                   $data['page']="gen_invoice_acknowledgement";
+                   $this->load->view("admin",$data);
+               }
+        }
 }

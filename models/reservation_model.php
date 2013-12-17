@@ -10,6 +10,11 @@ class reservation_model extends Model
     function __construct() {
             parent::__construct();
     }
+    
+    function get_territory_info($territory_id) {
+        return $this->db->query("select * from pnh_m_territory_info where id=?",$territory_id)->row_array();
+    }
+    
     /**
      * Function to note info of a transaction
      * @param type $trans_id
@@ -22,24 +27,6 @@ class reservation_model extends Model
                                     group by pi.transid order by tnote.id asc limit 0,6",$trans_id)->result_array();
     }
 
-    /**
-     * Function to get transaction id by p_invoice_no
-     * @param type $p_invoice_no
-     * @return type string
-     
-    function get_transid_by_invoice($p_invoice_no) {
-        return $this->db->query("select transid from proforma_invoices where p_invoice_no = ? ",$p_invoice_no)->row()->transid;
-    }
-    */
-    /**
-     * Function to note info of a transaction
-     * @param type $trans_id
-     * @return type array
-     
-    function get_transactions_note($trans_id) {
-        return $this->db->query("select note from king_transaction_notes where transid=? and note_priority=1 order by id asc limit 1",$trans_id)->row_array();
-    }
-    */
     /**
      * By invoice no get the free sample info
      * @param type $p_invoice_no

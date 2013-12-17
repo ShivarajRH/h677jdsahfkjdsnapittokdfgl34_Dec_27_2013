@@ -5,41 +5,7 @@
  */
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
-    /**
-    * function to generate bulk invoice acknowledgement by date range 
-    * 
-    */
-    function print_invoice_acknowledgementbydate($sdate='',$edate='')
-    {
-            $this->erpm->auth();
-
-            if($sdate == '' || $edate == '')
-                    show_error("Input date range");
-
-            $sdate = '2013-10-20';
-            $edate = '2013-11-07';
-
-            $dispatch_list_res = $this->db->query("select dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs 
-                                                                                                    from pnh_m_manifesto_sent_log a
-                                                                                                    join shipment_batch_process_invoice_link b on find_in_set(b.invoice_no,a.sent_invoices) and b.invoice_no != 0 
-                                                                                                    join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
-                                                                                                    join king_transactions d on d.transid = c.transid 
-                                                                                                    where date(sent_on) between ? and ? and dispatch_id != 0  
-                                                                                            group by d.franchise_id  ",array($sdate,$edate));
-
-            if($dispatch_list_res->num_rows())
-            {
-                    $data['dispatch_list'] = $dispatch_list_res->result_array();
-                    
-                    $data['page']="gen_invoice_acknowledgement";
-                    $this->load->view("admin",$data);
-            }
-            else
-            {
-                    echo '<script type="text/javascript">alert("No invoices found for the selected dates")</script>';
-            }
-    }
-
+    
     /**
      * Get Ungrouped transaction details 
      * @param type $territory_id  int
