@@ -39,7 +39,7 @@
     </div>
     <div class="clear"></div>
 
-        <div id="trans_list_replace_block"></div>
+        <div id="acknowledge_list_replace_block"></div>
 
 </div>
 <script>

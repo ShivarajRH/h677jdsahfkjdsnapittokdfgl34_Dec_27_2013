@@ -7,6 +7,52 @@ include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     
     /**
+    * Updating the picklist printed log into invoices
+    */
+    function jx_update_picklist_print_log()
+    {
+        $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+        
+            $all_inv_list = $this->input->post('all_inv_list');
+            if($all_inv_list) {
+                $all_inv_list_arr=explode(',',$all_inv_list);
+                
+                $group_no = time();
+                foreach($all_inv_list_arr as $invno) {
+                    $printcount=0;
+                    
+                    $this->db->where(array("p_inv_no"=>$invno));
+                    //$this->db->select("id,printcount");
+                    $row=$this->db->get('picklist_log_reservation')->row_array();
+//                    echo '<pre>';echo ''.$this->db->last_query();
+//                     print_r($row);
+                    $id=$row['id'];
+                    $printcount=$row['printcount'];
+                    if(count($row)>0) {
+                        $this->db->query('update picklist_log_reservation set printcount = `printcount` + 1 where id = '.$id.' limit 1');
+                    }
+                    else {
+                        //update to process_invoice table
+                        $field_arr=array(
+                            "group_no"=>$group_no
+                            ,"p_inv_no"=>$invno
+                            ,"created_by"=>$user['userid']
+                            ,"createdon"=> date("Y-m-d h:i:s",time())
+                            ,"printcount"=>1
+                        );
+                        $this->db->insert("picklist_log_reservation",$field_arr);
+
+                    }
+//                    echo ''.$this->db->last_query();//print_r($row);
+                                        
+                       
+                        
+                }
+            }
+            echo 'Log updated.';
+    }
+        
+    /**
      * Get Ungrouped transaction details 
      * @param type $territory_id  int
      */

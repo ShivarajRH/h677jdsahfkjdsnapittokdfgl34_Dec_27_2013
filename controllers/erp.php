@@ -25201,7 +25201,7 @@ die; */
                }
                echo 'Log updated.';
        }
-
+        
        /**
        * function to generate bulk invoice acknowledgement by date range 
        */

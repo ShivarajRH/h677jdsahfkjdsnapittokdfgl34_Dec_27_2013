@@ -37,35 +37,62 @@
         <div class="clear"></div>
         
         
-	<?php foreach($prods as $ii=>$product) { ?>
-        
-       
-        
+	<?php 
+        $pinvno_log_arr=array();
+        foreach($prods as $ii=>$product) { ?>
         <!--<div class="print_link_block"><a href="javascript:void(0);" class="print_link" onclick="print_this()">Print</a></div>-->
         
-	<div id="wrapper" style="clear: both">
+        <style>
+            .wrapper {
+                    clear: both;
+            }
+            .signature {
+                    display:none;
+            }
+            @media print{
+                .wrapper {
+                    clear: both;
+                    /*page-break-after:auto;*/
+                }
+                .signature {
+                    display: block;
+                }
+/*                .signature_default {
+                    display: none;
+                }*/
+                .print_link_block {
+                    display: none;
+                }
+            }
+                
+        </style>
+        
+	<div class="wrapper" style="">
                 <h3><?=$product['menuname']?></h3>
                 
 		<table border=1 class="tbl_class"  cellpadding=3>
-		<tr style="background:#aaa">
+		<tr style="background:#aaaaaa">
                     <th>#</th><th>Proforma Invoice No</th><th>Product ID</th><th>Product Name</th><th>Qty</th><Th>MRP</Th><th>Location</th>
 		</tr>
-		<?php $i=1; 
-                //foreach($prods as $pp){
+		<?php $i=1;
                     $tmp_arr=array();
                     foreach($product as $k=>$p){
                         if($k==='menuname')  continue;
                         
                         if(!in_array($p['p_invoice_no'],$tmp_arr)) {
-                            
+                            //push to temp array
                             $tmp_arr[] = $p['p_invoice_no'];
+                            
+                            array_push($pinvno_log_arr,$p['p_invoice_no']);
+                            
                             $invoice_msg = '<a target="_blank" href="'.site_url('admin/pack_invoice/'.$p['p_invoice_no']).'">'.$p['p_invoice_no'].'</a>';
                             
                         }
                         else {
                             $invoice_msg = '--||--';
                         }
-//                echo ''.$k;
+                        
+                        
                     ?>
 			<tr <?php if($i%2==0){?>style="background:#eee;"<?php }?>>
                                 <td><?=$i?></td>
@@ -79,24 +106,47 @@
 			</tr>
 		<?php $i++;
                     }
-		//} ?>
+		?>
 		</table>
+<!--                <div class="block signature" style="">
+                        <br>
+                        <span style="margin:22px 0px 0px;float:right;"><b>Validated By</b> : _______________<br /></span><br />
+                        <span style="margin:7px 0px;float:left;;"><b>Picked By</b> : _____________________<br /></span>
+                </div> -->
 	</div>
-	<?php } ?>
 
-	<div class="block">
-		<br>
-		<span style="margin:22px 0px 0px;float:right;"><b>Validated By</b> : _______________<br /></span><br />
-		<span style="margin:7px 0px;float:left;;"><b>Picked By</b> : _____________________<br /></span>
-	</div> 
+	<?php }
+        //echo count($pinvno_log_arr);
+        ?>
+        <input type="hidden" name="all_inv_list" id="all_inv_list" value="<?=implode(',',array_unique($pinvno_log_arr));?>"/>
+        <div class="block signature_default" style="">
+                <br>
+                <span style="margin:22px 0px 0px;float:right;"><b>Validated By</b> : _______________<br /></span><br />
+                <span style="margin:7px 0px;float:left;;"><b>Picked By</b> : _____________________<br /></span>
+        </div>
+        <p>&nbsp;</p>
 
 </div>
 <script>
 //    function print_block();
-    
 $(".print_link").click(function() {
-    
-    $('#show_picklist_block').printElement({printMode:"popup",pageTitle:"Product procurement list",leaveOpen:true});
-
+    $('#show_picklist_block').printElement({
+        printMode:"popup"
+        ,pageTitle:"Product Procurement List"
+        ,leaveOpen:false
+        /*,printBodyOptions: {
+            styleToAdd:'padding:10px;margin:10px;color:#FFFFFF !important;',
+            classNameToAdd : 'wrapper2'}*/
+    });
+    log_printcount();
 });
+
+
+function log_printcount()
+{
+    var all_inv_list = $("#all_inv_list").val();
+    $.post(site_url+'/admin/jx_update_picklist_print_log','all_inv_list='+all_inv_list,function(resp){ 
+        print(resp);
+    });
+}
 </script>

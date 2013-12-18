@@ -34,7 +34,7 @@ if($terrid!=0) {
      $cond .= ' and f.territory_id='.$terrid;
  }
  if($townid!=0) {
-     $cond .= ' and f.town_id='.$townid;
+    $cond .= ' and f.town_id='.$townid;
  }
  if($franchiseid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;
@@ -163,16 +163,12 @@ else
                                                 <div class="orders_info_block_'.$trans_arr['franchise_id'].'" class="orders_info_block" style="display:none;"></div>
                                         </td>';
 
-
-
                         }
                        
                     $output .= '</tr>'; 
 
                     $fil_territorylist[$trans_arr['territory_id']] = $trans_arr['territory_name'];
             }
-            
-            
             
             $output .='</tbody>
                         </table>
@@ -184,15 +180,14 @@ else
                         $(".process_by_fran_link").html(\''.($msg_process_by_fran).'\');
                         $(".re_allot_all_block").html(\''.($re_allot_all_block).'\');
                         $("#sel_old_new").hide();
-                    </script>    
-                    ';
+                    </script>';
             
            
     
-    }
+        }
 }
 
-    echo ''.$output;
+echo ''.$output;
     
     
 if(count($fil_territorylist) && $terrid==0) {

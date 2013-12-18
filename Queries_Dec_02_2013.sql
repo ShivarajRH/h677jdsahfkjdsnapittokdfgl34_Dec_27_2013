@@ -392,6 +392,64 @@ select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_co
                                                             where date(sent_on) between '2013-11-01' and '2013-12-16' and dispatch_id != 0  and f.territory_id=16
                                                     group by d.franchise_id order by f.territory_id asc;
 
-update `shipment_batch_process_invoice_link` set `is_acknowlege_printed`='1' where 
+### Dec_17_2013 ###
+update `shipment_batch_process_invoice_link` set `is_acknowlege_printed`='0' where 
 
-select * from shipment_batch_process_invoice_link where is_acknowlege_printed>1
+select * from shipment_batch_process_invoice_link where is_acknowlege_printed>0
+
+
+    Table: "picklist_log_reservation"
+id
+printcount
+p_inv_no
+created_by
+createdon
+####################################################################
+create table `picklist_log_reservation` (  `id` bigint NOT NULL AUTO_INCREMENT , `group_no` bigint (20) DEFAULT '0', `p_inv_no` int (100) , `created_by` int (11) DEFAULT '0', `createdon` datetime , `printcount` int (100) , PRIMARY KEY ( `id`));
+####################################################################
+
+picklist_log_reservationpicklist_log_reservation
+
+X insert into `picklist_log_reservation`(`id`,`group_no`,`p_inv_no`,`created_by`,`createdon`,`printcount`) values ( NULL,'1','114344','1',NULL,NULL);
+X truncate table `snapittoday_db_nov`.`picklist_log_reservation`picklist_log_reservation;
+
+
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114344', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114333', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114324', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114318', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114315', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114313', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114311', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114299', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114281', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114334', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114308', '1', '2013-12-17 07:29:26', 1)
+INSERT INTO `picklist_log_reservation` (`group_no`, `p_inv_no`, `created_by`, `createdon`, `printcount`) VALUES (1387288766, '114319', '1', '2013-12-17 07:29:26', 1)
+update picklist_log_reservation set printcount = `printcount` + 1 where id = 11 limit 1
+
+## Dec_18_2013 ##
+
+select DATE_FORMAT(shipped_on,"%w-%a") as day_of_week,DATE(shipped_on) as normaldate,shipped_on,shipped,invoice_no 
+from shipment_batch_process_invoice_link 
+where shipped_by=1 and day_of_week is not null .
+order by shipped_on ASC
+
+#7627rows
+
+desc shipment_batch_process_invoice_link;
+
+select * from shipment_batch_process_invoice_link
+
+select * from shipment_batch_process
+
+#73124rows
+
+select * from (
+select DATE_FORMAT(shipped_on,"%w") as week_day,DATE_FORMAT(shipped_on,"%a") as week_day_s,shipped_on,unix_timestamp(shipped_on) as unix_time,shipped,invoice_no
+from shipment_batch_process_invoice_link
+where shipped_by=1
+order by shipped_on ASC
+) as g where g.week_day is not null and unix_time!=0 and unix_time between unix_timestamp('2012-07-31 00:00:00') and unix_timestamp('2013-12-18 00:00:00')
+
+# =>5086rows/62ms

@@ -1025,3 +1025,5 @@ alter table `m_batch_config` add column `group_assigned_uid` varchar (120)  NULL
 alter table `shipment_batch_process_invoice_link` drop column `assigned_userid`;
 
 alter table `shipment_batch_process_invoice_link` add column `is_acknowlege_printed` int (11) DEFAULT '0' NULL  after `delivered_by`;
+
+create table `picklist_log_reservation` (  `id` bigint NOT NULL AUTO_INCREMENT , `group_no` bigint (20) DEFAULT '0', `p_inv_no` int (100) , `created_by` int (11) DEFAULT '0', `createdon` datetime , `printcount` int (100) , PRIMARY KEY ( `id`));
