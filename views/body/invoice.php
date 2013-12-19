@@ -803,7 +803,6 @@ table{
 	$ttl_inv_amt += $cod_ship_charges+$total_item_amount;
 	array_push($ttl_inv_list,$invoice_no);
 }
-//die("TESTING"); ============================ 22222 ====================
 ?>
 
 </div>
@@ -973,7 +972,7 @@ table{
 	<br><br>
 	Gate Pass  
 	</div>
-                            <table width="100%" style="margin-top:10px">
+          <table width="100%" style="margin-top:10px">
 				<tr>
 					<td valign="top">
 					<?php 
@@ -1476,7 +1475,7 @@ table{
 					<tbody>
 						<tr>
 							<td><p>For membership registration for this month </p></td>
-                                                        <td align="right"><b><?php echo formatInIndianStyle($invoice_credit_note_det['amount']);?></b></td>
+                            <td align="right"><b><?php echo formatInIndianStyle($invoice_credit_note_det['amount']);?></b></td>
 						</tr>
 					</tbody>
 				</table>

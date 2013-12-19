@@ -52,6 +52,11 @@
                     <div class="create_batch_msg_block"></div>
                 </td>
             </tr>
+            <?php /*
+   <select id="dlg_sel_franchise" name="dlg_sel_franchise" style="width: 204px;">
+        <option value="00">All Franchise</option>
+    </select> */?>
+           
         </table>
     </form>
     

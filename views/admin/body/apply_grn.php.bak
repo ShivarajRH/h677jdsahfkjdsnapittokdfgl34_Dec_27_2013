@@ -7,7 +7,7 @@
 	$notify_grn = $this->session->flashdata("notify_grn");
 if($notify_grn){?>
 <div style="background:#ff9900;padding:5px;color:#fff;" align="center"><h3><?php echo $notify_grn;?></h3></div>
-<?php }?>
+<?php } ?>
 <span style="float: right;"> Min PO Date:<input type="text" size="8" style="padding:2px;" name="min_po_date" value="<?php echo $min_po_date; ?>"> </span>
 <h2>Stock In</h2>
 <h4>Stock Intake No : <?=$this->db->query("select grn_id from t_grn_info order by grn_id desc")->row()->grn_id+1?></h4>

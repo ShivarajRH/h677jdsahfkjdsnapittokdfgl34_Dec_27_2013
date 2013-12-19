@@ -165,7 +165,7 @@ function print_podoc()
 
 
 $("#po_deliverydate").datetimepicker({
-	timeFormat: "hh:mm tt",
+.	timeFormat: "hh:mm tt",
 	dateFormat: "D MM d, yy"
 });
 function closepo()

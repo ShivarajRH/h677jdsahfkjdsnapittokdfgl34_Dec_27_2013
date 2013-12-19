@@ -102,8 +102,10 @@ switch($po['po_status']){
 <tr>
 <th>Sno</th>
 <th>Product</th>
-<th>Order Qty</th>
-<th>Received Qty</th>
+<th style="text-align: left" width="50">Last <br> 30 Days Sales</th>
+<th style="text-align: left" width="50">Required <br> Qty</th>
+<th>PO <br> Order <br> Qty</th>
+<th>Received <br> Qty</th>
 <th class="hideinprint">MRP</th>
 <th class="hideinprint">DP Price</th>
 <th class="hideinprint">Margin</th>
@@ -115,10 +117,19 @@ switch($po['po_status']){
 </tr>
 </thead>
 <tbody>
-<?php $sno=1; foreach($items as $i){?>
+<?php $sno=1; foreach($items as $i){
+	
+	$i['sales_30days']=$this->db->query("select ifnull(sum(o.quantity*l.qty),0) as s from m_product_deal_link l join king_orders o on o.itemid=l.itemid where l.product_id=? and o.time>".(time()-(24*60*60*30)).' and o.time < ?  ',array($i['product_id'],strtotime($po['created_on'])))->row()->s;
+	$i['sales_30days'] += $this->db->query("select ifnull(sum(o.quantity*l.qty),0) as s from m_product_group_deal_link l join king_orders o on o.itemid=l.itemid join products_group_orders pgo on pgo.order_id = o.id where pgo.product_id=? and o.time>".(time()-(24*60*60*30)).' and o.time < ?  ',array($i['product_id'],strtotime($po['created_on'])))->row()->s;
+	
+	$i['pen_ord_qty']=$this->db->query("select ifnull(sum(o.quantity*l.qty),0) as s from m_product_deal_link l join king_orders o on o.itemid=l.itemid where l.product_id=? and o.status = 0 and o.time < ? ",array($i['product_id'],strtotime($po['created_on'])))->row()->s;
+	
+?>
 <tr>
 <td><?=$sno++?></td>
 <td><a href="<?=site_url("admin/product/{$i['product_id']}")?>"><?=$i['product_name']?></a></td>
+<td><?=$i['sales_30days']?></td>
+<td><?=$i['pen_ord_qty']?></td>
 <td><?=$i['order_qty']?></td>
 <td><?=$i['received_qty']?></td>
 <td class="hideinprint"><?=$i['mrp']?></td>
@@ -133,7 +144,7 @@ switch($po['po_status']){
 <?php }?>
 
 	<tr class="hideinprint">
-		<td colspan="13" style="text-align: right">
+		<td colspan="14" style="text-align: right">
 			<a href="javascript:void(0)" onclick="print_podoc()">Print Document</a>
 		</td>
 	</tr>
@@ -165,7 +176,7 @@ function print_podoc()
 
 
 $("#po_deliverydate").datetimepicker({
-.	timeFormat: "hh:mm tt",
+	timeFormat: "hh:mm tt",
 	dateFormat: "D MM d, yy"
 });
 function closepo()

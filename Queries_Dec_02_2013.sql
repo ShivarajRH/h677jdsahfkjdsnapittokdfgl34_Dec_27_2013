@@ -445,11 +445,12 @@ select * from shipment_batch_process
 
 #73124rows
 
-select * from (
-select DATE_FORMAT(shipped_on,"%w") as week_day,DATE_FORMAT(shipped_on,"%a") as week_day_s,shipped_on,unix_timestamp(shipped_on) as unix_time,shipped,invoice_no
+select week_day,shipped_on,shipped_on_time,shipped,invoice_no,shipped_by from (
+select DATE_FORMAT(shipped_on,"%w") as week_day,shipped_on,unix_timestamp(shipped_on) as shipped_on_time,shipped,invoice_no,shipped_by
 from shipment_batch_process_invoice_link
-where shipped_by=1
-order by shipped_on ASC
-) as g where g.week_day is not null and unix_time!=0 and unix_time between unix_timestamp('2012-07-31 00:00:00') and unix_timestamp('2013-12-18 00:00:00')
+where shipped=1
+order by shipped_on DESC
+) as g where g.week_day is not null and shipped_on_time!=0 and shipped_by>0 and shipped_on_time between '1383284282' and '1385619678'
 
 # =>5086rows/62ms
+m_employee_info

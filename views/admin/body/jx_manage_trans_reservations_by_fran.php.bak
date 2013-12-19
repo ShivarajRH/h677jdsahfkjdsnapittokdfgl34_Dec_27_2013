@@ -34,7 +34,7 @@ if($terrid!=0) {
      $cond .= ' and f.territory_id='.$terrid;
  }
  if($townid!=0) {
-     $cond .= ' and f.town_id='.$townid;
+    $cond .= ' and f.town_id='.$townid;
  }
  if($franchiseid!=0) {
      $cond .= ' and f.franchise_id='.$franchiseid;

@@ -234,6 +234,16 @@ class Erp extends Stream
 			foreach($receipt_ids as $receipt_id)
 			{
 				$this->db->query("insert into pnh_m_deposited_receipts(deposited_reference_no,receipt_id,bank_id,is_submitted,status,submitted_by,submitted_on,remarks,created_on)value(?,?,?,1,1,?,?,?,now())",array($process_id,$receipt_id,$bank_id,$user['userid'],$submitted_date,$remarks));
+				$fran_det=$this->db->query("select f.franchise_id,f.login_mobile1,f.login_mobile2,f.franchise_name,r.instrument_no,r.receipt_amount,r.payment_mode from pnh_m_franchise_info f join pnh_t_receipt_info r on r.franchise_id=f.franchise_id where r.receipt_id=? limit 1",$receipt_id)->row_array();
+				$to=$fran_det['login_mobile1'];
+				$f_name=$fran_det['franchise_name'];
+				$instrument_no=$fran_det['instrument_no'];
+				$amount=$fran_det['receipt_amount'];
+				$type=$fran_det['payment_mode'];
+				$fid=$fran_det['franchise_id'];
+				$msg="Dear $f_name ,<br />
+				Cheque $instrument_no for Rs. $amount is due for clearance today, Pls maintain sufficient balance in bank a/c to avoid penalty or account suspension.";
+				if($type != 0){$this->erpm->pnh_sendsms($to,$msg,$fid,0,0,0);}
 			}
 			$r+=$this->db->affected_rows();
 			$this->erpm->flash_msg(count($receipt_ids)." Receipts are  Submitted");
@@ -422,6 +432,10 @@ class Erp extends Stream
 			$this->erpm->do_updatevendor($vid);
 		$data['contacts']=$this->erpm->getvendorcontacts($vid);
 		$data['brands']=$this->erpm->getbrandsforvendor($vid);
+		if($vid && !$catid)
+			$data['cat_brands']=$this->erpm->getcatbrandsforvendor($vid,$catid=0);
+		if($vid && $catid)
+			$data['cat_brands']=$this->erpm->getcatbrandsforvendor($vid,$catid);
 		$data['vendor']=$this->erpm->getvendor($vid);
 		$data['vid'] = $vid;
 		$data['page']="addvendor";
@@ -1163,8 +1177,6 @@ class Erp extends Stream
 		$user=$this->auth(STOCK_INTAKE_ROLE);
 		if($_POST)
 		{
-                        //echo '<pre>'; print_r($_POST);die();
-                    
 			$grn_id = $this->erpm->do_grn();
 			$this->session->set_flashdata("notify_grn","Stock Intake done successfully-#".$grn_id);
 			redirect("admin/apply_grn",'refresh');
@@ -4619,992 +4631,724 @@ group by g.product_id ");
 		$this->load->view("admin",$data);
 	}
 	
-	function viewcat($cat=false)
+	function brand_analytics($bid=false)
 	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
-		if(empty($cat))
-			show_404();
-		$data['cat']=$this->db->query("select c.*,m.name as main from king_categories c left outer join king_categories m on m.id=c.type where c.id=?",$cat)->row_array();
-		$data['deals']=$this->db->query("select i.*,c.name as category,c.id as catid from king_categories c join king_deals d on d.catid=c.id join king_dealitems i on i.dealid=d.dealid where c.id=? or c.type=?",array($cat,$cat))->result_array();
-		$data['page']="viewcat";
+		$data['top_sold_brand'] = $this->db->query("select br.name as name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+													from king_orders a
+													join king_transactions ki on ki.transid=a.transid
+													join king_dealitems di on di.id=a.itemid
+													join king_deals d on d.dealid=di.dealid
+													join king_brands br on br.id=d.brandid
+													where a.status!=3 and ki.is_pnh=1
+													group by br.id
+													order by ttl desc")->result_array();
+		$data['brands']=$this->db->query("select * from king_brands order by id asc")->result_array();
+		$data['page']="brand_analytics";
 		$this->load->view("admin",$data);
 	}
-	
-	function addcat()
+
+	/**
+	 * function to load territory list based on state selection
+	 * @param unknown_type $stateid
+	 */
+	function loadterritory_bystate($statedid=false)
 	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
-		if($_POST)
-			$this->erpm->do_addnewcat();
-		$data['page']="addcategory";
-		$this->load->view("admin",$data);
-	}
-	
-	function editcat($catid=false)
-	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
-		if(empty($catid))
-			show_404();
-		if($_POST)
-			$this->erpm->do_updatecat($catid);
-		$data['cat']=$this->db->query("select * from king_categories where id=?",$catid)->row_array();
-		$data['page']="addcategory";
-		$this->load->view("admin",$data);
-	}
-	
-	function dashboard()
-	{
-		$user=$this->auth();
-		$data['page']="dashboard";
-		$this->load->view("admin",$data);
-	}
-	
-	function export_data()
-	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
-		if($_POST)
-			$this->erpm->do_export_data();
-		$data['page']="export_data";
-		$this->load->view("admin",$data);
-	}
-	
-	function jx_pub_deal()
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		if(!$_POST)
-			die;
-		$this->db->query("update king_deals set publish=? where dealid=? limit 1",array($this->input->post("pub"),$this->input->post("did")));
-	}
-	
-	function jx_live_deal()
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		if(!$_POST)
-			die;
-		$this->db->query("update king_dealitems set live=? where id=? limit 1",array($this->input->post("live"),$this->input->post("id")));
-	}
-	
-	function deals_bulk_image_update($bid)
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		$data['items']=$this->db->query("select i.name,i.dealid,d.publish,i.live,b.* from deals_bulk_upload_items b join king_dealitems i on i.id=b.item_id join king_deals d on d.dealid=i.dealid where b.bulk_id=?",$bid)->result_array();
-		$data['page']="deals_bulk_image_update";
-		$this->load->view("admin",$data);
-	}
-	
-	function bu_img_update()
-	{
-		$user=$this->auth();
-		$i=$this->input->post("i");
-		$iid=$this->input->post("itemid");
-		$imgname=randomChars(15);
-		if (isset ( $_FILES ['pic'] ) && $_FILES ['pic'] ['error'] == 0)
+		$id =(!is_numeric($statedid))?9999999999:$statedid;
+		$output=array();
+		$territory_list=$this->db->query("SELECT a.id,a.territory_name,b.state_name
+										FROM pnh_m_territory_info a
+										JOIN pnh_m_states b ON b.state_id=a.state_id
+										WHERE b.state_id=?
+										GROUP BY a.id order by territory_name",$id);
+		if($territory_list->num_rows())
 		{
-			$this->load->library("thumbnail");
-			$img=$_FILES['pic']['tmp_name'];
-			if($this->thumbnail->check($img))
-			{
-				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/300/$imgname.jpg","width"=>300));
-				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/small/$imgname.jpg","width"=>200));
-				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/thumbs/$imgname.jpg","width"=>50,"max_height"=>50));
-				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/$imgname.jpg","width"=>400));
-				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/big/$imgname.jpg","width"=>1000));
-				$did=$this->db->query("select dealid from king_dealitems where id=?",$iid)->row()->dealid;
-				$this->db->query("update king_dealitems set pic=? where id=? limit 1",array($imgname,$iid));
-				$this->db->query("update king_deals set pic=? where dealid=? limit 1",array($imgname,$did));
-				$this->db->query("update deals_bulk_upload_items set is_image_updated=1,updated_on=".time().",updated_by={$user['userid']} where item_id=?",$iid);
-				$bid=$this->db->query("select bulk_id from deals_bulk_upload_items where item_id=?",$iid)->row()->bulk_id;
-				if($this->db->query("select 1 from deals_bulk_upload_items where bulk_id=? and is_image_updated=0",$bid)->num_rows()==0)
-					$this->db->query("update deals_bulk_upload set is_all_image_updated=1 where id=? limit 1",$bid);
-				$err=0;
-			}
-			else $err=1;
+			$output['territory_list']=$territory_list->result_array();
+			$output['status']='success';
 		}
 		else
-			$err=1;
-		echo "<script>parent.updatedimg($i,$err)</script>";
-	}
-	
-	function dealsbymenu_table($mid)
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 where d.menuid=? or d.menuid2=? order by i.name asc",array($mid,$mid))->result_array();
-		$data['pagetitle']="menu : ".$this->db->query("select name from king_menu where id=?",$mid)->row()->name;
-		$data['page']="deals_table";
-		$this->load->view("admin",$data);
-	}
-	
-	function dealsbycategory_table($cid)
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 where d.catid=? order by i.name asc",array($cid))->result_array();
-		$data['pagetitle']="Category : ".$this->db->query("select name from king_categories where id=?",$cid)->row()->name;
-		$data['page']="deals_table";
-		$this->load->view("admin",$data);
-	}
-	
-	function dealsbybrand_table($cid)
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 where d.brandid=? order by i.name asc",array($cid))->result_array();
-		$data['pagetitle']="Brand : ".$this->db->query("select name from king_brands where id=?",$cid)->row()->name;
-		$data['page']="deals_table";
-		$this->load->view("admin",$data);
-	}
-	
-	function deals_table()
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 order by d.sno desc limit 40")->result_array();
-		$data['page']="deals_table";
-		$this->load->view("admin",$data);
-	}
-	
-	function categories()
-	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
-		$cats=$this->db->query("select * from king_categories order by name asc")->result_array();
-		
-		$as=$alphas=array("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z");
-		foreach($as as $alpha)
-			$ret[$alpha]=array();
-		foreach($cats as $c)
 		{
-			$alpha=strtolower($c['name']{0});
-			if(!isset($ret[$alpha]))
-			{
-				$ret[$alpha]=array();
-				$alphas[]=$alpha;
-			}
-			$ret[$alpha][]=$c;
+			$output['status']='error';
+			$output['message']='No Territory Found';
 		}
-		for($i=0;$i<5;$i++)
-			$r[$i]=array();
-			
-		$i=0;
-		foreach($ret as $a=>$rt)
+		echo json_encode($output);
+	}
+	
+	/**
+	 * function to load territory list based on state selection
+	 * @param unknown_type $stateid
+	 */
+	function loadtown_byterritory($tid=false)
+	{
+		$tid =(!is_numeric($tid))?9999999999:$tid;
+		$output=array();
+		$town_list=$this->db->query("SELECT a.id,a.town_name
+										FROM pnh_towns a
+                               			join pnh_m_territory_info b on b.id=a.territory_id
+										WHERE b.id=?
+										GROUP BY a.id order by town_name",$tid);
+		if($town_list->num_rows())
 		{
-			$r[$i][$a]=$rt;
-			$i++;
-			if($i>4)
-				$i=0;
+			$output['town_list']=$town_list->result_array();
+			$output['status']='success';
 		}
-		$data['count']=count($cats);
-		$data['alphas']=$alphas;
-		$data['categories']=$r;
-		$data['page']="categories";
-		$this->load->view("admin",$data);
-	}
-	
-	function brands()
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE|PRODUCT_MANAGER_ROLE);
-		$brands=$this->db->query("select * from king_brands order by name asc")->result_array();
-		
-		$as=$alphas=array("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z");
-		foreach($as as $alpha)
-			$ret[$alpha]=array();
-		foreach($brands as $c)
+		else
 		{
-			if(!isset($c['name']{0}))
-				continue;
-			$alpha=strtolower($c['name']{0});
-			if(!isset($ret[$alpha]))
-			{
-				$ret[$alpha]=array();
-				$alphas[]=$alpha;
-			}
-			$ret[$alpha][]=$c;
+			$output['status']='error';
+			$output['message']='No Towns found in this territory';
 		}
-		for($i=0;$i<5;$i++)
-			$r[$i]=array();
-			
-		$i=0;
-		foreach($ret as $a=>$rt)
-		{
-			$r[$i][$a]=$rt;
-			$i++;
-			if($i>4)
-				$i=0;
-		}
-		$data['count']=count($brands);
-		$data['alphas']=$alphas;
-		$data['brands']=$r;
-		$data['rbs']=$this->erpm->getrackkbinsforbrands();
-		$data['page']="brands";
-		$this->load->view("admin",$data);
+		echo json_encode($output);
 	}
 	
-	function vendorsbybrand($bid=false)
+	/*
+	 * Ajax function to load territories by brandid 
+	 * 
+	 */
+	function jx_top_sale_terr($bid="",$s="",$e="")
 	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE|PURCHASE_ORDER_ROLE);
-		if(!$bid)
-			show_404();
-		$data['page']="erpvendors";
-		$data['brand']=$this->db->query("select name from king_brands where id=?",$bid)->row()->name;
-		$data['vendors']=$this->erpm->getvendorsforbrand($bid);
-		$this->load->view("admin",$data);
-	}
-	
-	function vendors()
-	{
-		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE|PURCHASE_ORDER_ROLE);
-		$data['page']="erpvendors";
-		$data['vendors']=$this->erpm->getvendors();
-		$this->load->view("admin",$data);
-	}
-	
-	function changeusertemp($userid,$temp)
-	{
-		$user=$this->auth(CALLCENTER_ROLE);
-		$this->db->query("update king_users set temperament=? where userid=?",array($temp,$userid));
-		redirect("admin/user/$userid");
-	}
-	
-	function client_invoices($s=false,$e=false)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if($e)
-			$data['pagetitle']="between $s and $e";
-		$data['invoices']=$this->erpm->getclientinvoices($s,$e);
-		$data['page']="client_invoices";
-		$this->load->view("admin",$data);
-	}
-	
-	function print_client_invoice($inv)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		$data['invoice']=$this->erpm->getclientinvoice($inv);
-		$data['orders']=$this->erpm->getclientinvoiceforprint($inv);
-		$this->load->view("admin/body/client_invoice_print",$data);
-	}
-	
-	function pack_client_invoice($inv)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if($_POST)
-		{
-			$this->db->query("update t_client_invoice_info set invoice_status=1 where invoice_id=?",$inv);
-			redirect("admin/client_invoice/$inv");
-		}
-		$data['invoice']=$this->db->query("select p.barcode,p.product_name,t.*,t.invoice_qty as qty from t_client_invoice_product_info t join m_product_info p on p.product_id=t.product_id where t.invoice_id=?",$inv)->result_array();
-		$data['page']="pack_client_invoice";
-		$this->load->view("admin",$data);
-	}
-	
-	function payment_client_invoice($inv=false)
-	{
-		if(!$inv)
-			show_404();
-		$user=$this->auth(FINANCE_ROLE);
-		if($_POST)
-			$this->erpm->do_payment_client($inv);
-		$data['page']="payment_client";
-		$this->load->view("admin",$data);
-	}
-	
-	function client_invoice($iid=false)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if(!$iid)
-			show_404();
-		$data['payments']=$this->db->query("select * from t_client_invoice_payment where invoice_id=?",$iid)->result_array();
-		$data['invoice']=$this->db->query("select i.*,a.name as created_by from t_client_invoice_info i join king_admin a on a.id=i.created_by where i.invoice_id=?",$iid)->row_array();
-		$data['items']=$this->db->query("select p.product_name,i.* from t_client_invoice_product_info i join m_product_info p on p.product_id=i.product_id where i.invoice_id=?",$iid)->result_array();
-		$data['page']="client_invoice";
-		$this->load->view("admin",$data);
-	}
-	
-	function createclientinvoice()
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if($_POST)
-			$this->erpm->do_clientinvoice();
-		$data['clients']=$this->erpm->getclients();
-		$data['page']="createclientinvoice";
-		$this->load->view("admin",$data);
-	}
-	
-	function jx_listclientordersforinvoice()
-	{
-		$user=$this->auth();
-		if(!$_POST)
-			die;
-		$cid=$this->input->post("cid");
-		foreach($this->db->query("select * from t_client_order_info where client_id=? and (order_status=0 || order_status=1)",$cid)->result_array() as $o)
-			echo '<a href="javascript:void(0);" onclick="loadorder(\''.$o['order_id'].'\')">'."ORD{$o['order_id']}, {$o['order_reference_no']}".'</a>';
-	}
-	
-	function jx_loadclientordersforinvoice()
-	{
-		$user=$this->auth();
-		if(!$_POST)
-			die;
-		$oid=$this->input->post("oid");
-		$items=$this->erpm->getclientordersforinvoice($oid);
-		echo json_encode($items);
-	}
-	
-	function client_order($oid=false)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if($_POST)
-			$this->erpm->do_closeclientorder($oid);
-		$data['order']=$this->erpm->getclientorder($oid);
-		$data['invoices']=$this->erpm->getinvoicesforclientorder($oid);
-		$data['page']="client_order";
-		$this->load->view("admin",$data);
-	}
-	
-	function client_orders($s=false,$e=false)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		$data['orders']=$this->erpm->getclientorders();
-		$data['page']="client_orders";
-		$this->load->view("admin",$data);
-	}
-	
-	function client_orders_by_client($cid=0)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		$data['orders']=$this->erpm->getclientordersbyclient($cid);
-		$data['byclient']=true;
-		$data['pagetitle']="for ".$this->db->query("select client_name as c from m_client_info where client_id=?",$cid)->row()->c;
-		$data['page']="client_orders";
-		$this->load->view("admin",$data);
-	}
-	
-	
-	function clients()
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		$data['clients']=$this->erpm->getclients();
-		$data['page']="clients";
-		$this->load->view("admin",$data);
-	}
-	
-	function addclientorder($cid='')
-	{
-		$user=$this->auth(FINANCE_ROLE);
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+		$sql = "select tr.id,tr.territory_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+													from king_orders a
+													join king_transactions ki on ki.transid=a.transid
+													join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+													join pnh_m_territory_info tr on tr.id=f.territory_id 
+													join king_dealitems di on di.id=a.itemid
+													join king_deals d on d.dealid=di.dealid
+													join king_brands br on br.id=d.brandid
+													where a.status!=3 and ki.is_pnh=1 and br.id='".$bid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+													group by tr.id
+													order by ttl desc";
+		 $res = $this->db->query($sql);
+		 $sales_summary = array();
 		 
-		if($_POST)
+		if($res->num_rows())
 		{
-			$cid = $this->input->post('cid');
-			$this->erpm->do_addclientorder($cid);
-		}
-			
-			
-		$data['cid'] = $cid; 	
-		$data['page']="addclientorder";
-		$this->load->view("admin",$data);
-	}
-	
-	function editclient($cid)
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if($_POST)
-			$this->erpm->do_updateclient($cid);
-		$data['client']=$this->db->query("select * from m_client_info where client_id=?",$cid)->row_array();
-		$data['contacts']=$this->db->query("select * from m_client_contacts_info where client_id=?",$cid)->result_array();
-		$data['page']="addclient";
-		$this->load->view("admin",$data);
-	}
-	
-	function addclient()
-	{
-		$user=$this->auth(FINANCE_ROLE);
-		if($_POST)
-			$this->erpm->do_addclient();
-		$data['page']="addclient";
-		$this->load->view("admin",$data);
-	}
-	
-	function stock_checker()
-	{
-		$user=$this->auth();
-		if($_POST)
-		{
-			$data['deal']=$this->db->query("select name,id from king_dealitems where id=?",$_POST['id'])->row_array();
-			$avail=$this->erpm->do_stock_check(array($data['deal']['id']));
-			$data['status']=1;
-			if(empty($avail))
-				$data['status']=0;
-		}
-		$data['page']="stock_checker";
-		$this->load->view("admin",$data);
-	}
-	
-	function update_partner_deal_prices($itemid)
-	{
-		$user=$this->auth(DEAL_MANAGER_ROLE);
-		if($_POST)
-		{
-			foreach(array("partner_id","customer_price","partner_price") as $i)
-				$$i=$this->input->post($i);
-			foreach($partner_id as $i=>$pid)
+			foreach($res->result_array() as $row)
 			{
-				$inp=array("partner_id"=>$pid,"itemid"=>$itemid,"customer_price"=>$customer_price[$i],"partner_price"=>$partner_price[$i]);
-				if($this->db->query("select 1 from partner_deal_prices where itemid=? and partner_id=?",array($itemid,$pid))->num_rows()==0)
-				{
-					$inp['created_on']=time();$inp['created_by']=$user['userid'];
-					$this->db->insert("partner_deal_prices",$inp);
-				}else{
-					$inp['modified_on']=time();
-					$inp['modified_by']=$user['userid'];
-					$this->db->where("partner_id",$inp['partner_id']);
-					$this->db->where("itemid",$inp['itemid']);
-					$this->db->update("partner_deal_prices",$inp);
-				}
-			}
-			$this->erpm->flash_msg("Partner prices updated");
-			redirect("admin/update_partner_deal_prices/$itemid");
-		}
-		$data['itemid']=$itemid;
-		$data['page']="update_partner_deal_prices";
-		$this->load->view("admin",$data);
-	}
-	
-	function partner_deal_prices()
-	{
-		$user=$this->auth(MANAGE_PARTNER_DEAL_PRICES);
-		if($_POST)
-		{
-			$f=fopen($_FILES['pfile']['tmp_name'],"r");
-			$head=fgetcsv($f);
-			$out=array($head);
-			$c=0;
-			$template=array("partner_id","itemid","customer_price","partner_price");
-			while(($data=fgetcsv($f))!==false)
-			{
-				foreach($template as $i=>$c)
-					$inp[$c]=$data[$i];
-				if($this->db->query("select 1 from partner_deal_prices where itemid=? and partner_id=?",array($data[1],$data[0]))->num_rows()==0)
-				{
-					$inp['created_on']=time();$inp['created_by']=$user['userid'];
-					$this->db->insert("partner_deal_prices",$inp);
-				}else{
-					$inp['modified_on']=time();
-					$inp['modified_by']=$user['userid'];
-					$this->db->where("partner_id",$inp['partner_id']);
-					$this->db->where("itemid",$inp['itemid']);
-					$this->db->update("partner_deal_prices",$inp);
-				}
-				$c++;
-			}
-			$this->erpm->flash_msg("$c deal prices updated");
-		}
-		$data['page']="partner_deal_prices";
-		$this->load->view("admin",$data);
-	}
-	
-	
-	function search()
-	{
-		$user=$this->auth();
-		if(strlen($this->input->post("q"))<3)
-			show_error("Please enter atleast 3 characters to search");
-		$eq=$this->input->post("q");
-		$q="%".$this->input->post("q")."%";
-		$data['categories']=$this->db->query("select * from king_categories where name like ?",$q)->result_array();
-		$data['brands']=$this->db->query("select * from king_brands where name like ?",$q)->result_array();
-		$data['deals']=$this->db->query("select name,dealid,id from king_dealitems where is_pnh=0 and name like ?",$q)->result_array();
-		$data['products']=$prods=$this->db->query("select product_name,product_id from m_product_info where product_name like ?",$q)->result_array();
-		foreach($prods as $i=>$p)
-			$prods[$i]['stock']=$this->db->query("select sum(available_qty) as s from t_stock_info where product_id=?",$p['product_id'])->row()->s;
-		$data['products']=$prods;
-		$data['invoices']=$this->db->query("select * from king_invoice where invoice_no like ?",$q)->result_array();
-		$data['orders']=$this->db->query("select transid from king_transactions where (transid like ? or partner_reference_no like ? ) ",array($q,$q))->result_array();
-		$data['clients']=$this->db->query("select client_id,client_name from m_client_info where client_name like ?",$q)->result_array();
-		$data['users']=$this->db->query("select * from king_users where email like ? or name like ? or (mobile=? and mobile<>0) order by name asc",array($q,$q,$this->input->post("q")))->result_array();
-		$data['tickets']=$this->db->query("select * from support_tickets where ticket_no like ? or concat('TK',ticket_no) like ?",array($q,$q))->result_array();
-		$data['vendors']=$this->db->query("select * from m_vendor_info where vendor_name like ? or vendor_code like ?",array($q,$q))->result_array();
-		$data['awbs']=$this->db->query("select b.*,o.transid from shipment_batch_process_invoice_link b join king_invoice o on o.invoice_no=b.invoice_no where b.awb=? limit 1",$this->input->post("q"))->result_array();
-		$data['pnh_deals']=$this->db->query("select name,id,pnh_id from king_dealitems where is_pnh=1 and (name like ? or (pnh_id=? and pnh_id!='0'))",array($q,$this->input->post("q")))->result_array();
-		$data['pnh_franchises']=$this->db->query("select franchise_id,pnh_franchise_id,franchise_name from pnh_m_franchise_info where pnh_franchise_id=? or franchise_name like ? or login_mobile1=? or login_mobile2=?",array($eq,$q,$eq,$eq))->result_array();
-		$data['pnh_members']=$this->db->query("select concat(first_name,' ',last_name) as name,pnh_member_id,user_id from pnh_member_info where pnh_member_id=? or  mobile = ? or  concat(first_name,' ',last_name) like ?",array($eq,$eq,$q))->result_array();
-		$data['page']="search_results";
-		$this->load->view("admin",$data);
-	}
-	
-	function pnh_jx_checkstock_order()
-	{
-		$fid=$this->input->post("fid");
-		$mid=$this->input->post("mid");
-		$pids=explode(",",$this->input->post("pids"));
-		$qty=explode(",",$this->input->post("qty"));
-		$iids=$this->db->query("select id,pnh_id from king_dealitems where is_pnh=1 and pnh_id in('".implode("','",$pids)."')")->result_array();
-		$itemids=array();
-		$order_det=array();
-		$e=0;
-		foreach($pids as $pid)
-			foreach($iids as $id)
-				if($id['pnh_id']==$pid)
-					$itemids[]=$id['id'];
-		$avail=$this->erpm->do_stock_check($itemids,$qty);
-		$un="";
-		$attr=$this->input->post('attr');
-		$attr_data=array();
-		if($attr)
-		{
-			$attrs=explode("&",$attr);
-			foreach($attrs as $attr)
-			{
-				list($pp,$v)=explode("=",$attr);
-				list($p,$a)=explode("_",$pp);
-				if(!isset($attr_data[$p]))
-					$attr_data[$p]=array();
-				$attr_data[$p][$a]=$v;
+				array_push($sales_summary,array($row['territory_name'],$row['ttl']*1,$row['id'],$row['ttl']*1)); 		
 			}
 		}
-		foreach($pids as $pid)
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
+	}
+	
+	/*
+	 * 
+	 * Ajax Function to get towns by territory and brand
+	 */
+	 function jx_gettownsbybrandid($bid="",$tid="",$s="",$e="")
+	 {
+	 	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	$output=array();
+		$town_list = "select tw.id,tw.town_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands br on br.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_m_states st on st.state_id = tr.state_id
+											join pnh_towns tw on tw.id=f.town_id
+											where br.id='".$bid."' and ki.is_pnh = 1 and tr.id='".$tid."' and a.status !=3  and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by tw.town_name
+											order by ttl desc";
+		 $res = $this->db->query($town_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
 		{
-			if(!isset($attr_data[$pid]))
-				continue;
-			$prods=array();
-			$i=0;
-			foreach($attr_data[$pid] as $a=>$v)
+			foreach($res->result_array() as $row)
 			{
-				if($i==0)
-				{
-					$pr=$this->db->query("select product_id from products_group_pids where attribute_name_id=? and attribute_value_id=?",array($a,$v))->result_array();
-					foreach($pr as $p)
-						$prods[]=$p['product_id'];
-				}else{
-				$c_prods=$prods;
-				$prods=array();
-				$pr=$this->db->query("select product_id from products_group_pids where attribute_name_id=? and attribute_value_id=?",array($a,$v))->result_array();
-				foreach($pr as $p)
-					if(in_array($p['product_id'],$c_prods))
-						$prods[]=$p['product_id'];
-				}
-				$i++;
-				if(empty($prods))
-				{
-					$e=1;
-					$un.="{$pid} is not available for selected combination";
-					break;
-				}
+				array_push($sales_summary,array($row['town_name'],$row['ttl']*1,$row['id'],$row['ttl']*1)); 		
 			}
 		}
-		if($e==0)
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	
+	/*
+	 * 
+	 * Ajax Function to get Franchises by territory and brand 
+	 */
+	 function jx_getfranchisebybrand($bid="",$tid="",$s="",$e="")
+	 {
+	  	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	 
+		$output=array();
+		$fran_list = "select f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands br on br.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_m_states st on st.state_id = tr.state_id
+											where a.status!=3 and ki.is_pnh=1 and br.id='".$bid."' and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by f.franchise_id
+											order by ttl desc limit 10";
+		$res = $this->db->query($fran_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
 		{
-		foreach($itemids as $i=>$itemid)
-		 if(!in_array($itemid,$avail))
-		 	$un.="{$pids[$i]} is out of stock\n";
-		 $e=0;
-		 if(strlen($un)!=0)
-		 	$e=1;
-		}
-		$total=$d_total=$bal=$abal=0;
-		$pc="";
-		if($e==0 && $mid && $this->db->query("select 1 from pnh_member_info where pnh_member_id=?",$mid)->num_rows()==0 && $this->db->query("select 1 from pnh_m_allotted_mid where franchise_id=? and ? between mid_start and mid_end",array($fid,$mid))->num_rows()==0)
-		{
-			$e=1;$un="MID : $mid is not allotted to this franchise";
-		}
-		if($e==0)
-		{
-			$iids=array();
-			$itemid=$this->db->query("select id from king_dealitems where pnh_id=?",$pid)->row()->id;
-			$menuid=$this->db->QUERY("select *,d.menuid,m.default_margin as margin from king_dealitems i join king_deals d on d.dealid=i.dealid JOIN pnh_menu m ON m.id=d.menuid where i.is_pnh=1 and i.pnh_id=?",$pid)->row_array();
-		 	$fran=$this->db->query("select * from pnh_m_franchise_info where franchise_id=?",$fid)->row_array();
-		 	$fran1=$this->db->query("select * from pnh_franchise_menu_link where fid=? and menuid=?",array($fid,$menuid['menuid']))->row_array();
-		 	$margin=$this->db->query("select margin,combo_margin from pnh_m_class_info where id=?",$fran['class_id'])->row_array();
-			
-			if($fran1['sch_discount_start']<time() && $fran1['sch_discount_end']>time() && $fran1['is_sch_enabled'])
-				$menuid['margin']+=$fran1['sch_discount'];
-				
-		 	$ordered_menu_list=array();
-		 	foreach($pids as $i=>$iid)
-		 	{
-				$prod=$this->db->query("select i.*,d.publish,d.menuid,d.brandid,d.catid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.is_pnh=1 and i.pnh_id=?",$iid)->row_array();
-				$ordered_menu_list[]=$prod['menuid'];
-				$items[$i]['brandid']=$prod['brandid'];
-				$items[$i]['menuid']=$prod['menuid'];
-				$items[$i]['catid']=$prod['catid'];
-				$items[$i]['name']=$prod['name'];
-				$items[$i]['tax']=$prod['tax'];
-				$items[$i]['mrp']=$prod['orgprice'];
-				$items[$i]['price']=$prod['price'];
-				$items[$i]['itemid']=$prod['id'];
-				$margin=$this->erpm->get_pnh_margin($fran['franchise_id'],$iid);
-				$items[$i]['base_margin']=$margin['base_margin'];
-				$items[$i]['sch_margin']=$margin['sch_margin'];
-				$items[$i]['bal_discount']=$margin['bal_discount'];
-				if($prod['is_combo']=="1")
-				{
-					$items[$i]['discount']=$items[$i]['price']/100*$margin['combo_margin'];
-					$items[$i]['base_margin']=$margin['combo_margin'];
-				}
-				else
-					$items[$i]['discount']=$items[$i]['price']/100*$margin['margin'];
-					$total+=$items[$i]['price']*$qty[$i];
-					$items[$i]['qty']=$qty[$i];
-					$d_total+=($items[$i]['price']-$items[$i]['discount'])*$qty[$i];
-					$items[$i]['final_price']=($items[$i]['price']-$items[$i]['discount']);
-					
-					$iids[]=$prod['id'];
-		 	}
-		 	
-		 	$fran_crdet = $this->erpm->get_fran_availcreditlimit($fid);
-			$fran['current_balance'] = $fran_crdet[3];
-			
-		 	$bal=$fran['current_balance'];
-		 	$abal=$fran['current_balance']-$d_total;
-			
-		 	//check if it is prepaid franchise block
-		 	$is_prepaid_franchise=$this->erpm->is_prepaid_franchise($fid);
-		 	if($is_prepaid_franchise)
-		 	{
-		 		if(count(array_unique($ordered_menu_list))==1)
-		 		{
-		 			if($ordered_menu_list[0]!=VOUCHERMENU)
-		 				$is_prepaid_franchise=false;
-		 						
-		 		}else{
-		 			$is_prepaid_franchise=false;
-		 		}
-		 	}
-		 	//check if it is prepaid franchise block
-			
-			if($fran['current_balance']<$d_total && !$is_prepaid_franchise)
+			foreach($res->result_array() as $row)
 			{
-				$e=1;$un="Insufficient balance! Balance in your account Rs {$fran['current_balance']}\nTotal order amount : Rs $d_total";
-			}
-			$pc_data['deals']=$this->erpm->pnh_getdealpricechanges($fran['app_version'],$iids);
-			$pc_data['total']=$total;
-			$pc_data['mid']=$mid;
-			$pc_data['items']=$items;
-			$pc_data['menuid']=$menuid;
-			$pc_data['fid']=$fid;
-			
-			
-			$pc=$this->load->view("admin/body/pc_offline_frag",$pc_data,true);
-		}
-		 die(json_encode(array("e"=>$e,"msg"=>$un,"total"=>$total,"d_total"=>$d_total,"com"=>$total-$d_total,"bal"=>$bal,"abal"=>$abal,"pc"=>$pc)));
-	}
-	
-	function pnh_fran_ver_change($fid,$v)
-	{
-		$user=$this->auth(true);
-		$this->db->query("update pnh_m_franchise_info set app_version=? where franchise_id=? limit 1",array($v,$fid));
-		$this->erpm->flash_msg("Version changed for franchise");
-		redirect("admin/pnh_franchise/$fid");
-	}
-	
-	function jx_pnh_prod_suggestion()
-	{
-		
-		$user=$this->auth();
-		$pid=$_POST['pid'];
-		$fid=$_POST['fid'];
-		$prods=array();
-		$cat_brand=$this->db->query("select d.catid,d.brandid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.pnh_id=?",$pid)->row_array();
-		$catid=$cat_brand['catid'];
-		$brandid=$cat_brand['brandid'];
-		
-		$suggest_deals = $this->db->query("
-												select i.is_combo,i.orgprice as mrp,i.price,
-									if((d.brandid=?),' ',i.name) as r, 
-										i.name,i.pnh_id,d.catid,d.brandid,i.id 
-									from king_deals d 
-									join king_dealitems i on i.dealid=d.dealid 
-									where i.is_pnh=1 and d.publish=1 and d.catid=? 
-									and i.pnh_id!=? and i.live=1 
-									order by r asc
-										
-										",array($brandid,$catid,$pid))->result_array();
-		
-		foreach($suggest_deals as $p)
-		{
-			$pid=$p['pnh_id'];
-			$margin=$this->erpm->get_pnh_margin($fid,$pid);
-			if($p['is_combo']=="1")
-				$p['discount']=$p['price']/100*$margin['combo_margin'];
-			else
-				$p['discount']=$p['price']/100*$margin['margin'];
-			$p['margin']=$p['discount']/$p['price']*100;
-			
-			
-			
-			
-			$stock=$this->erpm->do_stock_check(array($p['id']),array(1),true); 
-			
-			
-			$stock_tmp = array();
-			$stock_tmp[0] = array();
-			$stock_tmp[0][0] = array('stk'=>0);
-			foreach($stock as $plist)
-				foreach($plist as $pdet)
-				{
-					if(!$pdet['status'])
-					{
-						$prod['live']=0;
-						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
-					}
-					else
-					{
-						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
-					}
-				}	
-					
-			
-			
-			$p['stock']=(($stock_tmp[0][0]['stk']>0)?$stock_tmp[0][0]['stk']:0);
-			
-			$prods[]=$p;
-		}
-		$data['prods']=$prods;
-		$this->load->view("admin/body/pnh_prod_suggest_frag",$data);
-	}
-	
-	function jx_pnh_fran_cancelledorders()
-	{
-		
-		$user=$this->auth();
-		$pid=$_POST['pid'];
-		$fid=$_POST['fid'];
-		$prods=array();
-		$cat_brand=$this->db->query("select d.catid,d.brandid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.pnh_id=?",$pid)->row_array();
-		$catid=$cat_brand['catid'];
-		$brandid=$cat_brand['brandid'];
-		
-		$suggest_deals = $this->db->query("
-												select i.is_combo,i.orgprice as mrp,i.price,
-												if((d.brandid=?),' ',i.name) as r, 
-													i.name,i.pnh_id,d.catid,d.brandid,i.id,
-													t.init
-													 
-												from king_deals d 
-												join king_dealitems i on i.dealid=d.dealid 
-												join king_orders o on o.itemid = i.id 
-												join king_transactions t on t.transid = o.transid   
-												where i.is_pnh=1 and d.publish=1 
-												and o.status = 3 
-												and i.live=1 
-												order by t.init desc  
-									",array($pid))->result_array();
-		
-		foreach($suggest_deals as $p)
-		{
-			$pid=$p['pnh_id'];
-			$margin=$this->erpm->get_pnh_margin($fid,$pid);
-			if($p['is_combo']=="1")
-				$p['discount']=$p['price']/100*$margin['combo_margin'];
-			else
-				$p['discount']=$p['price']/100*$margin['margin'];
-			$p['margin']=$p['discount']/$p['price']*100;
-			
-			
-			
-			
-			$stock=$this->erpm->do_stock_check(array($p['id']),array(1),true); 
-			
-			
-			$stock_tmp = array();
-			$stock_tmp[0] = array();
-			$stock_tmp[0][0] = array('stk'=>0);
-			foreach($stock as $plist)
-				foreach($plist as $pdet)
-				{
-					if(!$pdet['status'])
-					{
-						$prod['live']=0;
-						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
-					}
-					else
-					{
-						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
-					}
-				}	
-					
-			
-			
-			$p['stock']=(($stock_tmp[0][0]['stk']>0)?$stock_tmp[0][0]['stk']:0);
-			
-			if(!$p['stock'])
-				continue ; 
-			
-			$prods[]=$p;
-		}
-		$data['prods']=$prods;
-		$this->load->view("admin/body/pnh_prod_suggest_frag",$data);
-		
-		
-		
-	}
-	
-	function pnh_place_quote()
-	{
-		$user=$this->auth(CALLCENTER_ROLE);
-		$req_respond_time = $this->input->post('req_respond_time');
-		
-		foreach(array("pid","quote","fid","qty") as $i)
-			$$i=$this->input->post($i);
-		
-		$inp=array("franchise_id"=>$fid,"created_on"=>time(),"quote_status"=>0,"respond_in_min"=>$req_respond_time,"created_by"=>$user['userid']);
-		$this->db->insert("pnh_quotes",$inp);
-		$qid=$this->db->insert_id();
-		
-		$new_prod_list=$this->input->post('produc_name');
-		
-		if($new_prod_list)
-		{
-			$np_name=$this->input->post('produc_name');
-			$np_qty=$this->input->post('np_qty');
-			$np_mrp=$this->input->post('np_mrp');
-			$np_quote=$this->input->post('np_quote');
-			foreach($new_prod_list as $i=>$new_prod_det)
-			{
-				$inp=array("quote_id"=>$qid,"new_product"=>$np_name[$i],"np_qty"=>$np_qty[$i],"np_mrp"=>$np_mrp[$i],"np_quote"=>$np_quote[$i]);
-				$this->db->insert("pnh_quotes_deal_link",$inp);
+				array_push($sales_summary,array($row['franchise_name'],$row['ttl']*1)); 		
 			}
 		}
-		
-		if($pid)
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	/*
+	 * Ajax function to load brand sales 
+	 * 
+	 */
+	function jx_brand_sales($brandid="",$s="",$e="")
+	{
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	$date_diff = date_diff_days($en,$st);
+		if($date_diff <= 31)
 		{
-			foreach($pid as $i=>$p)
+			$sql ="select date_format(from_unixtime(ki.init),'%d-%b') as mn,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join king_dealitems di on di.id=a.itemid
+				join king_deals d on d.dealid=di.dealid
+				join king_brands br on br.id=d.brandid
+				where br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."' and a.status !=3 and ki.is_pnh=1
+				group by date(from_unixtime(ki.init))";
+		}
+		
+		else
+		{
+			$sql ="select date_format(from_unixtime(ki.init),'%b-%Y') as mn,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join king_dealitems di on di.id=a.itemid
+				join king_deals d on d.dealid=di.dealid
+				join king_brands br on br.id=d.brandid
+				where br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."' and a.status !=3 and ki.is_pnh=1
+				group by date_format(from_unixtime(ki.init),'%m-%Y')
+				order by date(from_unixtime(ki.init))";
+		}
+		 $res = $this->db->query($sql);
+		 $sales_on = array();
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
 			{
-				$inp=array("quote_id"=>$qid,"pnh_id"=>$p,"qty"=>$qty[$i],"dp_price"=>$quote[$i]);
-				$this->db->insert("pnh_quotes_deal_link",$inp);	
+				array_push($sales_summary,array($row['mn'],$row['ttl']*1)); 		
 			}
 		}
-		
-		$remarks = trim($this->input->post('req_remark'));
-		if($remarks)
-		{
-			$inp = array($qid,$remarks,time(),$user['userid']);
-			$this->db->query("insert into pnh_quote_remarks (quote_id,remarks,time,created_by) values(?,?,?,?) " ,$inp);	
-		}
-		
-		echo site_url("admin/pnh_quote/$qid");
+		$output = array();
+		$output['date_diff'] = $date_diff;
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
 	}
 	
-	function pnh_update_quote($qid)
+	/*
+	 * Ajax function to load state-wise brand sales 
+	 * 
+	 */
+	function jx_brandsalesbystate($s="",$e="",$sid="",$tr_id="",$tw_id="",$brandid)
 	{
-		$user=$this->auth(CALLCENTER_ROLE);
-		if($_POST)
+		$date_diff = date_diff_days($e,$s);
+		if($date_diff <= 31)
 		{
-			foreach(array("id","final") as $i)
-				$$i=$this->input->post($i);
-			$_C_POST=$_POST;
-			
-			$fid = $_C_POST['fid'];
-			$fdet = $this->db->query('select * from pnh_m_franchise_info where franchise_id = ? ',$fid)->row_array();
-			$fmob = $fdet['login_mobile1'];
-			
-			foreach($id as $j=>$i)
+				$sql ="select date_format(from_unixtime(ki.init),'%d-%m') as mn,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+					from king_orders a
+					join king_transactions ki on ki.transid=a.transid
+					join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+					join pnh_m_territory_info tr on tr.id=f.territory_id 
+					join pnh_towns tw on tw.id=f.town_id
+					join pnh_m_states st on st.state_id = tr.state_id
+					join king_dealitems di on di.id=a.itemid
+					join king_deals d on d.dealid=di.dealid
+					join king_brands br on br.id=d.brandid													
+					where st.state_id='".$sid."' and tr.id='".$tr_id."' and tw.id='".$tw_id."' 
+					and br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."' and a.status !=3 and ki.is_pnh=1
+					group by date(from_unixtime(ki.init))";
+		}
+		else 
+		{
+			$sql ="select date_format(from_unixtime(ki.init),'%b-%Y') as mn,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				join pnh_m_territory_info tr on tr.id=f.territory_id 
+				join pnh_towns tw on tw.id=f.town_id
+				join pnh_m_states st on st.state_id = tr.state_id
+				join king_dealitems di on di.id=a.itemid
+				join king_deals d on d.dealid=di.dealid
+				join king_brands br on br.id=d.brandid
+				where st.state_id='".$sid."' and tr.id='".$tr_id."' and tw.id='".$tw_id."' 
+				and br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."' and a.status !=3 and ki.is_pnh=1
+				group by date_format(from_unixtime(ki.init),'%m-%Y')
+				order by date(from_unixtime(ki.init))";
+		}
+		 $res = $this->db->query($sql);
+		 $sales_on = array();
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
 			{
-				if($final[$j]==0)
-					continue;
-					
-				$itemdet=$this->db->query("select i.id,i.orgprice as mrp,i.name,concat(i.print_name,'-',i.pnh_id) as print_name from pnh_quotes_deal_link l join king_dealitems i on i.is_pnh=1 and i.pnh_id=l.pnh_id where l.id=?",$i)->row_array();
-				
-				$itemid = $itemdet['id'];
-				$itemname = $itemdet['name'];
-				$itemmrp = $itemdet['mrp'];
-				$itemprint_name = $itemdet['print_name'];
-				
-					
-				if(isset($_C_POST['up_sm'.$i]))
-				{
-					$_POST=array("special_margin"=>$final[$j],"from"=>date("Y-m-d"),"to"=>date("Y-m-d"),"type"=>1,'internal'=>1);
-					$this->pnh_special_margin_deal($itemid);
-				}
-				
-				$is_notified = 0;
-				
-				// check if notify ticked
-				if(isset($_C_POST['notify_sm'.$i]))
-				{
-					$is_notified = 1;
-					$q_msg = "Price for {$itemprint_name}\n Mrp : Rs {$itemmrp}, Landing Cost : Rs ".$final[$j];
-					$this->erpm->pnh_sendsms($fmob,$q_msg,$fid);	
-				}
-				
-				$this->db->query("update pnh_quotes_deal_link set final_price=?,status=1,price_updated_by=?,updated_on=?,is_notified=? where id=? limit 1",array($final[$j],$user['userid'],time(),$is_notified,$i));
-				
+				array_push($sales_summary,array($row['mn'],$row['ttl']*1)); 		
 			}
-			$this->db->query("update pnh_quotes set updated_by=?,updated_on=? where quote_id=? limit 1",array($user['userid'],time(),$qid));
-			$this->erpm->flash_msg("Order Quote updated");
-			redirect("admin/pnh_quote/$qid");
 		}
+		$output = array();
+		$output['date_diff'] = $date_diff;
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
 	}
 	
-	function pnh_quotes($fid=0,$s=0,$e=0,$brand=0,$fra=0,$sby=0,$sord=0,$pg=0)
-	{
-		if($fid)
-			$fra = $fid;
-		$fid = $fra; 
+	/*
+	 * 
+	 * Ajax Function to get towns by brand 
+	 */
+	 function jx_territorysbybrandid()
+	 {
+	  	$s= $this->input->post('st');
+	  	$e= $this->input->post('en');
+	  	$brandid= $this->input->post('brandid');
+		$output=array();
 		
-		$user=$this->auth(CALLCENTER_ROLE);
-		if($brand)
+		$tr_list = $this->db->query("select br.id,tr.id,tr.territory_name,br.name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+									from king_orders a
+									join king_transactions ki on ki.transid=a.transid
+									join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+									join pnh_m_territory_info tr on tr.id=f.territory_id 
+									join king_dealitems di on di.id=a.itemid
+									join king_deals d on d.dealid=di.dealid
+									join king_brands br on br.id=d.brandid
+									where br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."' and a.status !=3 and ki.is_pnh=1
+									group by tr.id,br.id
+									order by ttl desc");
+		
+		if($tr_list->num_rows())
 		{
-			$sql="select q.*,u.name as updated_by,c.name as created_by,f.franchise_name,l.new_product,e.brandid 
-			from pnh_quotes q 
-			join pnh_m_franchise_info f on f.franchise_id=q.franchise_id 
-			JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id 
-			join king_admin c on c.id=q.created_by 
-			join king_dealitems d on d.pnh_id=l.pnh_id
-			join king_deals e on e.dealid=d.dealid
-			left outer join king_admin u on u.id=q.updated_by where e.brandid='".$brand."'";
-			$count="select COUNT(distinct q.quote_id) as count from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by join king_dealitems d on d.pnh_id=l.pnh_id join king_deals e on e.dealid=d.dealid left outer join king_admin u on u.id=q.updated_by where e.brandid='".$brand."'";
-		
-		}elseif($fra)
-		{
-			$sql="select q.*,u.name as updated_by,c.name as created_by,f.franchise_name,l.new_product,e.brandid 
-			from pnh_quotes q 
-			join pnh_m_franchise_info f on f.franchise_id=q.franchise_id 
-			JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id 
-			join king_admin c on c.id=q.created_by 
-			join king_dealitems d on d.pnh_id=l.pnh_id
-			join king_deals e on e.dealid=d.dealid
-			left outer join king_admin u on u.id=q.updated_by where q.franchise_id='".$fra."'";
-			$count="select COUNT(distinct q.quote_id) as count from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by join king_dealitems d on d.pnh_id=l.pnh_id join king_deals e on e.dealid=d.dealid left outer join king_admin u on u.id=q.updated_by where q.franchise_id='".$fra."'";
-		
-		}else
-		{
-			$sql="select q.*,u.name as updated_by,c.name as created_by,f.franchise_name,l.new_product from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by left outer join king_admin u on u.id=q.updated_by where 1 ";
-			$count="select COUNT(distinct q.quote_id) as count from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by left outer join king_admin u on u.id=q.updated_by where 1 ";
-		
+			$output['tr_list']=$tr_list->result_array();
+			$output['status']='success';
 		}
-		
-		$from=$to=0;
-		if($s)
+		else
 		{
-			$from=strtotime($s);
-			$to=strtotime("23:59:59 $e");
+			$output['status']="error";
+			$output['message']="No Towns Found";
 		}
-		if($fra)
-		{
-			//$sql.=" and  q.franchise_id=? ";
-			//$count.=" and  q.franchise_id=? ";
-		}
-		
-		if($from)
-		{
-			$sql.=" and q.created_on between $from and $to ";
-			$count.=" and  q.created_on between $from and $to  ";
-		}
-		
-		
-		$sql.=" group by q.quote_id ";
-				
-		
-		if($sby == '' || $sby==0)	
-		{
-			$sql.=" order by q.created_on desc,q.updated_on desc";
-			$count.=" order by q.created_on desc,q.updated_on desc";
-		}
-		elseif($sby == 'fid' || $sby == 'status'){
+		echo json_encode($output);	
+	 }
 
-			if($sby == 'fid')
-				$sby = 'f.franchise_name';
-				
-			else if($sby == 'status') 	
-				$sby = '';
-				
-			$sord = $sord=='a'?'asc':'desc'; 
-			$sql.=" order by $sby,$sord,q.created_on desc,q.updated_on desc";
-			$count.=" order by $sby,$sord,q.created_on desc,q.updated_on desc";
+	 /*
+	 * 
+	 * Ajax Function to get Categories by brand 
+	 */
+	 function jx_categoriesbybrandid()
+	 {
+	  	$output=array();
+	  	$brandid= $this->input->post('brandid');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	
+	  	$s = date('Y-m-d',strtotime($start));
+		$e = date('Y-m-d',strtotime($end));
+	  	$cat_list = $this->db->query("select c.name as cat_name,br.name,sum(a.quantity) as qty_sold,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+										from king_orders a
+										join king_transactions ki on ki.transid=a.transid
+										join king_dealitems di on di.id=a.itemid
+										join king_deals d on d.dealid=di.dealid
+										join king_brands br on br.id=d.brandid
+										join king_categories c on c.id=d.catid
+										where br.id='".$brandid."' and a.status !=3 and ki.is_pnh=1 and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."' 
+										group by c.id
+										order by ttl desc");
+		
+		if($cat_list->num_rows())
+		{
+			$output['cat_list']=$cat_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Categories Found";
+		}
+		echo json_encode($output);	
+	 }
+	 
+	  /*
+	 * 
+	 * Ajax Function to get top Products by brand 
+	 */
+	 function jx_topproductbybrandid()
+	 {
+	  	$output=array();
+	  	$brandid= $this->input->post('brandid');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	
+	  	$s = date('Y-m-d',strtotime($start));
+		$e = date('Y-m-d',strtotime($end));
+		$top_prd_list = $this->db->query("select p.product_id,p.product_name,br.name,sum(a.quantity) as qty_sold,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+										from king_orders a
+										join king_transactions ki on ki.transid=a.transid
+										left join m_product_deal_link c on c.itemid=a.itemid
+										left join m_product_info p on p.product_id=c.product_id
+										join king_dealitems di on di.id=a.itemid
+										join king_deals d on d.dealid=di.dealid
+										join king_brands br on br.id=d.brandid
+										where br.id='".$brandid."' and a.status !=3 and ki.is_pnh=1 and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."'
+										group by c.id
+										order by ttl desc");
+		
+		if($top_prd_list->num_rows())
+		{
+			$output['top_prd_list']=$top_prd_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Categories Found";
+		}
+		echo json_encode($output);	
+	 }
+
+	 /*
+	 * 
+	 * Ajax Function to get top Franchises by brand 
+	 */
+	 function jx_topfranchisebybrandid()
+	 {
+	  	$output=array();
+	  	$brandid= $this->input->post('brandid');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	
+	  	$s = date('Y-m-d',strtotime($start));
+		$e = date('Y-m-d',strtotime($end));
+		$top_fran_list = $this->db->query("select br.name,sum(a.quantity) as qty_sold,f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+										from king_orders a
+										join king_transactions ki on ki.transid=a.transid
+										join pnh_m_franchise_info f on ki.franchise_id=f.franchise_id
+										join king_dealitems di on di.id=a.itemid
+										join king_deals d on d.dealid=di.dealid
+										join king_brands br on br.id=d.brandid
+										where br.id='".$brandid."' and a.status !=3 and ki.is_pnh=1 and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."'
+										group by f.franchise_id
+										order by ttl desc");
+		
+		if($top_fran_list->num_rows())
+		{
+			$output['top_fran_list']=$top_fran_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Categories Found";
+		}
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * 
+	 * Ajax Function to get products by brand 
+	 */
+	 function jx_getproductsbybrandid()
+	 {
+	  	$s= $this->input->post('st');
+	  	$e= $this->input->post('en');
+	  	$tr_id= $this->input->post('tr_id');
+	  	$state_id= $this->input->post('state_id');
+	  	$tw_id= $this->input->post('tw_id');
+	  	$brandid= $this->input->post('brandid');
+		$output=array();
+		
+		$prd_list = $this->db->query("select date_format(from_unixtime(ki.init),'%d-%b-%Y') as d,p.product_id,p.product_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+									from king_orders a
+									join king_transactions ki on ki.transid=a.transid
+									join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+									left join m_product_deal_link c on c.itemid=a.itemid
+									left join m_product_info p on p.product_id=c.product_id
+									join king_dealitems di on di.id=a.itemid
+									join king_deals d on d.dealid=di.dealid
+									join king_brands br on br.id=d.brandid
+									join pnh_m_territory_info tr on tr.id=f.territory_id 
+									join pnh_towns tw on tw.id=f.town_id
+									join pnh_m_states st on st.state_id = tr.state_id
+									where st.state_id='".$state_id."' and tr.id='".$tr_id."' and tw.id='".$tw_id."' 
+									and br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."' and a.status !=3 and ki.is_pnh=1
+									group by date(from_unixtime(ki.init)),product_id");
+		if($prd_list->num_rows())
+		{
+			$output['prd_list']=$prd_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Products Found";
+		}
+		echo json_encode($output);	
+	 }
+	 
+	/*
+	 * 
+	 *  Category sales statistics by brandid
+	 */ 
+	function jx_catsales_bybrand($brandid="",$s="",$e="")
+	{
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+		$ct_lst =$this->db->query("select c.id,c.name as name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+									from king_orders a
+									join king_transactions ki on ki.transid=a.transid
+									join king_dealitems di on di.id=a.itemid
+									join king_deals d on d.dealid=di.dealid
+									join king_brands br on br.id=d.brandid
+									join king_categories c on c.id=d.catid
+									where br.id='".$brandid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."' and a.status !=3 and ki.is_pnh=1
+									group by c.id");
+		$c=array();
+		
+		if($ct_lst->num_rows())
+		{
+			foreach($ct_lst->result_array() as $row)
+			{
+				array_push($c,array($row['name'],$row['ttl']*1)); 
+			}
+		}
+		$output = array();
+		$output['result'] = $c;
+		echo json_encode($output);		
+	}
+	
+	/*
+	 * 
+	 *  Category sales statistics by brandid
+	 */ 
+	function jx_vendors_bybrand($brandid="",$s="",$e="")
+	{
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+		$ct_lst =$this->db->query("select v.vendor_name,v.vendor_id,sum(p.total_value) as total_value,count(p.total_value) as pos 
+								from m_vendor_info v 
+								left outer join t_po_info p on p.vendor_id=v.vendor_id 
+								join m_vendor_brand_link vb on vb.vendor_id=v.vendor_id 
+								join m_vendor_contacts_info c on c.vendor_id=v.vendor_id 
+								where vb.brand_id='".$brandid."' and date(p.created_on) between '".$st."' and '".$en."' and vb.is_active=1
+								group by v.vendor_id 
+								order by total_value desc");
+		$ven=array();
+		
+		if($ct_lst->num_rows())
+		{
+			foreach($ct_lst->result_array() as $row)
+			{
+				array_push($ven,array($row['vendor_name'],$row['total_value']*1)); 
+			}
+		}
+		$output = array();
+		$output['result'] = $ven;
+		echo json_encode($output);		
+	}
+	
+	 /*
+	 * 
+	 * Ajax Function to get Franchises by brandid and townid 
+	 */
+	 function jx_getfranchisebybrandid_townid($bid="",$twid="",$s="",$e="")
+	 {
+	  	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	 
+		$output=array();
+		$fran_list = "select f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands b on b.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_towns tw on tw.id=f.town_id
+											join pnh_m_states st on st.state_id = tr.state_id
+											where a.status!=3 and ki.is_pnh=1 and b.id='".$bid."' and tw.id='".$twid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by f.franchise_id
+											order by ttl desc limit 10";
+		$res = $this->db->query($fran_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['franchise_name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * 
+	 * Ajax Function to get franchises by territory_id and brandid
+	 */
+	 function jx_getallfranchisesbybrandid_terrid()
+	 {
+	 	$bid=$this->input->post('brandid');
+	 	$tid= $this->input->post('terr_id');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	$st = date('Y-m-d',strtotime($start));
+		$en = date('Y-m-d',strtotime($end));
+	  	 
+		$output=array();
+		$fran_list = $this->db->query("select f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands b on b.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											where a.status!=3 and ki.is_pnh=1 and b.id='".$bid."' and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by f.franchise_id
+											order by ttl desc");
+		if($fran_list->num_rows())
+		{
+			$output['fran_list']=$fran_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+		}
+		echo json_encode($output);	
+	 }
+
+	/*
+	 * 
+	 * Ajax Function to get franchises by town_id and brandid
+	 */
+	 function jx_getallfranchisesbybrandid_townid()
+	 {
+	 	$bid=$this->input->post('brandid');
+	 	$tid= $this->input->post('town_id');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	$st = date('Y-m-d',strtotime($start));
+		$en = date('Y-m-d',strtotime($end));
+	  	 
+		$output=array();
+		$fran_list = $this->db->query("select f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands b on b.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_towns tw on tw.id=f.town_id 
+											where a.status!=3 and ki.is_pnh=1 and b.id='".$bid."' and tw.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by f.franchise_id
+											order by ttl desc");
+		if($fran_list->num_rows())
+		{
+			$output['fran_list']=$fran_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+		}
+		echo json_encode($output);	
+	 }
+	
+	/*
+	 * 
+	 * Ajax Function to get brands by territory_id 
+	 */
+	 function jx_getallbrandsbyterrid()
+	 {
+	 	$tid= $this->input->post('terr_id');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	$st = date('Y-m-d',strtotime($start));
+		$en = date('Y-m-d',strtotime($end));
+	  	 
+		$output=array();
+		$brand_list = $this->db->query("select b.id,b.name,sum(a.quantity) as qty_sold, ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands b on b.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											where a.status!=3 and ki.is_pnh=1 and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by b.id
+											order by ttl desc");
+		if($brand_list->num_rows())
+		{
+			$output['brand_list']=$brand_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+		}
+		echo json_encode($output);	
+	 }
+
+	/*
+	 * 
+	 * Ajax Function to get brands by town_id 
+	 */
+	 function jx_getallbrandsbytownid()
+	 {
+	 	$tid= $this->input->post('town_id');
+	  	$start= $this->input->post('start_date');
+	  	$end= $this->input->post('end_date');
+	  	$st = date('Y-m-d',strtotime($start));
+		$en = date('Y-m-d',strtotime($end));
+	  	 
+		$output=array();
+		$brand_list = $this->db->query("select b.id,b.name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems di on di.id=a.itemid
+											join king_deals d on d.dealid=di.dealid
+											join king_brands b on b.id=d.brandid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_towns tw on tw.id=f.town_id 
+											where a.status!=3 and ki.is_pnh=1 and tw.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by b.id
+											order by ttl desc");
+		if($brand_list->num_rows())
+		{
+			$output['brand_list']=$brand_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
 		}
 		
 		$sql.=" limit $pg,20";
@@ -9108,17 +8852,928 @@ group by g.product_id ");
 		$this->load->view("admin",$data);
 	}
 	
-	function pnh_territories()
+	function pnh_territories($sid=false)
 	{
 		$user=$this->auth(PNH_EXECUTIVE_ROLE);
 		if($_POST && !$this->input->post("edit"))
 			$this->erpm->do_pnh_add_territory();
 		elseif($_POST)
 			$this->erpm->do_pnh_update_territory();
-			
-		$data['terrys']=$this->db->query("select * from pnh_m_territory_info order by territory_name asc")->result_array();
+		if($sid != false)	
+			$data['terrys']=$this->db->query("select * from pnh_m_territory_info a join pnh_m_states b on b.state_id=a.state_id where a.state_id=? order by territory_name asc",$sid)->result_array();
+		else 
+			$data['terrys']=$this->db->query("select * from pnh_m_territory_info a join pnh_m_states b on b.state_id=a.state_id  order by territory_name asc")->result_array();
 		$data['page']="pnh_territories";
 		$this->load->view("admin",$data);
+	}
+	
+	function pnh_territory_analytics($tid=false)
+	{
+		$data['town_lst'] = $this->db->query("select territory_name,tw.id,town_name,count(franchise_id) as c 
+											from pnh_towns tw
+											left join pnh_m_franchise_info f on f.town_id=tw.id
+											left join pnh_m_territory_info tr on tr.id=tw.territory_id
+											where tr.id=? group by town_name order by c desc;",$tid)->result_array();
+		$data['town_sales'] = $this->db->query("select ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as total_value,
+											tw.town_name
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info fr on fr.franchise_id=ki.franchise_id 
+											join pnh_m_territory_info tr on tr.id=fr.territory_id
+											join pnh_towns tw on tw.id= fr.town_id
+											where tr.id=?
+											group by town_name order by total_value desc",$tid)->result_array();	
+		$data['terr_name'] = $this->db->query("select territory_name as name from pnh_m_territory_info where id=?",$tid)->row()->name;
+		$data['top_sold_prd']=$this->db->query("select p.product_name,p.product_id,e.territory_name,sum(a.quantity) as sold_qty,
+															ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl_value
+															from king_orders a
+															join king_transactions b on a.transid = b.transid
+															left join m_product_deal_link c on c.itemid=a.itemid
+															left join m_product_info p on p.product_id=c.product_id
+															join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+															join pnh_m_territory_info e on e.id=d.territory_id
+															where is_pnh = 1 and a.status != 3 and e.id='".$tid."'
+															group by p.product_name
+															order by sold_qty desc  limit 25")->result_array(); 
+		$data['top_sold_brand'] = $this->db->query("select c.name,c.id,e.territory_name,sum(a.quantity) as sold_qty,
+															ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl_value
+															from king_orders a
+															join king_transactions b on a.transid = b.transid
+															left join king_brands c on c.id=a.brandid
+															join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+															join pnh_m_territory_info e on e.id=d.territory_id
+															where is_pnh = 1 and a.status != 3 and e.id='".$tid."'
+															group by c.name
+															order by ttl_value desc  limit 25")->result_array();
+		$data['active_franch'] = $this->db->query("select tw.town_name,d.franchise_id,d.franchise_name,e.id,e.territory_name,sum(a.quantity) as sold_qty,
+															ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl_value
+															from king_orders a
+															join king_transactions b on a.transid = b.transid
+															join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+															join pnh_m_territory_info e on e.id=d.territory_id
+															join pnh_towns tw on tw.id=d.town_id
+															where is_pnh = 1 and a.status != 3 and e.id='".$tid."'
+															group by franchise_name 
+															order by ttl_value desc limit 25")->result_array();
+		$data['page']="pnh_territory_analytics";
+		$this->load->view("admin",$data);
+	}
+	
+	/*
+	 * Franchise List By Town 
+	 * 
+	 */ 
+	function jx_fran_list_by_town()
+    {
+	  	$tw_id= $this->input->post('town_id');
+		$output=array();
+		
+		$fra_det = $this->db->query("select franchise_id,franchise_name,town_name
+					from pnh_towns tw
+					left join pnh_m_franchise_info f on f.town_id=tw.id
+					left join pnh_m_territory_info tr on tr.id=tw.territory_id
+					where tw.id=? group by franchise_name ",$tw_id);
+		$k=1;
+		if($fra_det->num_rows())
+			{
+				echo "<table class='datagrid'>";
+				echo "<thead><th>Sl.No</th><th>Franchises</th></thead>";
+				echo "<tbody>";
+				foreach($fra_det->result_array() as $f)
+				{
+					echo "<tr><td>".$k++."</td><td><a href='".site_url("admin/pnh_franchise/{$f['franchise_id']}")."' target='_blank'>{$f['franchise_name']}</a></td></tr>";
+				}
+				echo "</tbody></table>";
+				
+			}
+			else
+			{
+				echo "No Franchises";
+		
+			}
+	}
+	
+	/*
+	 * Product List By Franchise Ordered
+	 * 
+	 */ 
+	function jx_prd_list_by_franchise()
+    {
+	  	$fid= $this->input->post('fid');
+		$tid= $this->input->post('tid');
+		$output=array();
+		
+		$prd_lst = $this->db->query("select p.product_id,p.product_name,br.name,br.id as brandid,sum(a.quantity) as sold_qty,
+									ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl_value
+									from king_orders a
+									join king_transactions b on a.transid = b.transid
+									left join m_product_deal_link c on c.itemid=a.itemid
+									left join m_product_info p on p.product_id=c.product_id
+									left join king_brands br on br.id=a.brandid
+									join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+									join pnh_m_territory_info e on e.id=d.territory_id
+									where is_pnh = 1 and a.status != 3 and e.id=?  and d.franchise_id=?
+									group by p.product_name,d.franchise_name
+									order by sold_qty desc limit 10",array($tid,$fid));
+		$j=1;
+		if($prd_lst->num_rows())
+			{
+				echo "<h3>Top 10 Products Ordered</h3>";
+				echo "<table class='datagrid'>";
+				echo "<thead><th>Sl.No</th><th>Product Name</th><th>Brand</th><th>Qty</th><th>Total Sales</th></thead>";
+				echo "<tbody>";
+				foreach($prd_lst->result_array() as $p)
+				{
+					echo "<tr><td>".$j++."</td><td><a href='".site_url("admin/product/{$p['product_id']}")."' target='_blank'>{$p['product_name']}</a></td>
+					      <td><a href='".site_url("admin/brand/{$p['brandid']}")."' target='_blank'>{$p['name']}</a></td>
+					      <td>".$p['sold_qty']."</td><td>".$p['ttl_value']."</td></tr>";
+				}
+				echo "</tbody></table>";
+				
+			}
+			else
+			{
+				echo "No Products";
+		
+			}
+	}
+	
+	
+	function jx_territory_stat($tid="")
+	{
+		$town_sales =$this->db->query("Select  e.id,e.town_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl 
+							from king_orders a 
+							join king_transactions b on b.transid=a.transid 
+							join pnh_m_franchise_info c on c.franchise_id=b.franchise_id  
+							join pnh_m_territory_info d on d.id=c.territory_id
+							join pnh_towns e on e.id=c.town_id
+							where d.id='".$tid."' and b.status!=3
+							group by town_id
+							");
+		$list=array();
+		
+		if($town_sales->num_rows())
+		{
+			foreach($town_sales->result_array() as $row)
+			{
+				array_push($list,array($row['town_name'],$row['ttl']*1,$row['id'])); 
+			}
+		}
+		$output = array();
+		$output['result'] = $list;
+		echo json_encode($output);	
+	}
+
+	/*
+	 * 
+	 *  Menu sales statistics by Territory
+	 */ 
+	function jx_menusalebyterritory($tid="")
+	{
+		$menu_lst =$this->db->query("select d.name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl 
+								from king_orders a
+								 join king_transactions ki on ki.transid=a.transid
+								left join king_dealitems b on b.id=a.itemid
+								left join king_deals c on c.dealid=b.dealid
+								left join pnh_menu d on d.id=c.menuid
+								join pnh_m_franchise_info fr on fr.franchise_id=ki.franchise_id
+								join pnh_m_territory_info tr on tr.id=fr.territory_id
+								where tr.id ='".$tid."' group by d.id");
+		$menu=array();
+		
+		if($menu_lst->num_rows())
+		{
+			foreach($menu_lst->result_array() as $row)
+			{
+				array_push($menu,array($row['name'],$row['ttl']*1)); 
+			}
+		}
+		$output = array();
+		$output['result'] = $menu;
+		echo json_encode($output);		
+	}
+	
+	/*
+	 * Ajax function to load territory sales 
+	 * 
+	 */
+	function jx_territory_total_sales_stat($s="",$e="",$tid="")
+	{
+	   $date_diff = date_diff_days($e,$s);
+		if($date_diff <= 31)
+		{
+			//echo 'success';exit;
+			$sql ="select date_format(from_unixtime(ki.init),'%d/%m/%y') as mn,f.territory_id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				where f.territory_id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."'
+				group by date(from_unixtime(ki.init))";
+		}
+		else 
+		{
+			//echo 'error';exit;
+			$sql ="select date_format(from_unixtime(ki.init),'%b-%Y') as mn,f.territory_id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				where f.territory_id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."'
+				group by date_format(from_unixtime(ki.init),'%Y-%m')";
+		}
+		
+		 $res = $this->db->query($sql);
+		 $sales_on = array();
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['mn'],$row['ttl']*1)); 		
+			}
+		}
+		
+		$output = array();
+		$output['date_diff'] = $date_diff;
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
+	}
+	
+	/*
+	 * Town Sales analytics 
+	 */ 
+	function pnh_town_analytics($townid=false)
+	{
+		$data['fran_lst'] = $this->db->query("select franchise_name,f.franchise_id 
+											from pnh_towns tw
+											left join pnh_m_franchise_info f on f.town_id=tw.id
+											where tw.id=? group by franchise_name",$townid)->result_array();
+		$data['town_name'] = $this->db->query("select town_name as name from pnh_towns where id=?",$townid)->row()->name;
+		$data['page']="pnh_town_analytics";
+		$this->load->view("admin",$data);
+	}
+	
+	/*
+	 * Ajax function to load town sales 
+	 * 
+	 */
+	function jx_townsales($s="",$e="",$tid="")
+	{
+	   $date_diff = date_diff_days($e,$s);
+		if($date_diff <= 31)
+		{
+			//echo 'success';exit;
+			$sql ="select date_format(from_unixtime(ki.init),'%d/%m/%y') as mn,f.town_id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				where f.town_id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."'
+				group by date(from_unixtime(ki.init))";
+		}
+		else 
+		{
+			//echo 'error';exit;
+			$sql ="select date_format(from_unixtime(ki.init),'%b-%Y') as mn,f.town_id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				where f.town_id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$s."' and '".$e."'
+				group by date_format(from_unixtime(ki.init),'%Y-%m')";
+		}
+		
+		 $res = $this->db->query($sql);
+		 $sales_on = array();
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['mn'],$row['ttl']*1)); 		
+			}
+		}
+		
+		$output = array();
+		$output['date_diff'] = $date_diff;
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
+	}
+	  /*
+	 * 
+	 * Ajax Function to get Top Products by town 
+	 */
+	 function jx_getproductsbytownid()
+	 {
+	  	$town_id= $this->input->post('tid');
+		$output=array();
+		$prod_list = $this->db->query("select p.product_name,p.product_id,sum(a.quantity) as sold_qty,
+											ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions b on a.transid = b.transid
+											left join m_product_deal_link c on c.itemid=a.itemid
+											left join m_product_info p on p.product_id=c.product_id
+											join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+											join pnh_towns tw on tw.id=d.town_id
+											where is_pnh = 1 and a.status != 3 and tw.id='".$town_id."'
+											group by p.product_name
+											order by ttl desc  limit 25");
+		if($prod_list->num_rows())
+		{
+			$output['prod_list']=$prod_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Products Found";
+	
+		}
+		echo json_encode($output);	
+	 }
+	  /*
+	 * 
+	 * Ajax Function to get Top Brands by town 
+	 */
+	 function jx_getbrandsbytownid()
+	 {
+	  	$town_id= $this->input->post('tid');
+		$output=array();
+		$brand_list = $this->db->query("select br.name,br.id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl,
+											sum(a.quantity) as sold_qty
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join king_brands br on br.id=a.brandid
+											join pnh_towns tw on tw.id=f.town_id
+											where is_pnh = 1 and a.status != 3 and tw.id='".$town_id."'
+											group by br.name
+											order by ttl desc limit 25");
+		if($brand_list->num_rows())
+		{
+			$output['brand_list']=$brand_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+	
+		}
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * 
+	 * Ajax Function to get Franchises by town 
+	 */
+	 function jx_getfranchisebytownid()
+	 {
+	  	$town_id= $this->input->post('tid');
+		$output=array();
+		$fran_list = $this->db->query("select f.franchise_id,f.franchise_name,tw.town_name,	
+		   									ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_m_states st on st.state_id = tr.state_id
+											join pnh_towns tw on tw.id=f.town_id
+											where is_pnh = 1 and tw.id='".$town_id."' and a.status !=3
+											group by f.franchise_name
+											order by ttl desc limit 25");
+		if($fran_list->num_rows())
+		{
+			$output['fran_list']=$fran_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Franchise Found";
+	
+		}
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * 
+	 *  Menu sales statistics by Town
+	 */ 
+	function jx_menusalebytown($tid="")
+	{
+		$menu_lst =$this->db->query("select d.name,d.id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl 
+								from king_orders a
+								 join king_transactions ki on ki.transid=a.transid
+								left join king_dealitems b on b.id=a.itemid
+								left join king_deals c on c.dealid=b.dealid
+								left join pnh_menu d on d.id=c.menuid
+								join pnh_m_franchise_info fr on fr.franchise_id=ki.franchise_id
+								join pnh_towns tw on tw.id=fr.town_id
+								where tw.id ='".$tid."' group by d.id");
+		$menu=array();
+		
+		if($menu_lst->num_rows())
+		{
+			foreach($menu_lst->result_array() as $row)
+			{
+				array_push($menu,array($row['name'],$row['ttl']*1,$row['id'])); 
+			}
+		}
+		$output = array();
+		$output['result'] = $menu;
+		echo json_encode($output);		
+	}
+	
+	/*
+	 * Ajax to load top sold product 
+	 * 
+	 */ 
+	function jx_productdetailbymenu_town()
+	{
+		$tid= $this->input->post('tw_id');
+	  	$m= $this->input->post('menu_id');
+		$output=array();
+		
+		$prd_list = $this->db->query(" select ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as total_value,
+											d.name,f.product_id,f.product_name,d.id,sum(a.quantity) as qty_sold 
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join king_dealitems b on b.id=a.itemid
+											join king_deals c on c.dealid=b.dealid
+											join pnh_menu d on d.id=c.menuid
+											join m_product_deal_link e on e.itemid=a.itemid
+											join m_product_info f on f.product_id=e.product_id
+											join  pnh_m_franchise_info fr on fr.franchise_id=ki.franchise_id 
+											join pnh_towns tw on tw.id= fr.town_id
+											where tw.id=? and d.id=?
+											group by f.product_id order by qty_sold desc limit 10", array($tid,$m));
+		
+		
+		if($prd_list->num_rows())
+		{
+			$output['prd_list_bymenu']=$prd_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Data Found";
+	
+		}
+			echo json_encode($output);
+	}
+	
+	/*
+	 * Ajax to load top sold brand 
+	 * 
+	 */ 
+	function jx_branddetailbymenu_town()
+	{
+		$tid= $this->input->post('tw_id');
+	  	$m= $this->input->post('menu_id');
+		$output=array();
+		
+		$brand_list = $this->db->query(" select ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as total_value,
+										d.name,br.id as brandid,br.name,d.id,sum(a.quantity) as qty_sold 
+										from king_orders a
+										join king_transactions ki on ki.transid=a.transid
+										join king_dealitems b on b.id=a.itemid
+										join king_deals c on c.dealid=b.dealid
+										join pnh_menu d on d.id=c.menuid
+										join king_brands br on br.id=c.brandid
+										join pnh_m_franchise_info fr on fr.franchise_id=ki.franchise_id 
+										join pnh_towns tw on tw.id= fr.town_id
+										where tw.id=? and d.id=?
+										group by br.id order by qty_sold desc limit 10", array($tid,$m));
+		
+		
+		if($brand_list->num_rows())
+		{
+			$output['brand_list_bymenu']=$brand_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Data Found";
+	
+		}
+			echo json_encode($output);
+	}
+	
+	function pnh_states()
+	{
+		$data['states']=$this->db->query("select * from pnh_m_states order by state_name asc")->result_array();
+		$data['page']="pnh_states";
+		$this->load->view("admin",$data);
+	}
+	function pnh_state_analytics($sid=false)
+	{
+		$data['territory']=$this->db->query("select * from pnh_m_territory_info where state_id = '".$sid."' order by territory_name asc")->result_array();
+		$data['page']="pnh_state_analytics";
+		$this->load->view("admin",$data);
+	}
+	
+	/*
+	 * 
+	 * Ajax Function to get territories by state 
+	 */
+	 function jx_getterritorybystateid($sid="",$s="",$e="")
+	 {
+	 	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	
+	 	$output=array();
+		$terr_list = "select tr.territory_name,tr.id,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+									from king_orders a
+									join king_transactions ki on ki.transid=a.transid
+									join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+									join pnh_m_territory_info tr on tr.id=f.territory_id 
+									join pnh_m_states st on st.state_id = tr.state_id
+									join pnh_towns tw on tw.id=f.town_id
+									where is_pnh = 1 and st.state_id='".$sid."' and a.status !=3 and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+									group by tr.territory_name
+									order by ttl desc";
+		 $res = $this->db->query($terr_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['territory_name'],$row['ttl']*1,$row['id'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * 
+	 * Ajax Function to get towns by state 
+	 */
+	 function jx_gettownsbystateid($sid="",$tid="",$s="",$e="")
+	 {
+	 	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	
+		$output=array();
+		$town_list = "select tw.id,tw.town_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_m_states st on st.state_id = tr.state_id
+											join pnh_towns tw on tw.id=f.town_id
+											where is_pnh = 1 and st.state_id='".$sid."' and a.status !=3 and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by tw.town_name
+											order by ttl desc limit 25";
+		 $res = $this->db->query($town_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['town_name'],$row['ttl']*1,$row['id'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * Ajax function to load top brands by territory
+	 * 
+	 */
+	function jx_get_territory_brand_sales_by_stateid($sid="",$tid="",$s="",$e="")
+	{
+		 $st = date('Y-m-d',strtotime($s));
+		 $en = date('Y-m-d',strtotime($e));
+	  	 $sql = "select br.name as name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				join king_dealitems di on di.id=a.itemid
+				join king_deals d on d.dealid=di.dealid
+				join king_brands br on br.id=d.brandid
+				join pnh_m_territory_info tr on tr.id=f.territory_id
+				join pnh_m_states st on st.state_id=tr.state_id
+				where a.status!=3 and ki.is_pnh=1 and st.state_id='".$sid."' and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+				group by br.id
+				order by ttl desc limit 10";
+		 $res = $this->db->query($sql);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
+	}
+	
+	/*
+	 * Ajax function to load top brands by town
+	 * 
+	 */
+	function jx_get_town_brand_sales_by_stateid($sid="",$twid="",$s="",$e="")
+	{
+		 $st = date('Y-m-d',strtotime($s));
+		 $en = date('Y-m-d',strtotime($e));
+	  	 
+	  	 $sql = "select br.name as name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				join king_dealitems di on di.id=a.itemid
+				join king_deals d on d.dealid=di.dealid
+				join king_brands br on br.id=d.brandid
+				join pnh_m_territory_info tr on tr.id=f.territory_id
+				join pnh_towns tw on tw.id=f.town_id
+				join pnh_m_states st on st.state_id=tr.state_id
+				where a.status!=3 and ki.is_pnh=1 and st.state_id='".$sid."' and tw.id='".$twid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+				group by br.id
+				order by ttl desc limit 10";
+		 $res = $this->db->query($sql);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
+	}
+	
+	 /*
+	 * 
+	 * Ajax Function to get Franchises by state 
+	 */
+	 function jx_getfranchisebyterritoryid($sid="",$tid="",$s="",$e="")
+	 {
+	  	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	 
+		$output=array();
+		$fran_list = "select f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_m_states st on st.state_id = tr.state_id
+											where a.status!=3 and ki.is_pnh=1 and st.state_id='".$sid."' and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by f.franchise_id
+											order by ttl desc limit 10";
+		$res = $this->db->query($fran_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['franchise_name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	 /*
+	 * 
+	 * Ajax Function to get Franchises by state 
+	 */
+	 function jx_getfranchisebytown($sid="",$twid="",$s="",$e="")
+	 {
+	  	$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	 
+		$output=array();
+		$fran_list = "select f.franchise_id,f.franchise_name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_towns tw on tw.id=f.town_id
+											join pnh_m_states st on st.state_id = tr.state_id
+											where a.status!=3 and ki.is_pnh=1 and st.state_id='".$sid."' and tw.id='".$twid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+											group by f.franchise_id
+											order by ttl desc limit 10";
+		$res = $this->db->query($fran_list);
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['franchise_name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	  /*
+	 * 
+	 *  Category sales statistics by territory id
+	 */ 
+	function jx_catsalesbyterritoryid($sid="",$tid="",$s="",$e="")
+	{
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	
+	  	$output=array();
+		$ct_lst ="select m.id,m.name as name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+								from king_orders a
+								join king_transactions ki on ki.transid=a.transid
+								join king_dealitems di on di.id=a.itemid
+								join king_deals d on d.dealid=di.dealid
+								join pnh_menu m on m.id=d.menuid
+								join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+								join pnh_m_territory_info tr on tr.id=f.territory_id 
+								join pnh_m_states st on st.state_id = tr.state_id
+								where a.status!=3 and ki.is_pnh=1 and st.state_id='".$sid."' and tr.id='".$tid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+								group by m.id";
+		
+		$res = $this->db->query($ct_lst);
+		$sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);			
+	}
+	
+	 /*
+	 * 
+	 *  Category sales statistics by territory id
+	 */ 
+	function jx_catsalesbytown($sid="",$twid="",$s="",$e="")
+	{
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+	  	
+	  	$output=array();
+		$ct_lst ="select m.id,m.name as name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+								from king_orders a
+								join king_transactions ki on ki.transid=a.transid
+								join king_dealitems di on di.id=a.itemid
+								join king_deals d on d.dealid=di.dealid
+								join pnh_menu m on m.id=d.menuid
+								join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+								join pnh_m_territory_info tr on tr.id=f.territory_id
+								join pnh_towns tw on tw.id=f.town_id 
+								join pnh_m_states st on st.state_id = tr.state_id
+								where a.status!=3 and ki.is_pnh=1 and st.state_id='".$sid."' and tw.id='".$twid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."'
+								group by m.id";
+		
+		$res = $this->db->query($ct_lst);
+		$sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['name'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);			
+	}
+	  /*
+	 * 
+	 * Ajax Function to get Products by state 
+	 */
+	 function jx_getproductsbystateid()
+	 {
+	  	$sid= $this->input->post('sid');
+		$output=array();
+		$prod_list = $this->db->query("select p.product_name,sum(a.quantity) as sold_qty,
+											ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions b on a.transid = b.transid
+											left join m_product_deal_link c on c.itemid=a.itemid
+											left join m_product_info p on p.product_id=c.product_id
+											join pnh_m_franchise_info d on d.franchise_id = b.franchise_id
+											join pnh_m_territory_info e on e.id=d.territory_id
+											join pnh_m_states st on st.state_id=e.state_id
+											where is_pnh = 1 and a.status != 3 and st.state_id='".$sid."'
+											group by p.product_name
+											order by ttl desc  limit 25");
+		if($prod_list->num_rows())
+		{
+			$output['prod_list']=$prod_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Products Found";
+	
+		}
+		echo json_encode($output);	
+	 }
+	  /*
+	 * 
+	 * Ajax Function to get Brands by state 
+	 */
+	 function jx_getbrandsbystateid()
+	 {
+	  	$sid= $this->input->post('sid');
+		$output=array();
+		$brand_list = $this->db->query("select br.name,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+											from king_orders a
+											join king_transactions ki on ki.transid=a.transid
+											join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+											join pnh_m_territory_info tr on tr.id=f.territory_id 
+											join pnh_m_states st on st.state_id = tr.state_id
+											join king_brands br on br.id=a.brandid
+											where is_pnh = 1 and st.state_id='".$sid."' and a.status !=3
+											group by br.name
+											order by ttl desc limit 25");
+		if($brand_list->num_rows())
+		{
+			$output['brand_list']=$brand_list->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+	
+		}
+		$output = array();
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);	
+	 }
+	 
+	/*
+	 * Ajax function to load state sales 
+	 * 
+	 */
+	function jx_state_sales($s="",$e="",$sid="")
+	{
+		$st = date('Y-m-d',strtotime($s));
+		$en = date('Y-m-d',strtotime($e));
+		$date_diff = date_diff_days($en,$st);
+		
+		if($date_diff <= 61)
+		{
+			$sql ="select date_format(from_unixtime(ki.init),'%d-%b') as mn,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				join pnh_m_territory_info tr on tr.id=f.territory_id 
+				join pnh_m_states st on st.state_id = tr.state_id
+				where st.state_id='".$sid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."' and a.status !=3
+				group by date(from_unixtime(ki.init))";
+		}
+		else
+		{
+			$sql ="select date_format(from_unixtime(ki.init),'%b-%Y') as mn,ROUND(SUM((i_orgprice-(i_coup_discount+i_discount))*a.quantity),2) as ttl
+				from king_orders a
+				join king_transactions ki on ki.transid=a.transid
+				join pnh_m_franchise_info f on f.franchise_id=ki.franchise_id
+				join pnh_m_territory_info tr on tr.id=f.territory_id 
+				join pnh_m_states st on st.state_id = tr.state_id
+				where st.state_id='".$sid."' and date_format(from_unixtime(ki.init),'%Y-%m-%d') between '".$st."' and '".$en."' and a.status !=3
+				group by date_format(from_unixtime(ki.init),'%m-%Y')
+				order by date(from_unixtime(ki.init))";
+		}
+		 $res = $this->db->query($sql);
+		 $sales_on = array();
+		 $sales_summary = array();
+		 
+		if($res->num_rows())
+		{
+			foreach($res->result_array() as $row)
+			{
+				array_push($sales_summary,array($row['mn'],$row['ttl']*1)); 		
+			}
+		}
+		$output = array();
+		$output['date_diff'] = $date_diff;
+		$output['summary'] = $sales_summary;
+		echo json_encode($output);
 	}
 	
 	function pnh_device_type()
@@ -24465,7 +25120,7 @@ die; */
 		$imei = $this->input->post('imei');
 		$p_invno = $this->input->post('p_invno');
 		$orderid = $this->input->post('order_id');
-		//echo '='.$imei."=".$p_invno."=".$orderid;
+		
 		if($p_invno)
 		{
 			$imei_stkdet_res = $this->db->query("select c.status,a.product_id,product_barcode,mrp,location_id,rack_bin_id,b.stock_id 
@@ -24488,14 +25143,14 @@ die; */
 										where imei_no = ? 
 									) as a 
 									join t_stock_info b on a.product_id = b.product_id 
-									where a.mrp = b.mrp and a.location_id = b.location_id and a.rack_bin_id = b.rack_bin_id",$imei);
+									where a.mrp = b.mrp and a.location_id = b.location_id and a.rack_bin_id = b.rack_bin_id 
+				",$imei);
 			}
 		}else
 		{
-			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($imei));	
+			$imei_stkdet_res = $this->db->query("select status,product_id from t_imei_no where imei_no = ? ",array($p_invno,$orderid,$imei));	
 		}
-		//echo $this->db->last_query();
-                
+		
 		$output=array();
 		if($imei_stkdet_res->num_rows())
 		{
@@ -24507,6 +25162,7 @@ die; */
 			}else
 			{
 				$output['status'] = 'success';
+				
 			}
 		}else
 		{
@@ -25185,80 +25841,408 @@ die; */
 		$objWriter->save('php://output');
 		exit;
 	}
-        
-        /**
-        * Updating the acknowledgement printed log into invoices
-        */
-       function jx_update_acknowledge_print_log()
-       {
-               $all_inv_list = $this->input->post('all_inv_list');
-               if($all_inv_list) {
-                   $all_inv_list_arr=explode(',',$all_inv_list);
-                   foreach($all_inv_list_arr as $invno) {
-                           //update to process_invoice table
-                           $this->db->query('update shipment_batch_process_invoice_link set is_acknowlege_printed = `is_acknowlege_printed` + 1 where invoice_no = ? limit 1',$invno);
-                   }
-               }
-               echo 'Log updated.';
-       }
-        
-       /**
-       * function to generate bulk invoice acknowledgement by date range 
-       */
-       function print_invoice_acknowledgementbydate()
-       {
-               $this->erpm->auth();
+	
+	
 
-               if(isset($_POST['date_from'])) {
-   //                echo '<pre>';print_r($_POST); die();
-                   $sdate=$_POST['date_from']; //'2013-10-20';
-                   $edate=$_POST['date_to']; //'2013-11-07';
-                   $territory_id=$_POST['sel_territory'];
-                   $consider_printed_ack=$_POST['consider_printed_ack'];
+	function getbrand_cat_details()
+	{
+		
+		$output=array();
+		$bid=$this->input->post('brandid');
+		$vendorid=$this->input->post('vendorid');
+	
+		$catgories=$this->db->query("SELECT  d.catid,d.brandid,c.name AS cat_name
+										FROM `king_deals` d
+										JOIN `king_categories` c ON c.id=d.catid
+										WHERE d.brandid=? GROUP BY d.catid",$bid);
+		$brand_margin_det=$this->db->query("select brand_margin,date_format(from_unixtime(applicable_from),'%d/%m/%y') as applicable_from,date_format(from_unixtime(applicable_till),'%d/%m/%Y') as applicable_till from m_vendor_brand_link where brand_id=? and vendor_id=? and is_active=1",array($bid,$vendorid))->row_array();
+		$brand_margin=$brand_margin_det['brand_margin'];
+		$frm_date=$brand_margin_det['applicable_from'];
+		$to_date=$brand_margin_det['applicable_till'];
+		if($catgories)
+		{
+			$output['status']='success';
+			$output['cat_list']=$catgories->result_array();
+			$output['brand_name']=$this->db->query("select name from king_brands where id=? ",$bid)->row()->name;
+			$output['brand_margin']=$brand_margin;
+			$output['from_dt']=$frm_date;
+			$output['to_dt']=$to_date;
+		}
+		
+		echo json_encode($output);
+	}
 
-                       if($sdate == '' || $edate == '')
-                               show_error("Input date range");
+/**
+ * function to update ecategory brand vender margin of individual vendor
+ * @param unknown_type $vendorid
+ */
+	function to_update_brand_marg_bycat($vendorid)
+	{
+		foreach(array("brandid","l_catid","l_brand","l_margin","l_from","l_until") as $i)
+			$$i=$this->input->post($i);
+		//echo '<pre>';print_r($_POST);exit;
 
-                       $cond=$cond_join='';
-                       if($territory_id!='00') {
-                           $cond =' and f.territory_id='.$territory_id;
-                               //$terr = $this->reservations->get_territory_info($territory_id);
-                               //$data['territory_name']=$terr['territory_name'];
-                       }
+		if(is_array($l_catid))
+			$l_catids=implode(',',$l_catid);
 
-                       if($consider_printed_ack != 'y') {
-                           $cond_join = ' and b.is_acknowlege_printed = 0 ';
-                       }
+		$othrcat_ofbrands = $this->db->query("SELECT DISTINCT catid FROM king_deals WHERE catid NOT IN ( $l_catids ) AND brandid=$l_brand[0]")->result_array();
+		
+		$brand_margin=$this->db->query("select brand_margin from m_vendor_brand_link where cat_id=0 and brand_id=? and vendor_id=? and is_active=1",array($l_brand[0],$vendorid))->row()->brand_margin;
+		
+		$has_all_cat=$this->db->query("select * from m_vendor_brand_link where cat_id=0 and brand_id=? and vendor_id=?",array($l_brand[0],$vendorid));
+		if($has_all_cat)
+		{
+			$this->db->query("update m_vendor_brand_link set is_active=0,modified_on=now() where brand_id=? and vendor_id=? and cat_id=0",array($l_brand[0],$vendorid));
+		}
+		if($othrcat_ofbrands)
+		{
+			
+			foreach($othrcat_ofbrands as $c)
+			{
+	
+				$this->db->query("insert into m_vendor_brand_link(cat_id,brand_id,brand_margin,vendor_id,applicable_from,applicable_till,created_on)values(?,?,?,?,?,?,now())",array($c['catid'],$l_brand[0],$brand_margin,$vendorid,strtotime($l_from),strtotime($l_until)));
+				
+			}
+		}
+		
+		if($_POST)
+		{
+			//echo '<pre>';print_r($_POST);
+			if($l_catid)
+			{
+				
+				foreach($l_catid as  $i=>$l_cat){
 
-                       $dispatch_list_res = $this->db->query("select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,count(distinct b.invoice_no) as ttl_invs
-                                                               from pnh_m_manifesto_sent_log a
-                                                               join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 $cond_join
-                                                               join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
-                                                               join king_transactions d on d.transid = c.transid 
-                                                               join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
-                                                               where date(sent_on) between ? and ? and dispatch_id != 0 $cond
-                                                       group by d.franchise_id order by f.territory_id asc ",array($sdate,$edate));
+					$check_cat_exist= $this->db->query("select * from m_vendor_brand_link where cat_id=? and brand_id=? and vendor_id=?",array($l_cat,$l_brand[$i],$vendorid));
+					
+					if($check_cat_exist->num_rows() == 0)
+					{
+						$this->db->query("insert into m_vendor_brand_link(cat_id,brand_id,brand_margin,vendor_id,created_on,applicable_from,applicable_till)values(?,?,?,?,now(),?,?)",array($l_cat,$l_brand[$i],$l_margin[$i],$vendorid,strtotime($l_from[$i]),strtotime($l_until[$i])));
+						
+					}
+				}
+			}
+		}
+		if(!isset($_SERVER['HTTP_X_REQUESTED_WITH']))
+		{
+			$this->erpm->flash_msg("Category for vendor updated");
+			redirect($_SERVER['HTTP_REFERER']);
+		}
+	}
+	
+	function vendor_margin_bulk_update()
+	{
+		$data['page']="vendor_margin_bulk_update";
+		$this->load->view("admin",$data);
+	}
+	
+	function bulk_update_vndrmrg()
+	{
+		$this->erpm->auth();
+		
+		$catid=$this->input->post('catid');
+		$brandid=$this->input->post('brandid');
+		$vendorids=$this->input->post('vendorid');
+		
+		$cat_det = $this->db->query('select id,name from king_categories where id = ? ',$catid)->row_array();
+		$brand_det = $this->db->query('select id,name from king_brands where id = ? ',$brandid)->row_array();
+		
+		$ven_list = array();
+		foreach($vendorids as $vid)
+		{
+			$ven_det = $this->db->query('select vendor_id,vendor_name from m_vendor_info where vendor_id = ? ',$vid)->row_array();
+			
+			// to get already linked details from margin table 
+			$margin_det_res=$this->db->query("SELECT DISTINCT l.id,l.vendor_id,b.name AS brand_name,v.vendor_name,l.brand_id,l.brand_margin,date_format(from_unixtime(l.applicable_from),'%d/%m/%Y') as applicable_from ,date_format(from_unixtime(l.applicable_till),'%d/%m/%Y') as applicable_till ,c.name as category_name,l.cat_id  
+											FROM m_vendor_brand_link l 
+											JOIN king_brands b ON b.id=l.brand_id
+											JOIN m_vendor_info v ON v.vendor_id=l.vendor_id 
+											left JOIN king_categories c on c.id=l.cat_id
+											WHERE l.is_active=1 AND l.vendor_id = ?  
+											and l.cat_id=? and l.brand_id = ? ",array($vid,$catid,$brandid));
+			if($margin_det_res->num_rows())
+			{
+				$margin_det = $margin_det_res->row_array();
+				$margin = $margin_det['brand_margin'];
+				$apl_frm = $margin_det['applicable_from'];
+				$apl_to = $margin_det['applicable_till']; 
+			}else
+			{
+				$margin = '';
+				$apl_frm = '';
+				$apl_to = '';
+			}							
+											
+			$tmp = array();
+			$tmp['vendor_id'] = $vid;
+			$tmp['vendor_name'] = $ven_det['vendor_name'];
+			$tmp['cat_id'] = $catid;
+			$tmp['category_name'] = $cat_det['name'];
+			$tmp['brand_id'] = $brandid;
+			$tmp['brand_name'] = $brand_det['name'];
+			$tmp['brand_margin'] = $margin;
+			$tmp['applicable_from'] = $apl_frm;
+			$tmp['applicable_till'] = $apl_to;
+			$ven_list[] = $tmp;
+		}
+		
+		$output=array();
+		if(count($ven_list))
+		{
+			$output['status']='success';
+			$output['v_brnd']=$ven_list;
+		}else 
+		{
+			$output['status']='error';
+			$output['msg']='No Data Found';
+		}
+		
+		echo json_encode($output);
+	}
+	
+	function bulk_update()
+	{
+		foreach(array("l_vendor","l_cat","l_brand","l_margin","l_from","l_untill") as $i)
+			$$i=$this->input->post("$i");
+		
+		if($l_brand && $l_cat)
+		{
+				
+			foreach($l_brand as $i=>$b)
+			{
+				foreach($l_cat as $i=>$c)
+				{
+					if($this->db->query("select id from m_vendor_brand_link where vendor_id = ? and brand_id = ? and cat_id=?",array($l_vendor[$i],$b,$c))->num_rows()!=0)
+					{
+					
+						$this->db->query("update m_vendor_brand_link set brand_margin = ? ,applicable_from = ?,applicable_till = ?,created_on = now() where vendor_id = ? and brand_id = ? and cat_id=?",array($l_margin[$i],strtotime($l_from[$i]),strtotime($l_untill[$i]),$l_vendor[$i],$b,$c));
+					}
+					else 
+					{
+						$this->db->query("insert into m_vendor_brand_link(brand_margin,applicable_from,applicable_till,created_on,vendor_id,brand_id,cat_id) values(?,?,?,now(),?,?,?)",array($l_margin[$i],strtotime($l_from[$i]),strtotime($l_untill[$i]),$l_vendor[$i],$b,$c));
+					}
+				}
+		
+			}
+		}
+		
+		//echo $this->db->last_query();
+		//die;
+		if(!isset($_SERVER['HTTP_X_REQUESTED_WITH']))
+		{
+			$this->erpm->flash_msg("Vendor Category Brand Margin updated ");
+			redirect($_SERVER['HTTP_REFERER']);
+		}
+	}
+	
+	function to_get_linkedcatbybrandvendor()
+	{
+		$vid=$this->input->post('vendorid');
+		$bid=$this->input->post('brandid');
+		$output=array();
+		$sql="SELECT l.cat_id,l.brand_id,date_format(from_unixtime(l.applicable_from),'%d/%m/%Y') as applicable_from ,date_format(from_unixtime(l.applicable_till),'%d/%m/%Y') as applicable_till,l.brand_margin,c.name AS category_name 
+							FROM m_vendor_brand_link l
+							LEFT JOIN king_categories c ON c.id= l.cat_id
+							WHERE vendor_id=? AND is_active=1 AND brand_id=?";
+		$brand_name=$this->db->query("select name from king_brands where id=?",$bid)->row()->name;
+		$linked_cat_list=$this->db->query($sql,array($vid,$bid));
+		
+		if($linked_cat_list)
+		{
+			$output['status']='success';
+			$output['l_catlist']=$linked_cat_list->result_array();
+			$output['brand_name']=$brand_name;
+		}
+		else
+		{
+			$output['status']='error';
+			$output['msg']='No Data Found';
+		}
+		echo json_encode($output);
+	}
+	
+	
+	function update_vendor_catgory_brand()
+	{
+		$catid=$this->input->post('catid');
+		$brandid=$this->input->post('brandid');
+		if(is_array($brandid))
+			$brandid=implode(',',$brandid);
+		$vendorids=$this->input->post('vendorid');
+		if(is_array($vendorid))
+			$vendorids=implode(',',$vendorids);
+		$ttl_brands=sizeof($brandid);
+		$is_dulicate_cat=$this->db->query("select * from m_vendor_brand_link where cat_id = 0 and brand_id in (?) and vendor_id=? and is_active=1",array($brandid,$vendorids));
+			if(!$is_dulicate_cat)
+		$is_dulicate_cat=$this->db->query("select * from m_vendor_brand_link where cat_id = 0 and brand_id in (?) and vendor_id=? and is_active=1",array($catid,$brandid,$vendorids));
+		if($is_dulicate_cat->num_rows()==0)
+		{
+			$br_cat_list=$this->db->query("select b.name as brand_name,b.id as brandid, c.id as catid,c.name as category_name from king_deals d join king_brands b on b.id=d.brandid join king_categories c on c.id=d.catid where d.catid=? and d.brandid in($brandid) GROUP BY d.brandid",$catid);
+		}
+		
+		if($br_cat_list)
+		{
+			$output['status']='success';
+			$output['brnd_cat_res']=$br_cat_list->result_array();
+		}else
+		
+		{
+			$output['status']='error';
+			$output['msg']='This category  For all Brand Updated';
+		}
+		echo json_encode($output);
+	}
 
-                       if($dispatch_list_res->num_rows()) {
-                               $data['dispatch_list'] = $dispatch_list_res->result_array();
-   //                            echo '<pre>'.$this->db->last_query().'</pre>';die();
-                               $data['sdate']=$sdate;
-                               $data['edate']=$edate;
+	/**
+	 * function to load all categories vendors
+	 * 
+	 */
+	function jx_load_cat_byvendor()
+	{
+		$output=array();
+		$vid=$this->input->post('ven_id');
+					
+		$catlist_res=$this->db->query("select  c.id as catid,c.name as category_name 
+								from king_deals d 
+								join king_brands b on b.id=d.brandid 
+								join king_categories c on c.id=d.catid 
+								join m_vendor_brand_link v on v.brand_id=b.id 
+								where v.vendor_id ='".$vid."' and v.is_active=1
+								group by catid");
+				
+		if($catlist_res->num_rows())
+		{
+			$output['ct_list']=$catlist_res->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Categories Found";
+			
+		}
+		echo json_encode($output);
+	}
+	
+	/**
+	 * function to load all categories vendors
+	 * 
+	 */
+	function jx_load_brand_byvendor()
+	{
+		$output=array();
+		$vid=$this->input->post('ven_id');
+					
+		$brandlist_res=$this->db->query("select  b.id as brandid,b.name as brand_name 
+								from king_deals d 
+								join king_brands b on b.id=d.brandid 
+								join king_categories c on c.id=d.catid 
+								join m_vendor_brand_link v on v.brand_id=b.id 
+								where v.vendor_id ='".$vid."' and v.is_active=1
+								group by brand_id");
+				
+		if($brandlist_res->num_rows())
+		{
+			$output['br_list']=$brandlist_res->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+			
+		}
+		echo json_encode($output);
+	}
+	
+	function jx_load_brand_byvendor_bycatid()
+	{
+		$output=array();
+		$vid=$this->input->post('vid');
+		$catid=$this->input->post('catid');	
+		if($catid != 0)
+		{
+			$brandlist_res=$this->db->query("select  b.id as brandid,b.name as brand_name 
+								from king_deals d 
+								join king_brands b on b.id=d.brandid 
+								join king_categories c on c.id=d.catid 
+								join m_vendor_brand_link v on v.brand_id=b.id 
+								where v.vendor_id ='".$vid."' and d.catid='".$catid."' and v.is_active=1
+								group by brandid");
+		}	
+		else
+		{
+			$brandlist_res=$this->db->query("select  b.id as brandid,b.name as brand_name 
+								from king_deals d 
+								join king_brands b on b.id=d.brandid 
+								join king_categories c on c.id=d.catid 
+								join m_vendor_brand_link v on v.brand_id=b.id 
+								where v.vendor_id ='".$vid."' and v.is_active=1 
+								group by brand_id");
+		}	
+		if($brandlist_res->num_rows())
+		{
+			$output['brd_list']=$brandlist_res->result_array();
+			$output['status']='success';
+		}
+		else
+		{
+			$output['status']="error";
+			$output['message']="No Brands Found";
+			
+		}
+		echo json_encode($output);
+	}
+	
+	function jx_load_vendor_cat()
+	{
+		$catid=$this->input->post('catid');
+		$vid=$this->input->post('vid');
+		
+		$margin_res=$this->erpm->getcatbrandsforvendor($vid,$catid);
+		
+		if($margin_res)
+		{
+			$output['status']='success';
+			$output['res_list']=$margin_res;
+		}else
+		{
+			$output['status']='error';
+			$output['msg']='No Category Found';
+		}
+		//print_r($output['res_list']);exit;
+		echo json_encode($output);
+	}
+	
+	
 
-                               $data['page']="print_invoice_acknowledgement";
-                               $this->load->view("admin",$data);
-                       }
-                       else {
-                               echo '<script type="text/javascript">alert("Warning:\nNo invoices found for the selected dates and territory!")</script>';
-                               redirect('admin/print_invoice_acknowledgementbydate','refresh');
-                       }
-               }
-               else {
-                   $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
-                   $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+	function jx_load_vendordet_bybrand()
+	{
+		$catid=$this->input->post('catid');
+		$bid=$this->input->post('brand_id');
+		$vid=$this->input->post('ven_id');
+		
+		$margin_res=$this->erpm->getcatbrandsforvendor_bybrandid($vid,$catid,$bid);
+		
+		if($margin_res)
+		{
+			$output['status']='success';
+			$output['res_list']=$margin_res;
+		}else
+		{
+			$output['status']='error';
+			$output['msg']='No Details Found';
+		}
+		
+		echo json_encode($output);
+	}
 
-                   $data['page']="gen_invoice_acknowledgement";
-                   $this->load->view("admin",$data);
-               }
-        }
+	/* function update_vendor_catgory_brand()
+	{
+		$catid=$this->input->post('catid');
+		$brandid=$this->input->post('brandid');
+		$vendorid=$this->input->post('vendorid');
+		echo '<pre>';print_r($_POST);die;
+		//check for duplicate entry
+	} */
 }
