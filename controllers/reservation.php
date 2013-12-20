@@ -9,54 +9,39 @@ class Reservation extends Voucher {
         /**
          * Get acknowledgement list for given territory, and between dates range
          */
-        function jx_get_acknowledgement_list() {
+        function jx_get_acknowledgement_list($territory_id) {
             $user = $this->erpm->auth(true,true);
             
-            $sel_territory = $this->input->post('sel_territory');
+            $sel_territory = $territory_id;//$this->input->post('sel_territory');
             $date_from =  $this->input->post('date_from');
             $date_to = $this->input->post('date_to');
-            $consider_printed_ack = $this->input->post('consider_printed_ack');
+            /*$consider_printed_ack = $this->input->post('consider_printed_ack');
+            if($consider_printed_ack != 'y') { $cond_join = ' and b.is_acknowlege_printed = 0 '; }*/
             
-            if($date_from == '' || $date_to == '')
-                die ("Please specify date");
+            $output=array();$cond=$cond_join='';
             
-            $output='';
-            
-            $sdate = strtotime($date_from);
-            $edate = strtotime($date_to);
-            $rslt_arr = $this->db->query("select week_day,shipped_on,shipped_on_time,shipped,invoice_no,shipped_by from (
-                                        select DATE_FORMAT(shipped_on,'%w') as week_day,shipped_on,unix_timestamp(shipped_on) as shipped_on_time,shipped,invoice_no,shipped_by
-                                        from shipment_batch_process_invoice_link
-                                        where shipped=1
-                                        order by shipped_on DESC
-                                ) as g where g.week_day is not null and shipped_on_time!=0 and shipped_by>0 and shipped_on_time between ? and ?",array($sdate,$edate))->result_array();
-            $output .= '<table class="datagrid">';
-             
-            foreach($rslt_arr as $row) {
-                
-                    
-                        $output .= '<tr>
-                                <th>Slno</th>
-                                <th>Territory Manager</th>
-                                <th>TM/BE</th>
-                                <th></th>
-                                <th></th>
-                                <th><input type="checkbox"></th>
-                            </tr>';
+            if($date_from == '' || $date_to == '') {
+                $output = array("status"=>"fail","response"=>"Please specify date");
             }
-            
-            $output .='<tr>
-                    <td>1</td>
-                    <td>TM1</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td><input type="checkbox"></td>
-                </tr>';
-           
-            
-            $output .= '</table>';
-            echo ''.$output;
+            else {
+
+                    $sdate = strtotime($date_from);
+                    $edate = strtotime($date_to);
+                    $rslt_arr = $this->db->query("select week_day,shipped,invoice_no,shipped_by from (
+                                                    select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped,sd.invoice_no,sd.shipped_by
+                                                    from shipment_batch_process_invoice_link sd
+                                                    join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                    join king_transactions tr on tr.transid = pi.transid
+                                                    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and f.territory_id =? and unix_timestamp(sd.shipped_on) between ? and ?
+                                                    order by shipped_on DESC
+                                                    ) as g where g.week_day is not null",array($territory_id,$sdate,$edate))->result_array();
+                    $output['result'] = $rslt_arr;
+                    $output['status'] = "success";
+                    $output['lastqry'] = $this->db->last_query();
+                    
+            }
+            echo json_encode($output);
         }
 
         /**
@@ -91,7 +76,7 @@ class Reservation extends Voucher {
 
                         if($sdate == '' || $edate == '')
                                 show_error("Input date range");*/
-
+                        /*
                         $cond=$cond_join='';
                         if($territory_id!='00') {
                             $cond =' and f.territory_id='.$territory_id;
@@ -124,12 +109,13 @@ class Reservation extends Voucher {
                         else {
                                 echo '<script type="text/javascript">alert("Warning:\nNo invoices found for the selected dates and territory!")</script>';
                                 redirect('admin/print_invoice_acknowledgementbydate','refresh');
-                        }//
+                        }*/
                 }
                 else {
                     $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
                     $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
-
+                    
+                    
                     $data['page']="gen_invoice_acknowledgement";
                     $this->load->view("admin",$data);
                 }
@@ -458,7 +444,6 @@ class Reservation extends Voucher {
                     $rslt_arr[$row['menuid']]['menuname'] = $row['menuname'];
                 }
             }
-            
         }
 //        echo '<pre>';print_r($rslt_arr);die();
         $data['prods']=$rslt_arr;
@@ -654,6 +639,11 @@ class Reservation extends Voucher {
     }
 
     /********End Orders Reservation**************/
+    
+    function jx_get_managers_executives_info() {
+        $rslt = $this->db->query("select employee_id,email,gender,city,contact_no,if(job_title=4,'TM','BE') as job_role from m_employee_info where job_title in (4,5) and is_suspended=0 order by job_title ASC")->result_array();
+        echo json_encode($rslt);
+    }
 }
 
 ?>

@@ -7,8 +7,7 @@
  */
 class reservation_model extends Model
 {
-    
-	function __construct() {
+    function __construct() {
             parent::__construct();
     }
     

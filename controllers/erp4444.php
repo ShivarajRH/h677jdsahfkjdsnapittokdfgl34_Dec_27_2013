@@ -25842,6 +25842,8 @@ die; */
 		exit;
 	}
 	
+	
+
 	function getbrand_cat_details()
 	{
 		
@@ -26243,4 +26245,981 @@ die; */
 		echo '<pre>';print_r($_POST);die;
 		//check for duplicate entry
 	} */
+        function dashboard()
+	{
+		$user=$this->auth();
+		$data['page']="dashboard";
+		$this->load->view("admin",$data);
+	}
+
+	function export_data()
+	{
+		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
+		if($_POST)
+			$this->erpm->do_export_data();
+		$data['page']="export_data";
+		$this->load->view("admin",$data);
+	}
+	function jx_pub_deal()
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		if(!$_POST)
+			die;
+		$this->db->query("update king_deals set publish=? where dealid=? limit 1",array($this->input->post("pub"),$this->input->post("did")));
+	}
+	
+	function jx_live_deal()
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		if(!$_POST)
+			die;
+		$this->db->query("update king_dealitems set live=? where id=? limit 1",array($this->input->post("live"),$this->input->post("id")));
+	}
+        function deals_bulk_image_update($bid)
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		$data['items']=$this->db->query("select i.name,i.dealid,d.publish,i.live,b.* from deals_bulk_upload_items b join king_dealitems i on i.id=b.item_id join king_deals d on d.dealid=i.dealid where b.bulk_id=?",$bid)->result_array();
+		$data['page']="deals_bulk_image_update";
+		$this->load->view("admin",$data);
+	}
+	
+	function bu_img_update()
+	{
+		$user=$this->auth();
+		$i=$this->input->post("i");
+		$iid=$this->input->post("itemid");
+		$imgname=randomChars(15);
+		if (isset ( $_FILES ['pic'] ) && $_FILES ['pic'] ['error'] == 0)
+		{
+			$this->load->library("thumbnail");
+			$img=$_FILES['pic']['tmp_name'];
+			if($this->thumbnail->check($img))
+			{
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/300/$imgname.jpg","width"=>300));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/small/$imgname.jpg","width"=>200));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/thumbs/$imgname.jpg","width"=>50,"max_height"=>50));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/$imgname.jpg","width"=>400));
+				$this->thumbnail->create(array("source"=>$img,"dest"=>"images/items/big/$imgname.jpg","width"=>1000));
+				$did=$this->db->query("select dealid from king_dealitems where id=?",$iid)->row()->dealid;
+				$this->db->query("update king_dealitems set pic=? where id=? limit 1",array($imgname,$iid));
+				$this->db->query("update king_deals set pic=? where dealid=? limit 1",array($imgname,$did));
+				$this->db->query("update deals_bulk_upload_items set is_image_updated=1,updated_on=".time().",updated_by={$user['userid']} where item_id=?",$iid);
+				$bid=$this->db->query("select bulk_id from deals_bulk_upload_items where item_id=?",$iid)->row()->bulk_id;
+				if($this->db->query("select 1 from deals_bulk_upload_items where bulk_id=? and is_image_updated=0",$bid)->num_rows()==0)
+					$this->db->query("update deals_bulk_upload set is_all_image_updated=1 where id=? limit 1",$bid);
+				$err=0;
+			}
+			else $err=1;
+		}
+		else
+			$err=1;
+		echo "<script>parent.updatedimg($i,$err)</script>";
+	}
+	function dealsbymenu_table($mid)
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 where d.menuid=? or d.menuid2=? order by i.name asc",array($mid,$mid))->result_array();
+		$data['pagetitle']="menu : ".$this->db->query("select name from king_menu where id=?",$mid)->row()->name;
+		$data['page']="deals_table";
+		$this->load->view("admin",$data);
+	}
+	
+	function dealsbycategory_table($cid)
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 where d.catid=? order by i.name asc",array($cid))->result_array();
+		$data['pagetitle']="Category : ".$this->db->query("select name from king_categories where id=?",$cid)->row()->name;
+		$data['page']="deals_table";
+		$this->load->view("admin",$data);
+	}
+	
+	
+	function dealsbybrand_table($cid)
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 where d.brandid=? order by i.name asc",array($cid))->result_array();
+		$data['pagetitle']="Brand : ".$this->db->query("select name from king_brands where id=?",$cid)->row()->name;
+		$data['page']="deals_table";
+		$this->load->view("admin",$data);
+	}
+	
+	function deals_table()
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		$data['deals']=$this->db->query("select d.pic,b.name as brand,c.name as category,m1.name as menu1,m2.name as menu2,i.id,d.dealid,i.name,i.orgprice as mrp,i.price,d.publish,i.live from king_deals d join king_dealitems i on i.dealid=d.dealid join king_categories c on c.id=d.catid join king_brands b on b.id=d.brandid join king_menu m1 on m1.id=d.menuid left outer join king_menu m2 on m2.id=d.menuid2 order by d.sno desc limit 40")->result_array();
+		$data['page']="deals_table";
+		$this->load->view("admin",$data);
+	}
+	
+	function categories()
+	{
+		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE);
+		$cats=$this->db->query("select * from king_categories order by name asc")->result_array();
+		
+		$as=$alphas=array("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z");
+		foreach($as as $alpha)
+			$ret[$alpha]=array();
+		foreach($cats as $c)
+		{
+			$alpha=strtolower($c['name']{0});
+			if(!isset($ret[$alpha]))
+			{
+				$ret[$alpha]=array();
+				$alphas[]=$alpha;
+			}
+			$ret[$alpha][]=$c;
+		}
+		for($i=0;$i<5;$i++)
+			$r[$i]=array();
+			
+		$i=0;
+		foreach($ret as $a=>$rt)
+		{
+			$r[$i][$a]=$rt;
+			$i++;
+			if($i>4)
+				$i=0;
+		}
+		$data['count']=count($cats);
+		$data['alphas']=$alphas;
+		$data['categories']=$r;
+		$data['page']="categories";
+		$this->load->view("admin",$data);
+	}
+	function brands()
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE|PRODUCT_MANAGER_ROLE);
+		$brands=$this->db->query("select * from king_brands order by name asc")->result_array();
+		
+		$as=$alphas=array("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r","s","t","u","v","w","x","y","z");
+		foreach($as as $alpha)
+			$ret[$alpha]=array();
+		foreach($brands as $c)
+		{
+			if(!isset($c['name']{0}))
+				continue;
+			$alpha=strtolower($c['name']{0});
+			if(!isset($ret[$alpha]))
+			{
+				$ret[$alpha]=array();
+				$alphas[]=$alpha;
+			}
+			$ret[$alpha][]=$c;
+		}
+		for($i=0;$i<5;$i++)
+			$r[$i]=array();
+			
+		$i=0;
+		foreach($ret as $a=>$rt)
+		{
+			$r[$i][$a]=$rt;
+			$i++;
+			if($i>4)
+				$i=0;
+		}
+		$data['count']=count($brands);
+		$data['alphas']=$alphas;
+		$data['brands']=$r;
+		$data['rbs']=$this->erpm->getrackkbinsforbrands();
+		$data['page']="brands";
+		$this->load->view("admin",$data);
+	}
+	
+	function vendorsbybrand($bid=false)
+	{
+		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE|PURCHASE_ORDER_ROLE);
+		if(!$bid)
+			show_404();
+		$data['page']="erpvendors";
+		$data['brand']=$this->db->query("select name from king_brands where id=?",$bid)->row()->name;
+		$data['vendors']=$this->erpm->getvendorsforbrand($bid);
+		$this->load->view("admin",$data);
+	}
+	
+	function vendors()
+	{
+		$user=$this->auth(PRODUCT_MANAGER_ROLE|DEAL_MANAGER_ROLE|PURCHASE_ORDER_ROLE);
+		$data['page']="erpvendors";
+		$data['vendors']=$this->erpm->getvendors();
+		$this->load->view("admin",$data);
+	}
+	
+	function changeusertemp($userid,$temp)
+	{
+		$user=$this->auth(CALLCENTER_ROLE);
+		$this->db->query("update king_users set temperament=? where userid=?",array($temp,$userid));
+		redirect("admin/user/$userid");
+	}
+        
+        function client_invoices($s=false,$e=false)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if($e)
+			$data['pagetitle']="between $s and $e";
+		$data['invoices']=$this->erpm->getclientinvoices($s,$e);
+		$data['page']="client_invoices";
+		$this->load->view("admin",$data);
+	}
+	
+	function print_client_invoice($inv)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		$data['invoice']=$this->erpm->getclientinvoice($inv);
+		$data['orders']=$this->erpm->getclientinvoiceforprint($inv);
+		$this->load->view("admin/body/client_invoice_print",$data);
+	}
+	
+	function pack_client_invoice($inv)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if($_POST)
+		{
+			$this->db->query("update t_client_invoice_info set invoice_status=1 where invoice_id=?",$inv);
+			redirect("admin/client_invoice/$inv");
+		}
+		$data['invoice']=$this->db->query("select p.barcode,p.product_name,t.*,t.invoice_qty as qty from t_client_invoice_product_info t join m_product_info p on p.product_id=t.product_id where t.invoice_id=?",$inv)->result_array();
+		$data['page']="pack_client_invoice";
+		$this->load->view("admin",$data);
+	}
+	
+	function payment_client_invoice($inv=false)
+	{
+		if(!$inv)
+			show_404();
+		$user=$this->auth(FINANCE_ROLE);
+		if($_POST)
+			$this->erpm->do_payment_client($inv);
+		$data['page']="payment_client";
+		$this->load->view("admin",$data);
+	}
+	
+	function client_invoice($iid=false)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if(!$iid)
+			show_404();
+		$data['payments']=$this->db->query("select * from t_client_invoice_payment where invoice_id=?",$iid)->result_array();
+		$data['invoice']=$this->db->query("select i.*,a.name as created_by from t_client_invoice_info i join king_admin a on a.id=i.created_by where i.invoice_id=?",$iid)->row_array();
+		$data['items']=$this->db->query("select p.product_name,i.* from t_client_invoice_product_info i join m_product_info p on p.product_id=i.product_id where i.invoice_id=?",$iid)->result_array();
+		$data['page']="client_invoice";
+		$this->load->view("admin",$data);
+	}
+	
+	function createclientinvoice()
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if($_POST)
+			$this->erpm->do_clientinvoice();
+		$data['clients']=$this->erpm->getclients();
+		$data['page']="createclientinvoice";
+		$this->load->view("admin",$data);
+	}
+	
+	function jx_listclientordersforinvoice()
+	{
+		$user=$this->auth();
+		if(!$_POST)
+			die;
+		$cid=$this->input->post("cid");
+		foreach($this->db->query("select * from t_client_order_info where client_id=? and (order_status=0 || order_status=1)",$cid)->result_array() as $o)
+			echo '<a href="javascript:void(0);" onclick="loadorder(\''.$o['order_id'].'\')">'."ORD{$o['order_id']}, {$o['order_reference_no']}".'</a>';
+	}
+	
+	function jx_loadclientordersforinvoice()
+	{
+		$user=$this->auth();
+		if(!$_POST)
+			die;
+		$oid=$this->input->post("oid");
+		$items=$this->erpm->getclientordersforinvoice($oid);
+		echo json_encode($items);
+	}
+	
+	function client_order($oid=false)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if($_POST)
+			$this->erpm->do_closeclientorder($oid);
+		$data['order']=$this->erpm->getclientorder($oid);
+		$data['invoices']=$this->erpm->getinvoicesforclientorder($oid);
+		$data['page']="client_order";
+		$this->load->view("admin",$data);
+	}
+	
+	function client_orders($s=false,$e=false)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		$data['orders']=$this->erpm->getclientorders();
+		$data['page']="client_orders";
+		$this->load->view("admin",$data);
+	}
+	
+	function client_orders_by_client($cid=0)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		$data['orders']=$this->erpm->getclientordersbyclient($cid);
+		$data['byclient']=true;
+		$data['pagetitle']="for ".$this->db->query("select client_name as c from m_client_info where client_id=?",$cid)->row()->c;
+		$data['page']="client_orders";
+		$this->load->view("admin",$data);
+	}
+	
+	
+	function clients()
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		$data['clients']=$this->erpm->getclients();
+		$data['page']="clients";
+		$this->load->view("admin",$data);
+	}
+        
+        function addclientorder($cid='')
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		 
+		if($_POST)
+		{
+			$cid = $this->input->post('cid');
+			$this->erpm->do_addclientorder($cid);
+		}
+			
+			
+		$data['cid'] = $cid; 	
+		$data['page']="addclientorder";
+		$this->load->view("admin",$data);
+	}
+	function editclient($cid)
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if($_POST)
+			$this->erpm->do_updateclient($cid);
+		$data['client']=$this->db->query("select * from m_client_info where client_id=?",$cid)->row_array();
+		$data['contacts']=$this->db->query("select * from m_client_contacts_info where client_id=?",$cid)->result_array();
+		$data['page']="addclient";
+		$this->load->view("admin",$data);
+	}
+	
+	function addclient()
+	{
+		$user=$this->auth(FINANCE_ROLE);
+		if($_POST)
+			$this->erpm->do_addclient();
+		$data['page']="addclient";
+		$this->load->view("admin",$data);
+	}
+        function stock_checker()
+	{
+		$user=$this->auth();
+		if($_POST)
+		{
+			$data['deal']=$this->db->query("select name,id from king_dealitems where id=?",$_POST['id'])->row_array();
+			$avail=$this->erpm->do_stock_check(array($data['deal']['id']));
+			$data['status']=1;
+			if(empty($avail))
+				$data['status']=0;
+		}
+		$data['page']="stock_checker";
+		$this->load->view("admin",$data);
+	}
+	
+	function update_partner_deal_prices($itemid)
+	{
+		$user=$this->auth(DEAL_MANAGER_ROLE);
+		if($_POST)
+		{
+			foreach(array("partner_id","customer_price","partner_price") as $i)
+				$$i=$this->input->post($i);
+			foreach($partner_id as $i=>$pid)
+			{
+				$inp=array("partner_id"=>$pid,"itemid"=>$itemid,"customer_price"=>$customer_price[$i],"partner_price"=>$partner_price[$i]);
+				if($this->db->query("select 1 from partner_deal_prices where itemid=? and partner_id=?",array($itemid,$pid))->num_rows()==0)
+				{
+					$inp['created_on']=time();$inp['created_by']=$user['userid'];
+					$this->db->insert("partner_deal_prices",$inp);
+				}else{
+					$inp['modified_on']=time();
+					$inp['modified_by']=$user['userid'];
+					$this->db->where("partner_id",$inp['partner_id']);
+					$this->db->where("itemid",$inp['itemid']);
+					$this->db->update("partner_deal_prices",$inp);
+				}
+			}
+			$this->erpm->flash_msg("Partner prices updated");
+			redirect("admin/update_partner_deal_prices/$itemid");
+		}
+		$data['itemid']=$itemid;
+		$data['page']="update_partner_deal_prices";
+		$this->load->view("admin",$data);
+	}
+        function partner_deal_prices()
+	{
+		$user=$this->auth(MANAGE_PARTNER_DEAL_PRICES);
+		if($_POST)
+		{
+			$f=fopen($_FILES['pfile']['tmp_name'],"r");
+			$head=fgetcsv($f);
+			$out=array($head);
+			$c=0;
+			$template=array("partner_id","itemid","customer_price","partner_price");
+			while(($data=fgetcsv($f))!==false)
+			{
+				foreach($template as $i=>$c)
+					$inp[$c]=$data[$i];
+				if($this->db->query("select 1 from partner_deal_prices where itemid=? and partner_id=?",array($data[1],$data[0]))->num_rows()==0)
+				{
+					$inp['created_on']=time();$inp['created_by']=$user['userid'];
+					$this->db->insert("partner_deal_prices",$inp);
+				}else{
+					$inp['modified_on']=time();
+					$inp['modified_by']=$user['userid'];
+					$this->db->where("partner_id",$inp['partner_id']);
+					$this->db->where("itemid",$inp['itemid']);
+					$this->db->update("partner_deal_prices",$inp);
+				}
+				$c++;
+			}
+			$this->erpm->flash_msg("$c deal prices updated");
+		}
+		$data['page']="partner_deal_prices";
+		$this->load->view("admin",$data);
+	}
+	
+	
+	function search()
+	{
+		$user=$this->auth();
+		if(strlen($this->input->post("q"))<3)
+			show_error("Please enter atleast 3 characters to search");
+		$eq=$this->input->post("q");
+		$q="%".$this->input->post("q")."%";
+		$data['categories']=$this->db->query("select * from king_categories where name like ?",$q)->result_array();
+		$data['brands']=$this->db->query("select * from king_brands where name like ?",$q)->result_array();
+		$data['deals']=$this->db->query("select name,dealid,id from king_dealitems where is_pnh=0 and name like ?",$q)->result_array();
+		$data['products']=$prods=$this->db->query("select product_name,product_id from m_product_info where product_name like ?",$q)->result_array();
+		foreach($prods as $i=>$p)
+			$prods[$i]['stock']=$this->db->query("select sum(available_qty) as s from t_stock_info where product_id=?",$p['product_id'])->row()->s;
+		$data['products']=$prods;
+		$data['invoices']=$this->db->query("select * from king_invoice where invoice_no like ?",$q)->result_array();
+		$data['orders']=$this->db->query("select transid from king_transactions where (transid like ? or partner_reference_no like ? ) ",array($q,$q))->result_array();
+		$data['clients']=$this->db->query("select client_id,client_name from m_client_info where client_name like ?",$q)->result_array();
+		$data['users']=$this->db->query("select * from king_users where email like ? or name like ? or (mobile=? and mobile<>0) order by name asc",array($q,$q,$this->input->post("q")))->result_array();
+		$data['tickets']=$this->db->query("select * from support_tickets where ticket_no like ? or concat('TK',ticket_no) like ?",array($q,$q))->result_array();
+		$data['vendors']=$this->db->query("select * from m_vendor_info where vendor_name like ? or vendor_code like ?",array($q,$q))->result_array();
+		$data['awbs']=$this->db->query("select b.*,o.transid from shipment_batch_process_invoice_link b join king_invoice o on o.invoice_no=b.invoice_no where b.awb=? limit 1",$this->input->post("q"))->result_array();
+		$data['pnh_deals']=$this->db->query("select name,id,pnh_id from king_dealitems where is_pnh=1 and (name like ? or (pnh_id=? and pnh_id!='0'))",array($q,$this->input->post("q")))->result_array();
+		$data['pnh_franchises']=$this->db->query("select franchise_id,pnh_franchise_id,franchise_name from pnh_m_franchise_info where pnh_franchise_id=? or franchise_name like ? or login_mobile1=? or login_mobile2=?",array($eq,$q,$eq,$eq))->result_array();
+		$data['pnh_members']=$this->db->query("select concat(first_name,' ',last_name) as name,pnh_member_id,user_id from pnh_member_info where pnh_member_id=? or  mobile = ? or  concat(first_name,' ',last_name) like ?",array($eq,$eq,$q))->result_array();
+		$data['page']="search_results";
+		$this->load->view("admin",$data);
+	}
+	
+	function pnh_jx_checkstock_order()
+	{
+		$fid=$this->input->post("fid");
+		$mid=$this->input->post("mid");
+		$pids=explode(",",$this->input->post("pids"));
+		$qty=explode(",",$this->input->post("qty"));
+		$iids=$this->db->query("select id,pnh_id from king_dealitems where is_pnh=1 and pnh_id in('".implode("','",$pids)."')")->result_array();
+		$itemids=array();
+		$order_det=array();
+		$e=0;
+		foreach($pids as $pid)
+			foreach($iids as $id)
+				if($id['pnh_id']==$pid)
+					$itemids[]=$id['id'];
+		$avail=$this->erpm->do_stock_check($itemids,$qty);
+		$un="";
+		$attr=$this->input->post('attr');
+		$attr_data=array();
+		if($attr)
+		{
+			$attrs=explode("&",$attr);
+			foreach($attrs as $attr)
+			{
+				list($pp,$v)=explode("=",$attr);
+				list($p,$a)=explode("_",$pp);
+				if(!isset($attr_data[$p]))
+					$attr_data[$p]=array();
+				$attr_data[$p][$a]=$v;
+			}
+		}
+		foreach($pids as $pid)
+		{
+			if(!isset($attr_data[$pid]))
+				continue;
+			$prods=array();
+			$i=0;
+			foreach($attr_data[$pid] as $a=>$v)
+			{
+				if($i==0)
+				{
+					$pr=$this->db->query("select product_id from products_group_pids where attribute_name_id=? and attribute_value_id=?",array($a,$v))->result_array();
+					foreach($pr as $p)
+						$prods[]=$p['product_id'];
+				}else{
+				$c_prods=$prods;
+				$prods=array();
+				$pr=$this->db->query("select product_id from products_group_pids where attribute_name_id=? and attribute_value_id=?",array($a,$v))->result_array();
+				foreach($pr as $p)
+					if(in_array($p['product_id'],$c_prods))
+						$prods[]=$p['product_id'];
+				}
+				$i++;
+				if(empty($prods))
+				{
+					$e=1;
+					$un.="{$pid} is not available for selected combination";
+					break;
+				}
+			}
+		}
+		if($e==0)
+		{
+		foreach($itemids as $i=>$itemid)
+		 if(!in_array($itemid,$avail))
+		 	$un.="{$pids[$i]} is out of stock\n";
+		 $e=0;
+		 if(strlen($un)!=0)
+		 	$e=1;
+		}
+		$total=$d_total=$bal=$abal=0;
+		$pc="";
+		if($e==0 && $mid && $this->db->query("select 1 from pnh_member_info where pnh_member_id=?",$mid)->num_rows()==0 && $this->db->query("select 1 from pnh_m_allotted_mid where franchise_id=? and ? between mid_start and mid_end",array($fid,$mid))->num_rows()==0)
+		{
+			$e=1;$un="MID : $mid is not allotted to this franchise";
+		}
+		if($e==0)
+		{
+			$iids=array();
+			$itemid=$this->db->query("select id from king_dealitems where pnh_id=?",$pid)->row()->id;
+			$menuid=$this->db->QUERY("select *,d.menuid,m.default_margin as margin from king_dealitems i join king_deals d on d.dealid=i.dealid JOIN pnh_menu m ON m.id=d.menuid where i.is_pnh=1 and i.pnh_id=?",$pid)->row_array();
+		 	$fran=$this->db->query("select * from pnh_m_franchise_info where franchise_id=?",$fid)->row_array();
+		 	$fran1=$this->db->query("select * from pnh_franchise_menu_link where fid=? and menuid=?",array($fid,$menuid['menuid']))->row_array();
+		 	$margin=$this->db->query("select margin,combo_margin from pnh_m_class_info where id=?",$fran['class_id'])->row_array();
+			
+			if($fran1['sch_discount_start']<time() && $fran1['sch_discount_end']>time() && $fran1['is_sch_enabled'])
+				$menuid['margin']+=$fran1['sch_discount'];
+				
+		 	$ordered_menu_list=array();
+		 	foreach($pids as $i=>$iid)
+		 	{
+				$prod=$this->db->query("select i.*,d.publish,d.menuid,d.brandid,d.catid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.is_pnh=1 and i.pnh_id=?",$iid)->row_array();
+				$ordered_menu_list[]=$prod['menuid'];
+				$items[$i]['brandid']=$prod['brandid'];
+				$items[$i]['menuid']=$prod['menuid'];
+				$items[$i]['catid']=$prod['catid'];
+				$items[$i]['name']=$prod['name'];
+				$items[$i]['tax']=$prod['tax'];
+				$items[$i]['mrp']=$prod['orgprice'];
+				$items[$i]['price']=$prod['price'];
+				$items[$i]['itemid']=$prod['id'];
+				$margin=$this->erpm->get_pnh_margin($fran['franchise_id'],$iid);
+				$items[$i]['base_margin']=$margin['base_margin'];
+				$items[$i]['sch_margin']=$margin['sch_margin'];
+				$items[$i]['bal_discount']=$margin['bal_discount'];
+				if($prod['is_combo']=="1")
+				{
+					$items[$i]['discount']=$items[$i]['price']/100*$margin['combo_margin'];
+					$items[$i]['base_margin']=$margin['combo_margin'];
+				}
+				else
+					$items[$i]['discount']=$items[$i]['price']/100*$margin['margin'];
+					$total+=$items[$i]['price']*$qty[$i];
+					$items[$i]['qty']=$qty[$i];
+					$d_total+=($items[$i]['price']-$items[$i]['discount'])*$qty[$i];
+					$items[$i]['final_price']=($items[$i]['price']-$items[$i]['discount']);
+					
+					$iids[]=$prod['id'];
+		 	}
+		 	
+		 	$fran_crdet = $this->erpm->get_fran_availcreditlimit($fid);
+			$fran['current_balance'] = $fran_crdet[3];
+			
+		 	$bal=$fran['current_balance'];
+		 	$abal=$fran['current_balance']-$d_total;
+			
+		 	//check if it is prepaid franchise block
+		 	$is_prepaid_franchise=$this->erpm->is_prepaid_franchise($fid);
+		 	if($is_prepaid_franchise)
+		 	{
+		 		if(count(array_unique($ordered_menu_list))==1)
+		 		{
+		 			if($ordered_menu_list[0]!=VOUCHERMENU)
+		 				$is_prepaid_franchise=false;
+		 						
+		 		}else{
+		 			$is_prepaid_franchise=false;
+		 		}
+		 	}
+		 	//check if it is prepaid franchise block
+			
+			if($fran['current_balance']<$d_total && !$is_prepaid_franchise)
+			{
+				$e=1;$un="Insufficient balance! Balance in your account Rs {$fran['current_balance']}\nTotal order amount : Rs $d_total";
+			}
+			$pc_data['deals']=$this->erpm->pnh_getdealpricechanges($fran['app_version'],$iids);
+			$pc_data['total']=$total;
+			$pc_data['mid']=$mid;
+			$pc_data['items']=$items;
+			$pc_data['menuid']=$menuid;
+			$pc_data['fid']=$fid;
+			
+			
+			$pc=$this->load->view("admin/body/pc_offline_frag",$pc_data,true);
+		}
+		 die(json_encode(array("e"=>$e,"msg"=>$un,"total"=>$total,"d_total"=>$d_total,"com"=>$total-$d_total,"bal"=>$bal,"abal"=>$abal,"pc"=>$pc)));
+	}
+        function pnh_fran_ver_change($fid,$v)
+	{
+		$user=$this->auth(true);
+		$this->db->query("update pnh_m_franchise_info set app_version=? where franchise_id=? limit 1",array($v,$fid));
+		$this->erpm->flash_msg("Version changed for franchise");
+		redirect("admin/pnh_franchise/$fid");
+	}
+	function jx_pnh_prod_suggestion()
+	{
+		
+		$user=$this->auth();
+		$pid=$_POST['pid'];
+		$fid=$_POST['fid'];
+		$prods=array();
+		$cat_brand=$this->db->query("select d.catid,d.brandid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.pnh_id=?",$pid)->row_array();
+		$catid=$cat_brand['catid'];
+		$brandid=$cat_brand['brandid'];
+		
+		$suggest_deals = $this->db->query("
+												select i.is_combo,i.orgprice as mrp,i.price,
+									if((d.brandid=?),' ',i.name) as r, 
+										i.name,i.pnh_id,d.catid,d.brandid,i.id 
+									from king_deals d 
+									join king_dealitems i on i.dealid=d.dealid 
+									where i.is_pnh=1 and d.publish=1 and d.catid=? 
+									and i.pnh_id!=? and i.live=1 
+									order by r asc
+										
+										",array($brandid,$catid,$pid))->result_array();
+		
+		foreach($suggest_deals as $p)
+		{
+			$pid=$p['pnh_id'];
+			$margin=$this->erpm->get_pnh_margin($fid,$pid);
+			if($p['is_combo']=="1")
+				$p['discount']=$p['price']/100*$margin['combo_margin'];
+			else
+				$p['discount']=$p['price']/100*$margin['margin'];
+			$p['margin']=$p['discount']/$p['price']*100;
+			
+			
+			
+			
+			$stock=$this->erpm->do_stock_check(array($p['id']),array(1),true); 
+			
+			
+			$stock_tmp = array();
+			$stock_tmp[0] = array();
+			$stock_tmp[0][0] = array('stk'=>0);
+			foreach($stock as $plist)
+				foreach($plist as $pdet)
+				{
+					if(!$pdet['status'])
+					{
+						$prod['live']=0;
+						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
+					}
+					else
+					{
+						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
+					}
+				}	
+					
+			
+			
+			$p['stock']=(($stock_tmp[0][0]['stk']>0)?$stock_tmp[0][0]['stk']:0);
+			
+			$prods[]=$p;
+		}
+		$data['prods']=$prods;
+		$this->load->view("admin/body/pnh_prod_suggest_frag",$data);
+	}
+	
+	function jx_pnh_fran_cancelledorders()
+	{
+		
+		$user=$this->auth();
+		$pid=$_POST['pid'];
+		$fid=$_POST['fid'];
+		$prods=array();
+		$cat_brand=$this->db->query("select d.catid,d.brandid from king_dealitems i join king_deals d on d.dealid=i.dealid where i.pnh_id=?",$pid)->row_array();
+		$catid=$cat_brand['catid'];
+		$brandid=$cat_brand['brandid'];
+		
+		$suggest_deals = $this->db->query("
+												select i.is_combo,i.orgprice as mrp,i.price,
+												if((d.brandid=?),' ',i.name) as r, 
+													i.name,i.pnh_id,d.catid,d.brandid,i.id,
+													t.init
+													 
+												from king_deals d 
+												join king_dealitems i on i.dealid=d.dealid 
+												join king_orders o on o.itemid = i.id 
+												join king_transactions t on t.transid = o.transid   
+												where i.is_pnh=1 and d.publish=1 
+												and o.status = 3 
+												and i.live=1 
+												order by t.init desc  
+									",array($pid))->result_array();
+		
+		foreach($suggest_deals as $p)
+		{
+			$pid=$p['pnh_id'];
+			$margin=$this->erpm->get_pnh_margin($fid,$pid);
+			if($p['is_combo']=="1")
+				$p['discount']=$p['price']/100*$margin['combo_margin'];
+			else
+				$p['discount']=$p['price']/100*$margin['margin'];
+			$p['margin']=$p['discount']/$p['price']*100;
+			
+			
+			
+			
+			$stock=$this->erpm->do_stock_check(array($p['id']),array(1),true); 
+			
+			
+			$stock_tmp = array();
+			$stock_tmp[0] = array();
+			$stock_tmp[0][0] = array('stk'=>0);
+			foreach($stock as $plist)
+				foreach($plist as $pdet)
+				{
+					if(!$pdet['status'])
+					{
+						$prod['live']=0;
+						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
+					}
+					else
+					{
+						$stock_tmp[0][0] = array('stk'=>$pdet['stk']);
+					}
+				}	
+					
+			
+			
+			$p['stock']=(($stock_tmp[0][0]['stk']>0)?$stock_tmp[0][0]['stk']:0);
+			
+			if(!$p['stock'])
+				continue ; 
+			
+			$prods[]=$p;
+		}
+		$data['prods']=$prods;
+		$this->load->view("admin/body/pnh_prod_suggest_frag",$data);
+		
+		
+		
+	}
+	
+	function pnh_place_quote()
+	{
+		$user=$this->auth(CALLCENTER_ROLE);
+		$req_respond_time = $this->input->post('req_respond_time');
+		
+		foreach(array("pid","quote","fid","qty") as $i)
+			$$i=$this->input->post($i);
+		
+		$inp=array("franchise_id"=>$fid,"created_on"=>time(),"quote_status"=>0,"respond_in_min"=>$req_respond_time,"created_by"=>$user['userid']);
+		$this->db->insert("pnh_quotes",$inp);
+		$qid=$this->db->insert_id();
+		
+		$new_prod_list=$this->input->post('produc_name');
+		
+		if($new_prod_list)
+		{
+			$np_name=$this->input->post('produc_name');
+			$np_qty=$this->input->post('np_qty');
+			$np_mrp=$this->input->post('np_mrp');
+			$np_quote=$this->input->post('np_quote');
+			foreach($new_prod_list as $i=>$new_prod_det)
+			{
+				$inp=array("quote_id"=>$qid,"new_product"=>$np_name[$i],"np_qty"=>$np_qty[$i],"np_mrp"=>$np_mrp[$i],"np_quote"=>$np_quote[$i]);
+				$this->db->insert("pnh_quotes_deal_link",$inp);
+			}
+		}
+		
+		if($pid)
+		{
+			foreach($pid as $i=>$p)
+			{
+				$inp=array("quote_id"=>$qid,"pnh_id"=>$p,"qty"=>$qty[$i],"dp_price"=>$quote[$i]);
+				$this->db->insert("pnh_quotes_deal_link",$inp);	
+			}
+		}
+		
+		$remarks = trim($this->input->post('req_remark'));
+		if($remarks)
+		{
+			$inp = array($qid,$remarks,time(),$user['userid']);
+			$this->db->query("insert into pnh_quote_remarks (quote_id,remarks,time,created_by) values(?,?,?,?) " ,$inp);	
+		}
+		
+		echo site_url("admin/pnh_quote/$qid");
+	}
+	
+	function pnh_update_quote($qid)
+	{
+		$user=$this->auth(CALLCENTER_ROLE);
+		if($_POST)
+		{
+			foreach(array("id","final") as $i)
+				$$i=$this->input->post($i);
+			$_C_POST=$_POST;
+			
+			$fid = $_C_POST['fid'];
+			$fdet = $this->db->query('select * from pnh_m_franchise_info where franchise_id = ? ',$fid)->row_array();
+			$fmob = $fdet['login_mobile1'];
+			
+			foreach($id as $j=>$i)
+			{
+				if($final[$j]==0)
+					continue;
+					
+				$itemdet=$this->db->query("select i.id,i.orgprice as mrp,i.name,concat(i.print_name,'-',i.pnh_id) as print_name from pnh_quotes_deal_link l join king_dealitems i on i.is_pnh=1 and i.pnh_id=l.pnh_id where l.id=?",$i)->row_array();
+				
+				$itemid = $itemdet['id'];
+				$itemname = $itemdet['name'];
+				$itemmrp = $itemdet['mrp'];
+				$itemprint_name = $itemdet['print_name'];
+				
+					
+				if(isset($_C_POST['up_sm'.$i]))
+				{
+					$_POST=array("special_margin"=>$final[$j],"from"=>date("Y-m-d"),"to"=>date("Y-m-d"),"type"=>1,'internal'=>1);
+					$this->pnh_special_margin_deal($itemid);
+				}
+				
+				$is_notified = 0;
+				
+				// check if notify ticked
+				if(isset($_C_POST['notify_sm'.$i]))
+				{
+					$is_notified = 1;
+					$q_msg = "Price for {$itemprint_name}\n Mrp : Rs {$itemmrp}, Landing Cost : Rs ".$final[$j];
+					$this->erpm->pnh_sendsms($fmob,$q_msg,$fid);	
+				}
+				
+				$this->db->query("update pnh_quotes_deal_link set final_price=?,status=1,price_updated_by=?,updated_on=?,is_notified=? where id=? limit 1",array($final[$j],$user['userid'],time(),$is_notified,$i));
+				
+			}
+			$this->db->query("update pnh_quotes set updated_by=?,updated_on=? where quote_id=? limit 1",array($user['userid'],time(),$qid));
+			$this->erpm->flash_msg("Order Quote updated");
+			redirect("admin/pnh_quote/$qid");
+		}
+	}
+	
+	function pnh_quotes($fid=0,$s=0,$e=0,$brand=0,$fra=0,$sby=0,$sord=0,$pg=0)
+	{
+		if($fid)
+			$fra = $fid;
+		$fid = $fra; 
+		
+		$user=$this->auth(CALLCENTER_ROLE);
+		if($brand)
+		{
+			$sql="select q.*,u.name as updated_by,c.name as created_by,f.franchise_name,l.new_product,e.brandid 
+			from pnh_quotes q 
+			join pnh_m_franchise_info f on f.franchise_id=q.franchise_id 
+			JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id 
+			join king_admin c on c.id=q.created_by 
+			join king_dealitems d on d.pnh_id=l.pnh_id
+			join king_deals e on e.dealid=d.dealid
+			left outer join king_admin u on u.id=q.updated_by where e.brandid='".$brand."'";
+			$count="select COUNT(distinct q.quote_id) as count from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by join king_dealitems d on d.pnh_id=l.pnh_id join king_deals e on e.dealid=d.dealid left outer join king_admin u on u.id=q.updated_by where e.brandid='".$brand."'";
+		
+		}elseif($fra)
+		{
+			$sql="select q.*,u.name as updated_by,c.name as created_by,f.franchise_name,l.new_product,e.brandid 
+			from pnh_quotes q 
+			join pnh_m_franchise_info f on f.franchise_id=q.franchise_id 
+			JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id 
+			join king_admin c on c.id=q.created_by 
+			join king_dealitems d on d.pnh_id=l.pnh_id
+			join king_deals e on e.dealid=d.dealid
+			left outer join king_admin u on u.id=q.updated_by where q.franchise_id='".$fra."'";
+			$count="select COUNT(distinct q.quote_id) as count from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by join king_dealitems d on d.pnh_id=l.pnh_id join king_deals e on e.dealid=d.dealid left outer join king_admin u on u.id=q.updated_by where q.franchise_id='".$fra."'";
+		
+		}else
+		{
+			$sql="select q.*,u.name as updated_by,c.name as created_by,f.franchise_name,l.new_product from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by left outer join king_admin u on u.id=q.updated_by where 1 ";
+			$count="select COUNT(distinct q.quote_id) as count from pnh_quotes q join pnh_m_franchise_info f on f.franchise_id=q.franchise_id JOIN `pnh_quotes_deal_link` l ON l.quote_id=q.quote_id join king_admin c on c.id=q.created_by left outer join king_admin u on u.id=q.updated_by where 1 ";
+		
+		}
+		
+		$from=$to=0;
+		if($s)
+		{
+			$from=strtotime($s);
+			$to=strtotime("23:59:59 $e");
+		}
+		if($fra)
+		{
+			//$sql.=" and  q.franchise_id=? ";
+			//$count.=" and  q.franchise_id=? ";
+		}
+		
+		if($from)
+		{
+			$sql.=" and q.created_on between $from and $to ";
+			$count.=" and  q.created_on between $from and $to  ";
+		}
+		
+		
+		$sql.=" group by q.quote_id ";
+				
+		
+		if($sby == '' || $sby==0)	
+		{
+			$sql.=" order by q.created_on desc,q.updated_on desc";
+			$count.=" order by q.created_on desc,q.updated_on desc";
+		}
+		elseif($sby == 'fid' || $sby == 'status'){
+
+			if($sby == 'fid')
+				$sby = 'f.franchise_name';
+				
+			else if($sby == 'status') 	
+				$sby = '';
+				
+			$sord = $sord=='a'?'asc':'desc'; 
+			$sql.=" order by $sby,$sord,q.created_on desc,q.updated_on desc";
+			$count.=" order by $sby,$sord,q.created_on desc,q.updated_on desc";
+		}
+		
+		$sql.=" limit $pg,20";
+		$title="Franchise Requests";
+		if($fra)
+			$title.=" for '".$this->db->query("select franchise_name from pnh_m_franchise_info where franchise_id=?",$fra)->row()->franchise_name."'";
+		if($from)
+			$title.=" between $s and $e";
+		$data['url']=site_url("admin/pnh_quotes");
+		$data['st_d'] = $s?$s:0;
+		$data['en_d'] = $e?$e:0;
+		
+		$data['pagetitle']=$title;
+		
+		$data['quotes']=$this->db->query($sql)->result_array();
+		$ttl_quotes = $this->db->query($count)->row()->count;
+		$data['brand_res']=$this->db->query("select b.name as brand_name,d.brandid,i.name,i.orgprice as mrp,i.price,q.pnh_id,q.* from pnh_quotes_deal_link q join king_dealitems i on i.pnh_id=q.pnh_id and i.is_pnh=1 join king_deals d on d.dealid = i.dealid join king_brands b on b.id = d.brandid group by brand_name")->result_array();
+		$data['franch_res']=$this->db->query("select a.franchise_id,b.franchise_name from pnh_quotes a join pnh_m_franchise_info b on b.franchise_id=a.franchise_id group by b.franchise_name")->result_array();
+		$data['results']=$ttl_quotes;
+		
+		$data["links"] = $this->_prepare_pagination(site_url("admin/pnh_quotes/".$fid.'/'.$s.'/'.$e.'/'.$brand.'/'.$fra.'/'.$sby.'/'.$sord),$ttl_quotes,20,10);
+		
+		$data['total_rows'] = $ttl_quotes;
+		
+		$data['page_num'] = $pg; 
+		
+		$data['brand']=$brand;
+		$data['fra']=$fra;	
+		$data['page']="pnh_quotes";
+		$this->load->view("admin",$data);
+	}
 }

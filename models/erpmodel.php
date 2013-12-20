@@ -4192,16 +4192,29 @@ courier disable ends
 		*/
 		
 		$this->benchmark->mark('code_start');
-		$ret=$this->db->query("select distinct d.pic,d.is_pnh,e.menuid,i.discount,p.product_id,p.mrp,p.barcode,i.transid,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+		$ret=$this->db->query("select distinct o.time,e.menuid,mnu.name as menuname,d.pic,d.is_pnh,i.discount,p.product_id,p.mrp,p.barcode,i.transid,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
 									from proforma_invoices i 
 									join king_orders o on o.id=i.order_id and i.transid = o.transid 
 									join m_product_deal_link pl on pl.itemid=o.itemid 
 									join m_product_info p on p.product_id=pl.product_id 
 									join king_dealitems d on d.id=o.itemid 
+									join king_deals e on e.dealid=d.dealid
+                                                                        left join pnh_menu as mnu on mnu.id = e.menuid and mnu.status=1
+                                                                        join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
+									where i.invoice_status=1 and i.p_invoice_no in ($inv_no) order by e.menuid DESC")->result_array();
+                
+		$ret2=$this->db->query("select o.time,e.menuid,mnu.name as menuname,d.pic,d.is_pnh,i.discount,i.discount,p.product_id,p.mrp,i.transid,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no 
+									from proforma_invoices i 
+									join king_orders o on o.id=i.order_id and i.transid = o.transid 
+									join products_group_orders pgo on pgo.order_id=o.id 
+									join m_product_group_deal_link pl on pl.itemid=o.itemid 
+									join m_product_info p on p.product_id=pgo.product_id 
+									join king_dealitems d on d.id=o.itemid 
 									join king_deals e on e.dealid=d.dealid 
+									left join pnh_menu as mnu on mnu.id = e.menuid and mnu.status=1
 									join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  
-									where i.p_invoice_no in ($inv_no) and i.invoice_status=1 order by o.sno ")->result_array();
-		$ret2=$this->db->query("select d.pic,d.is_pnh,e.menuid,i.discount,i.discount,p.product_id,p.mrp,i.transid,p.barcode,i.p_invoice_no,p.product_name,o.i_orgprice as order_mrp,o.quantity*pl.qty as qty,d.name as deal,d.dealid,o.itemid,o.id as order_id,i.p_invoice_no from proforma_invoices i join king_orders o on o.id=i.order_id and i.transid = o.transid join products_group_orders pgo on pgo.order_id=o.id join m_product_group_deal_link pl on pl.itemid=o.itemid join m_product_info p on p.product_id=pgo.product_id join king_dealitems d on d.id=o.itemid join king_deals e on e.dealid=d.dealid join shipment_batch_process_invoice_link sb on sb.p_invoice_no = i.p_invoice_no and sb.invoice_no = 0  where i.p_invoice_no in ($inv_no) and i.invoice_status=1 order by o.sno ")->result_array();
+									where i.invoice_status=1 and i.p_invoice_no in ($inv_no) 
+									order by e.menuid DESC")->result_array();
 		$ret=array_merge($ret,$ret2);
 		if(empty($ret))
 			show_error("Proforma Invoice not found or Invoice is already cancelled");
@@ -6741,32 +6754,14 @@ order by p.product_name asc
 			$$i=$this->input->post($i);
 		$inp=array("receipt_type"=>$r_type,"franchise_id"=>$fid,"bank_name"=>$bank,"receipt_amount"=>$amount,"payment_mode"=>$type,"instrument_no"=>$no,"instrument_date"=>strtotime($date),"created_by"=>$user['userid'],"created_on"=>time(),"remarks"=>$msg,"in_transit"=>$transit_type);
 		
-		$amount=$amount;
-		$receipt_no=$no;
-		$rec_date=date('d-M-Y'); 
-		$fran_info=$this->db->query("select franchise_name,login_mobile1,login_mobile2 from pnh_m_franchise_info where franchise_id=? limit 1",$fid)->row_array();
-		$fran_name=$fran_info['franchise_name'];
-		$to=$fran_info['login_mobile1'];
-		$mob2=$fran_info['login_mobile2'];
-		
-		if($type == 0)
-		{
-			$msg="Dear $fran_name ,<br />We are in receipt of Rs $amount through cash, We request you to make all payments by Cheque or DD only for safer transactions";
-		}else if($type == 1){
-			
-			$msg="Dear $fran_name ,<br />
-					We are in receipt of $cash_type_arr[$type] for Rs $amount with no $receipt_no dated $rec_date.<br />
-					Thanks for the payment. (Pls note cheque subject to realization).";
-		}
 		// if cash receipt is added.
 		if($type == 0)
 			$inp['instrument_date'] = strtotime(date('Y-m-d'));
-
+		
 		$this->db->insert("pnh_t_receipt_info",$inp);
 		$recpt_id = $this->db->insert_id();
-		$this->pnh_sendsms($to,$msg,$fid,0,0,0);
-		//$this->erpm->pnh_fran_account_stat($fid,0, $amount,"Topup $no $date");
-
+//		$this->erpm->pnh_fran_account_stat($fid,0, $amount,"Topup $no $date");
+		
 		/*
 		$arr = array($fid,((!$r_type)?2:3),$recpt_id,$r_type,$amount,$msg,1,date('Y-m-d H:i:s'),$user['userid']);
 				$this->db->query("insert into pnh_franchise_account_summary (franchise_id,action_type,receipt_id,receipt_type,credit_amt,remarks,status,created_on,created_by) values(?,?,?,?,?,?,?,?,?)",$arr);

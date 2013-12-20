@@ -453,4 +453,73 @@ order by shipped_on DESC
 ) as g where g.week_day is not null and shipped_on_time!=0 and shipped_by>0 and shipped_on_time between '1383284282' and '1385619678'
 
 # =>5086rows/62ms
-m_employee_info
+
+# Dec_19_2013
+
+select week_day,shipped_on,shipped_on_time,shipped,invoice_no,shipped_by from (
+select DATE_FORMAT(shipped_on,"%w") as week_day,shipped_on,unix_timestamp(shipped_on) as shipped_on_time,shipped,invoice_no,shipped_by
+from shipment_batch_process_invoice_link
+where shipped=1
+order by shipped_on DESC
+) as g where g.week_day is not null and shipped_on_time!=0 and shipped_by>0
+
+# =>65078rows
+
+select * from shipment_batch_process_invoice_link
+select * from batch
+select * from shipment_batch_process
+
+select week_day,shipped_on,shipped_on_time,shipped,invoice_no,shipped_by from (
+select DATE_FORMAT(shipped_on,"%w") as week_day,shipped_on,unix_timestamp(shipped_on) as shipped_on_time,shipped,invoice_no,shipped_by
+from shipment_batch_process_invoice_link
+where shipped=1
+order by shipped_on DESC
+) as g where g.week_day is not null and shipped_on_time!=0 and shipped_by>0
+
+select * from pnh_m_territory_info;
+
+select employee_id,name,email,gender,city,contact_no,if(job_title=4,'TM','BE') as job_role 
+from m_employee_info 
+where job_title in (4,5) and is_suspended=0 order by job_title ASC;
+=>28rows
+
+select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role,ttl.is_active
+from m_employee_info emp
+join m_town_territory_link ttl on ttl.employee_id = emp.employee_id and ttl.is_active=1
+join pnh_m_territory_info t on t.id = ttl.territory_id
+where job_title in (4) and is_suspended=0 #and t.id='1'
+#group by emp.employee_id
+order by job_title ASC;
+
+select * from m_town_territory_link
+
+select  * from m_employee_info w where w.name like '%Kantaraj Naik%' and is_suspended=0;
+
+select * from proforma_invoices
+select * from shipment_batch_process_invoice_link
+
+
+select week_day,shipped_on,shipped_on_time,shipped,invoice_no,shipped_by from (
+select DATE_FORMAT(shipped_on,"%w") as week_day,shipped_on,unix_timestamp(shipped_on) as shipped_on_time,shipped,invoice_no,shipped_by
+from shipment_batch_process_invoice_link
+where shipped=1
+order by shipped_on DESC
+) as g where g.week_day is not null and shipped_on_time!=0 and shipped_by>0 and shipped_on_time between '1383284282' and '1385619678';
+
+
+select week_day,shipped_on_time,shipped,invoice_no,shipped_by from (
+	select DATE_FORMAT(sd.shipped_on,'%w') as week_day,unix_timestamp(sd.shipped_on) as shipped_on_time,sd.shipped,sd.invoice_no,sd.shipped_by
+	from shipment_batch_process_invoice_link sd
+	join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1  
+	join king_transactions tr on tr.transid = pi.transid
+	join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+    where shipped=1 and sd.shipped_by>0 and f.territory_id ='4'
+    order by shipped_on DESC
+) as g where g.week_day is not null and g.shipped_on_time!=0 and g.shipped_on_time between 1383244200 and 1387391400 
+
+#5346 rows => #18008
+
+
+select week_day,shipped,invoice_no,shipped_by from ( select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped,sd.invoice_no,sd.shipped_by from shipment_batch_process_invoice_link sd join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1  join king_transactions tr on tr.transid = pi.transid join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id where shipped=1 and f.territory_id ='3' and unix_timestamp(sd.shipped_on) !=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387391400 order by shipped_on DESC ) as g where g.week_day is not null
+
+# Dec_20_2013
