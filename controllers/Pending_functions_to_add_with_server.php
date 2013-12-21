@@ -404,3 +404,38 @@ WHERE emp.employee_id IS NULL OR emp.name IS NULL ';
 }
 
 ?>
+<script>
+    var obj = {};
+
+$.getJSON("displayjson.php",function (data) {
+    $.each(data.news, function (i, news) {
+        obj[news.title] = news.link;
+    });                      
+});
+
+// later:
+$.each(obj, function (index, value) {
+    alert( index + ' : ' + value );
+});
+In JavaScript, objects fulfill the role of associative arrays. Be aware that objects do not have a defined "sort order" when iterating them (see below).
+
+However, In your case it is not really clear to me why you transfer data from the original object (data.news) at all. Why do you not simply pass a reference to that object around?
+
+You can combine objects and arrays to achieve predictable iteration and key/value behavior:
+
+var arr = [];
+
+$.getJSON("displayjson.php",function (data) {
+    $.each(data.news, function (i, news) {
+        arr.push({
+            title: news.title, 
+            link:  news.link
+        });
+    });                      
+});
+
+// later:
+$.each(arr, function (index, value) {
+    alert( value.title + ' : ' + value.link );
+});
+</script>

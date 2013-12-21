@@ -520,6 +520,72 @@ select week_day,shipped_on_time,shipped,invoice_no,shipped_by from (
 #5346 rows => #18008
 
 
-select week_day,shipped,invoice_no,shipped_by from ( select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped,sd.invoice_no,sd.shipped_by from shipment_batch_process_invoice_link sd join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1  join king_transactions tr on tr.transid = pi.transid join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id where shipped=1 and f.territory_id ='3' and unix_timestamp(sd.shipped_on) !=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387391400 order by shipped_on DESC ) as g where g.week_day is not null
+select distinct week_day,shipped,invoice_no,shipped_by from ( select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped,sd.invoice_no,sd.shipped_by from shipment_batch_process_invoice_link sd join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1  join king_transactions tr on tr.transid = pi.transid join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id where shipped=1 and f.territory_id ='3' and unix_timestamp(sd.shipped_on) !=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 order by shipped_on DESC ) as g where g.week_day is not null
 
 # Dec_20_2013
+
+select week_day,shipped_on,shipped,invoice_no,shipped_by from ( select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped_on,sd.shipped,sd.invoice_no,sd.shipped_by from shipment_batch_process_invoice_link sd join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1  join king_transactions tr on tr.transid = pi.transid join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and f.territory_id ='3' and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 order by shipped_on DESC ) as g where g.week_day is not null
+
+
+select distinct week_day,shipped_on,shipped,invoice_no,shipped_by from (
+select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped_on,sd.shipped,sd.invoice_no,sd.shipped_by
+from shipment_batch_process_invoice_link sd
+join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1
+join king_transactions tr on tr.transid = pi.transid
+join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and f.territory_id ='' and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800
+order by shipped_on DESC
+) as g where g.week_day is not null;
+
+-- select distinct week_day,shipped_on,shipped,invoice_no_str,shipped_by from (
+		    select sd.shipped_on,sd.shipped,group_concat(sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,sd.shipped_by
+		    from shipment_batch_process_invoice_link sd
+		    join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+		    join king_transactions tr on tr.transid = pi.transid
+		    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+		    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 and f.territory_id ='3'
+		   
+			order by shipped_on DESC
+--                                                 ) as g where g.week_day is not null;
+
+
+select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,count(distinct b.invoice_no) as ttl_invs
+                                                               from pnh_m_manifesto_sent_log a
+                                                               join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 #$cond_join
+                                                               join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+                                                               join king_transactions d on d.transid = c.transid 
+                                                               join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
+                                                               where date(sent_on) between '2013-11-01 17:27:17' and '2013-11-27 18:44:22' and dispatch_id != 0  and f.territory_id='3'
+                                                       group by d.franchise_id order by f.territory_id asc
+
+
+## idea 1
+select f.territory_id,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,sd.shipped_by
+		    from pnh_m_manifesto_sent_log man
+			join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+		    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+		    join king_transactions tr on tr.transid = pi.transid
+		    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+		    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 #and f.territory_id ='3'
+			group by f.territory_id
+			order by f.territory_id DESC
+
+
+-- idea 2
+select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,emp.employee_id		    
+		from pnh_m_manifesto_sent_log man
+			join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+		    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+		    join king_transactions tr on tr.transid = pi.transid
+		    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+ 			join m_town_territory_link ttl on ttl.territory_id = f.territory_id and is_active=1
+			join m_employee_info emp on emp.employee_id = ttl.employee_id
+
+
+			join pnh_m_territory_info t on t.id = f.territory_id
+                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 #and f.territory_id ='3'
+			group by f.territory_id
+			order by f.territory_id DESC;
+-- Outout: 19rows/312ms
+
+select * from m_town_territory_link

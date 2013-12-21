@@ -6,40 +6,73 @@
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     //==========================================================
+        function get_territory_managers($territory_id) {
+            $rdata['result'] = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
+                        from m_employee_info emp
+                        join m_town_territory_link ttl on ttl.employee_id = emp.employee_id 
+                        join pnh_m_territory_info t on t.id = ttl.territory_id
+                        where job_title = 4 and is_suspended=0 and t.id=?
+                        order by job_title ASC",$territory_id)->result_array();## and ttl.is_active=1 group by emp.employee_id
+                echo ''.  json_encode($rdata);
+        }
+        function get_town_executives($territory_id) { //,$employee_id
+            $rdata['result'] = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
+                        from m_employee_info emp
+                        join m_town_territory_link ttl on ttl.employee_id = emp.employee_id 
+                        join pnh_m_territory_info t on t.id = ttl.territory_id
+                        where job_title = 5 and is_suspended=0 and t.id=?
+
+                        order by job_title ASC",array($territory_id))->result_array();// #group by emp.employee_id # and ttl.is_active=1and ttl.parent_emp_id=? ,$employee_id
+            echo ''.  json_encode($rdata);
+        }
+        
         /**
          * Get acknowledgement list for given territory, and between dates range
          */
-        function jx_get_acknowledgement_list($territory_id) {
+        function jx_get_acknowledgement_list() {
             $user = $this->erpm->auth(true,true);
             
-            $sel_territory = $territory_id;//$this->input->post('sel_territory');
+            $cond=$cond_join='';
+            
+            $sel_territory = $this->input->post('sel_territory');
+            $territory_id = $this->input->post('territory_id');
+            
+            if($sel_territory != '00') {
+                $territory_id='';
+                $cond .= ' and f.territory_id ='.$sel_territory.' ';
+            }
+            elseif($territory_id != '')  {
+                $cond .= ' and f.territory_id ='.$territory_id.' ';
+            }
+            
             $date_from =  $this->input->post('date_from');
             $date_to = $this->input->post('date_to');
-            /*$consider_printed_ack = $this->input->post('consider_printed_ack');
-            if($consider_printed_ack != 'y') { $cond_join = ' and b.is_acknowlege_printed = 0 '; }*/
+            /*$consider_printed_ack = $this->input->post('consider_printed_ack');if($consider_printed_ack != 'y') { $cond_join = ' and b.is_acknowlege_printed = 0 '; }*/
             
-            $output=array();$cond=$cond_join='';
+            $output=array();
             
             if($date_from == '' || $date_to == '') {
                 $output = array("status"=>"fail","response"=>"Please specify date");
             }
             else {
+                    //$sdate = strtotime($date_from);
+                   // $edate = strtotime($date_to);
 
-                    $sdate = strtotime($date_from);
-                    $edate = strtotime($date_to);
-                    $rslt_arr = $this->db->query("select week_day,shipped,invoice_no,shipped_by from (
-                                                    select DATE_FORMAT(sd.shipped_on,'%w') as week_day,sd.shipped,sd.invoice_no,sd.shipped_by
-                                                    from shipment_batch_process_invoice_link sd
-                                                    join proforma_invoices pi on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
-                                                    join king_transactions tr on tr.transid = pi.transid
-                                                    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
-                                                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and f.territory_id =? and unix_timestamp(sd.shipped_on) between ? and ?
-                                                    order by shipped_on DESC
-                                                    ) as g where g.week_day is not null",array($territory_id,$sdate,$edate))->result_array();
-                    $output['result'] = $rslt_arr;
                     $output['status'] = "success";
-                    $output['lastqry'] = $this->db->last_query();
-                    
+                    $output['result'] = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs		    
+                                                        from pnh_m_manifesto_sent_log man
+                                                                join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                                            join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                            join king_transactions tr on tr.transid = pi.transid
+                                                            join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                                join pnh_m_territory_info t on t.id = f.territory_id
+                                                            where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and date(sent_on) between ? and ? $cond
+                                                        group by f.territory_id
+                                                        order by f.territory_id DESC",array($date_from,$date_to))->result_array();
+
+                    $output['other'] = $date_from.''.$date_to;
+//                    $output['lastqry'] = $this->db->last_query();
+
             }
             echo json_encode($output);
         }
@@ -112,12 +145,12 @@ class Reservation extends Voucher {
                         }*/
                 }
                 else {
-                    $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
-                    $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
-                    
-                    
-                    $data['page']="gen_invoice_acknowledgement";
-                    $this->load->view("admin",$data);
+//                      $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+//                    $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
+
+
+                        $data['page']="gen_invoice_acknowledgement";
+                        $this->load->view("admin",$data);
                 }
          }
     //==========================================================
