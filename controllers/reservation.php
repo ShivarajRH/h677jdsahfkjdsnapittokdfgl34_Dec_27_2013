@@ -7,23 +7,24 @@ include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     //==========================================================
         function get_territory_managers($territory_id) {
-            $rdata['result'] = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
+            $rdata = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
                         from m_employee_info emp
                         join m_town_territory_link ttl on ttl.employee_id = emp.employee_id 
                         join pnh_m_territory_info t on t.id = ttl.territory_id
                         where job_title = 4 and is_suspended=0 and t.id=?
                         order by job_title ASC",$territory_id)->result_array();## and ttl.is_active=1 group by emp.employee_id
-                echo ''.  json_encode($rdata);
+//                echo ''.  json_encode($rdata);
+                return $rdata;
         }
         function get_town_executives($territory_id) { //,$employee_id
-            $rdata['result'] = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
+            $rdata = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
                         from m_employee_info emp
                         join m_town_territory_link ttl on ttl.employee_id = emp.employee_id 
                         join pnh_m_territory_info t on t.id = ttl.territory_id
                         where job_title = 5 and is_suspended=0 and t.id=?
-
                         order by job_title ASC",array($territory_id))->result_array();// #group by emp.employee_id # and ttl.is_active=1and ttl.parent_emp_id=? ,$employee_id
-            echo ''.  json_encode($rdata);
+//             $rdata['result'] = echo ''.  json_encode($rdata);
+            return $rdata;
         }
         
         /**
@@ -59,7 +60,8 @@ class Reservation extends Voucher {
                    // $edate = strtotime($date_to);
 
                     $output['status'] = "success";
-                    $output['result'] = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs		    
+//                    $output['result'] = 
+                    $rslt =$this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs		    
                                                         from pnh_m_manifesto_sent_log man
                                                                 join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
                                                             join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
@@ -69,7 +71,12 @@ class Reservation extends Voucher {
                                                             where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and date(sent_on) between ? and ? $cond
                                                         group by f.territory_id
                                                         order by f.territory_id DESC",array($date_from,$date_to))->result_array();
-
+                    foreach($rslt as $row) {
+                            $row['terr_info'][] = $rslt;
+                            $row['terr_manager_info'][] = $rslt['territory_id'];
+                            $row['terr_executive_info'][] = $rslt['territory_id'];
+                    }
+                    
                     $output['other'] = $date_from.''.$date_to;
 //                    $output['lastqry'] = $this->db->last_query();
 
@@ -145,10 +152,32 @@ class Reservation extends Voucher {
                         }*/
                 }
                 else {
-//                      $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+                      $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
 //                    $data['pnh_towns']=$this->db->query("select id,town_name from pnh_towns order by town_name")->result_array();
-
-
+                    $rdata = array();
+                    $date_from='2013-11-01';
+                    $date_to='2013-12-21';
+                    $rslt = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped
+                        ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
+                                                    from pnh_m_manifesto_sent_log man
+                                                            join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                                        join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                        join king_transactions tr on tr.transid = pi.transid
+                                                        join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                            join pnh_m_territory_info t on t.id = f.territory_id
+                                                        where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and date(sent_on) between ? and ? $cond
+                                                    group by f.territory_id
+                                                    order by f.territory_id DESC",array($date_from,$date_to))->result_array();
+                    $data['terr_info'] = $rslt;
+                    
+                    foreach($rslt as $row) {
+                            
+                            $data['terr_manager_info'][$row['territory_id']] = $this->get_territory_managers($row['territory_id']);
+                            $data['busi_executive_info'][$row['territory_id']] = $this->get_town_executives($row['territory_id']);
+                    }
+                    
+//                    echo '<pre>';print_r($data);die();
+                    
                         $data['page']="gen_invoice_acknowledgement";
                         $this->load->view("admin",$data);
                 }

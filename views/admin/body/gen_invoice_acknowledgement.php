@@ -31,8 +31,7 @@
         overflow: hidden;
         width: 150px;
     }
-.temp { display: none; }
-.loading { display: block; padding-left: 20px;}
+    .loading { display: block; padding-left: 20px;}
 </style>
 <div class="page_wrap container">
 	
@@ -49,7 +48,7 @@
                 </div>
                 
 		<div class="page_action_buttons fl_right" align="right">
-                    <form id="trans_date_form" name="trans_date_form" method="post" action="<?php //echo site_url("admin/print_invoice_acknowledgementbydate"); ?>">
+                    <form id="trans_date_form" name="trans_date_form" method="post" action="">
                         <table cellpadding="5" cellspacing="0" border="0">
 
                             <tr>
@@ -68,7 +67,59 @@
 	</div>
 	<div style="clear:both">&nbsp;</div>
 	<div class="page_content">
-            <div class="block_list_acknowledgements"></div>
+            <div class="block_list_acknowledgements">
+                    <form action='' name='' id=''>
+                        <table class='datagrid' cellspacing='4' cellpadding='4' width='100%'>
+                            <tr>
+                                <th>Slno</th>
+                                <th>Territory Name</th>
+                                <th>
+                                    <abbr title='Territory Manager'>Territory Manager</abbr>
+                                </th>
+                                <th>
+                                    <abbr title='Business Executive'>Business Executives</abbr>
+                                </th>
+                                <th><< 9/12/2013 - 11/12/2013</th>
+                                <th> 9/12/2013 - 11/12/2013</th>
+                                <th> 9/12/2013 - 11/12/2013 >></th>
+                                <th><input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'>
+                                </th>
+                            </tr>
+                            <?php 
+                            foreach($terr_info as $i=>$terr) { ?>
+                                <tr>
+                                    <td><?=++$i;?></td>
+                                    <td><?=$terr['territory_name'];?></td>
+                                    <td>
+                                        <?php 
+                                            $new_arr = $terr_manager_info[$terr['territory_id']];
+                                            foreach($new_arr as $tm) { ?>
+                                                    <div class="terr_manager"><?=$tm['name'];?></div>
+                                        <?php } ?>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                            $new_arr2 = $busi_executive_info[$terr['territory_id']];
+                                            foreach($new_arr2 as $be) { ?>
+                                                    <div class="town_executive"><?=$be['name'];?></div>
+                                        <?php } ?>
+                                    </td>
+                                    <td id='load_franchise_order_acks_block_<?=$terr['territory_id']?>' class='load_franchise_order_acks_block'></td>
+                                    <td><?=$terr['ttl_franchises']; ?>  franchise, <?=$terr['ttl_invs'];?> items</td>
+                                    <td>
+                                        <!--2 franchise, 50 items, 35,000,00 Rs-->
+                                    </td>
+                                    <td><input type='checkbox' name='' id='' class='chk_terr_print'></td>
+                                </tr>
+
+                            <?php } ?>
+
+                                <tr>
+                                    <td colspan='8' align='right'><input type='submit' name='' id='' class='btn_generate_inv' value='Generate'></td>
+                                </tr>
+                            </table>
+                   </form>
+            </div>
         </div>
         
 </div>
@@ -126,94 +177,17 @@
             var date_from = $("#date_from").val();
             var date_to = $("#date_to").val();
             var postData = {sel_territory:sel_territory,date_from:date_from,date_to:date_to,consider_printed_ack:consider_printed_ack};
-//             print(postData);
-             
-            
-            $(".block_list_acknowledgements").html("<div class='loading'>Loading...</div>");
-            $.post(site_url+'admin/jx_get_acknowledgement_list/',postData,function(resp) {
-                
-                var rdata='';
-                
-                if(resp.status == "success") {
-                    rdata += "<form action='' name='' id=''>\n\
-                                        <table class='datagrid' cellspacing='4' cellpadding='4' width='100%'>\n\
-                                            <tr>\n\
-                                                <th>Slno</th>\n\
-                                                <th>Territory Name</th>\n\
-                                                <th>\n\
-                                                    <abbr title='Territory Manager'>Territory Manager</abbr>\n\
-                                                </th>\n\
-                                                <th>\n\
-                                                    <abbr title='Business Executive'>Business Executives</abbr>\n\
-                                                </th>\n\
-                                                <th><< 9/12/2013 - 11/12/2013</th>\n\
-                                                <th> 9/12/2013 - 11/12/2013</th>\n\
-                                                <th> 9/12/2013 - 11/12/2013 >></th>\n\
-                                                <th>\n\<input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'>\n\
-                                                </th>\n\
-                                            </tr>";
 
-                            $.each(resp.result,function(i,row) {
-
-                                    rdata += "<tr>\n\
-                                            <div class='temp' id='temp_data_"+row.territory_id+"'></div>\n\
-                                            <td>"+(++i)+"</td>\n\
-                                            <td>"+row.territory_name+"</td>\n\
-                                            <td>";
-                                            
-                                            var territory_id=row.territory_id;
-                                            
-                                            $.post(site_url+'admin/get_territory_managers/'+territory_id,{},function(terr_managers_arr){
-                                                var ab='';
-                                                $.each(terr_managers_arr.result,function(j,terr_managers) {
-//                                                    print(terr_managers.name);
-                                                    ab += '<div class="terr_manager">'+terr_managers.name+'</div>';
-                                                    $("#temp_data_"+row.territory_id).html(ab);
-                                                });
-                                               
-                                               
-                                            },'json');
-                                            
-                                           rdatra += ($("#temp_data_"+row.territory_id).html());
-                                            
-
-                                    rdata += "</td>\n\
-                                        <td>";
-                                                //print($.post(site_url+'admin/get_town_executives/'+territory_id,{},function(town_executives_arr){},'json'));
-//
-//                                                    $.each(town_executives_arr,function(j,town_executives) {
-//                                                    print(town_executives.name);
-//                                                        rdata += '<div class="town_executive">'+town_executives.name+'</div>';
-//                                                    });
-
-                                                
-                                        
-                                     rdata +="</td>\n\
-                                                <td id='load_franchise_order_acks_block_'+terr['id']+' class='load_franchise_order_acks_block'></td>\n\
-                                                <td>1 franchise, 50 items, 35,000,00 Rs</td>\n\
-                                                <td>2 franchise, 50 items, 35,000,00 Rs</td>\n\
-                                                <td><input type='checkbox' name='' id='' class='chk_terr_print'></td>\n\
-                                            </tr>\n\
-                                            <tr>\n\
-                                                <td colspan='8' align='right'><input type='submit' name='' id='' class='btn_generate_inv' value='Generate'></td>\n\
-                                            </tr>";
-                            });
-                            
-                           
-                        rdata +="</table>\n\
-                           </form>";
-                }
+            //$(".block_list_acknowledgements").html("<div class='loading'>Loading...</div>");
+            //$.post(site_url+'admin/jx_get_acknowledgement_list/',postData,function(resp) {
+                //var rdata='';
+                //if(resp.status == "success") {
+                   
+                /*}
                 else {
                     rdata +="Error : <b>"+resp.response+"<b>";
-                }
-
-                $(".block_list_acknowledgements").html(rdata);
-                    
-                        
-            },'json');
-             
-            
+                }*/
     }
-
     loadAcknowledgementList(0);
+// ]]>
 </script>

@@ -589,3 +589,266 @@ select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.
 -- Outout: 19rows/312ms
 
 select * from m_town_territory_link
+
+# Dec_21_2013
+
+select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(distinct sd.invoice_no) as invoice_no_str
+			,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises
+		from pnh_m_manifesto_sent_log man
+			join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+		    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+		    join king_transactions tr on tr.transid = pi.transid
+		    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+ 			join m_town_territory_link ttl on ttl.territory_id = f.territory_id and is_active=1
+			join m_employee_info emp on emp.employee_id = ttl.employee_id
+
+
+			join pnh_m_territory_info t on t.id = f.territory_id
+                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 #and f.territory_id ='3'
+			group by f.territory_id
+			order by f.territory_id DESC;
+
+
+#================================================================================================
+alter table king_invoice add column `paid_status` tinyint(11) DEFAULT '0' after ref_dispatch_id;
+alter table king_dealitems add column `billon_orderprice` tinyint(1) DEFAULT '0' after nyp_price;
+alter table king_orders add column `billon_orderprice` tinyint(1) DEFAULT '0' after note;
+alter table king_orders add column `is_paid` tinyint(1) DEFAULT '0' after offer_refid;
+alter table king_orders add column `partner_order_id` varchar(30) DEFAULT '0' after offer_refid;
+
+CREATE TABLE `king_partner_settelment_filedata` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `partner_id` int(11) DEFAULT NULL,
+  `payment_uploaded_id` bigint(20) DEFAULT '0',
+  `file_name` varchar(255) DEFAULT NULL,
+  `orderid` bigint(20) DEFAULT '0',
+  `logged_on` bigint(20) DEFAULT '0',
+  `processed_by` tinyint(2) DEFAULT '0',
+  PRIMARY KEY (`id`)
+);
+
+alter table king_tmp_orders change brandid `brandid` bigint(20) DEFAULT '0',change vendorid `vendorid` bigint(20) DEFAULT '0';
+
+alter table king_tmp_orders add column `partner_order_id` varchar(30) DEFAULT '0' after user_note;
+alter table king_tmp_orders add column `partner_reference_no` varchar(100) DEFAULT '0' after partner_order_id;
+
+alter table king_transactions change partner_reference_no `partner_reference_no` varchar(100) NOT NULL;
+alter table king_transactions add column `credit_days` int(11) DEFAULT '0' after trans_grp_ref_no;
+alter table king_transactions add column `credit_remarks` varchar(255) DEFAULT NULL after credit_days;
+
+alter table m_courier_info add column `ref_partner_id` int(11) DEFAULT '0' after remarks;
+
+
+CREATE TABLE `m_partner_settelment_details` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `order_id` bigint(20) DEFAULT NULL,
+  `order_value` double DEFAULT NULL,
+  `shipping_charges` double DEFAULT NULL,
+  `payment_id` varchar(255) DEFAULT NULL,
+  `payment_amount` double DEFAULT NULL,
+  `payment_date` date DEFAULT NULL,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_on` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+alter table m_product_info add column `corr_status` tinyint(1) DEFAULT '0' after modified_by;
+alter table m_product_info add column `corr_updated_on` datetime DEFAULT NULL after corr_status;
+
+CREATE TABLE `m_product_update_log` (
+  `id` bigint(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) DEFAULT '0',
+  `type` varchar(255) DEFAULT NULL,
+  `message` text,
+  `logged_by` int(11) DEFAULT '0',
+  `logged_on` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+alter table m_vendor_brand_link change applicable_from `applicable_from` bigint(20) DEFAULT NULL;
+alter table m_vendor_brand_link change applicable_till `applicable_till` bigint(20) DEFAULT NULL;
+
+
+CREATE TABLE `pnh_m_creditlimit_onprepaid` (
+  `id` bigint(11) NOT NULL AUTO_INCREMENT,
+  `franchise_id` bigint(12) DEFAULT NULL,
+  `book_id` bigint(12) DEFAULT NULL,
+  `book_value` bigint(12) DEFAULT NULL,
+  `receipt_id` bigint(12) DEFAULT NULL,
+  `credit_limit_on_prepaid` double DEFAULT NULL,
+  `created_on` datetime DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `valid_till` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+
+CREATE TABLE `pnh_m_fran_security_cheques` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `franchise_id` int(11) DEFAULT '0',
+  `bank_name` varchar(255) DEFAULT NULL,
+  `cheque_no` varchar(30) DEFAULT NULL,
+  `cheque_date` date DEFAULT NULL,
+  `collected_on` date DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `returned_on` date DEFAULT NULL,
+  `created_on` datetime DEFAULT NULL,
+  `modified_on` datetime DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `modified_by` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+alter table pnh_m_franchise_info change store_open_time `store_open_time` time DEFAULT NULL;
+alter table pnh_m_franchise_info change store_close_time `store_close_time` time DEFAULT NULL;
+# X
+alter table pnh_m_franchise_info add column `purchase_limit` double DEFAULT '0' after reason;
+alter table pnh_m_franchise_info add column `new_credit_limit` double DEFAULT '0' after purchase_limit;
+
+alter table pnh_m_manifesto_sent_log add column `lrno_update_refid` bigint(11) DEFAULT '0' after lrno;
+
+
+CREATE TABLE `pnh_m_states` (
+  `state_id` int(11) NOT NULL AUTO_INCREMENT,
+  `state_name` varchar(255) DEFAULT NULL,
+  `created_on` datetime DEFAULT NULL,
+  `created_by` int(11) DEFAULT '0',
+  PRIMARY KEY (`state_id`)
+);
+
+alter table pnh_m_territory_info add column `state_id` bigint(11) DEFAULT '0' after id;
+
+alter table pnh_menu add column `voucher_credit_default_margin` double DEFAULT '0' after default_margin;
+
+
+CREATE TABLE `pnh_menu_margin_track` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `menu_id` bigint(20) DEFAULT NULL,
+  `default_margin` double DEFAULT NULL,
+  `balance_discount` double DEFAULT NULL,
+  `balance_amount` bigint(20) DEFAULT NULL,
+  `loyality_pntvalue` double DEFAULT NULL,
+  `created_by` int(12) DEFAULT NULL,
+  `created_on` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+alter table pnh_sms_log_sent add column `no_ofboxes` bigint(20) DEFAULT '0' after ticket_id;
+
+CREATE TABLE `pnh_town_courier_priority_link` (
+  `id` bigint(11) NOT NULL AUTO_INCREMENT,
+  `town_id` int(11) DEFAULT '0',
+  `courier_priority_1` int(5) DEFAULT '0',
+  `courier_priority_2` int(5) DEFAULT '0',
+  `courier_priority_3` int(5) DEFAULT '0',
+  `delivery_hours_1` int(3) DEFAULT '0',
+  `delivery_hours_2` int(3) DEFAULT '0',
+  `delivery_hours_3` int(3) DEFAULT '0',
+  `delivery_type_priority1` int(3) DEFAULT '0',
+  `delivery_type_priority2` int(3) DEFAULT '0',
+  `delivery_type_priority3` int(3) DEFAULT '0',
+  `is_active` tinyint(1) DEFAULT '0',
+  `created_on` datetime DEFAULT NULL,
+  `created_by` int(11) DEFAULT '0',
+  `modified_on` datetime DEFAULT NULL,
+  `modified_by` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `t_billedmrp_change_log` (
+  `id` bigint(11) NOT NULL AUTO_INCREMENT,
+  `invoice_no` bigint(11) DEFAULT '0',
+  `p_invoice_no` int(11) DEFAULT '0',
+  `packed_mrp` double DEFAULT NULL,
+  `billed_mrp` double DEFAULT NULL,
+  `remarks` text,
+  `logged_on` datetime DEFAULT NULL,
+  `logged_by` int(5) DEFAULT '0',
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `t_imei_update_log` (
+  `id` bigint(11) NOT NULL AUTO_INCREMENT,
+  `imei_no` varchar(255) DEFAULT NULL,
+  `product_id` bigint(11) DEFAULT '0',
+  `stock_id` bigint(11) DEFAULT '0',
+  `grn_id` bigint(11) DEFAULT '0',
+  `alloted_order_id` bigint(11) DEFAULT '0',
+  `alloted_on` datetime DEFAULT NULL,
+  `invoice_no` bigint(11) DEFAULT '0',
+  `return_id` bigint(11) DEFAULT '0',
+  `is_cancelled` tinyint(1) DEFAULT '0',
+  `cancelled_on` datetime DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT '0',
+  `logged_on` datetime DEFAULT NULL,
+  `logged_by` int(11) DEFAULT '0',
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `t_pnh_creditlimit_track` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `franchise_id` bigint(20) DEFAULT NULL,
+  `payment_modetype` tinyint(1) DEFAULT NULL COMMENT '1:postpaid,2:prepaid using vouchers,3:prepaid by holding Acounts',
+  `prepaid_credit_id` double DEFAULT NULL,
+  `reconsolation_rid` bigint(11) DEFAULT NULL,
+  `order_id` bigint(12) DEFAULT NULL,
+  `transid` varchar(255) DEFAULT NULL,
+  `amount` double DEFAULT NULL,
+  `prepaid_creditlimit` double DEFAULT NULL,
+  `purchase_limit` double DEFAULT '0',
+  `init` bigint(20) DEFAULT NULL,
+  `actiontime` bigint(20) DEFAULT NULL,
+  `paid` double DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+CREATE TABLE `t_prepaid_credit_receipt_track` (
+  `id` bigint(11) NOT NULL AUTO_INCREMENT,
+  `receipt_id` bigint(11) DEFAULT NULL,
+  `receipt_amount` double DEFAULT '0',
+  `prepaid_credit` double DEFAULT '0',
+  `franchise_id` bigint(11) DEFAULT NULL,
+  `receipt_realizedon` bigint(20) DEFAULT '0',
+  PRIMARY KEY (`id`)
+);
+
+
+CREATE TABLE `m_batch_config` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `batch_grp_name` varchar(150) DEFAULT NULL,
+  `assigned_menuid` int(11) DEFAULT '0',
+  `batch_size` int(11) DEFAULT '0',
+  `group_assigned_uid` varchar(120) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+
+alter table shipment_batch_process add column `assigned_userid` int(11) DEFAULT '0' after status;
+alter table shipment_batch_process add column `territory_id` int(11) DEFAULT '0' after assigned_userid;
+alter table shipment_batch_process add column `batch_configid` int(11) DEFAULT '0' after territory_id;
+
+CREATE TABLE `t_exotel_agent_status` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `callsid` varchar(255) DEFAULT NULL,
+  `from` varchar(50) DEFAULT NULL,
+  `dialwhomno` varchar(255) DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  `created_on` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);
+#================================================================
+
+select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(distinct sd.invoice_no) as invoice_no_str
+			,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises
+		from pnh_m_manifesto_sent_log man
+			join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+		    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+		    join king_transactions tr on tr.transid = pi.transid
+		    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+ 			join m_town_territory_link ttl on ttl.territory_id = f.territory_id and is_active=1
+			join m_employee_info emp on emp.employee_id = ttl.employee_id
+
+
+			join pnh_m_territory_info t on t.id = f.territory_id
+                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 #and f.territory_id ='3'
+			group by f.territory_id
+			order by f.territory_id DESC;
