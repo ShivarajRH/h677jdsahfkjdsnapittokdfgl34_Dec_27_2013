@@ -932,35 +932,35 @@ class Cron extends Controller{
 		
 		$this->cron_log(17,1);
 		
-		$current_balance_list_res=$this->db->query("SELECT distinct franchise_id,franchise_name,b.class_name,current_balance,login_mobile1,login_mobile2
-													FROM pnh_m_franchise_info a
-													JOIN pnh_m_class_info b ON b.id= a.class_id
-													WHERE is_suspended=0");
+		$current_balance_list_res=$this->db->query("SELECT distinct franchise_id,franchise_name,current_balance,login_mobile1,login_mobile2 FROM pnh_m_franchise_info a WHERE is_suspended !=1 ");
+		
 		if($current_balance_list_res->num_rows())
 		{
 			foreach($current_balance_list_res->result_array() as $current_balance_det)
 			{
 				$login_mobile1=$current_balance_det['login_mobile1'];
-				$class_name=$current_balance_det['class_name'];
 				$franchise_name=$current_balance_det['franchise_name'];
 				$balance=$current_balance_det['current_balance'];
 				
-				$acc_statement = $this->erpm->get_franchise_account_stat_byid($current_balance_det['franchise_id']);	
+				$acc_statement = $this->erpm->get_franchise_account_stat_byid($current_balance_det['franchise_id']);
+				$net_payable_amt = $acc_statement['net_payable_amt'];
+				$credit_note_amt = $acc_statement['credit_note_amt'];
 				$shipped_tilldate = $acc_statement['shipped_tilldate'];
 				$paid_tilldate = $acc_statement['paid_tilldate'];
-				$uncleared_payment = $acc_statement['uncleared_payment'];		
+				$uncleared_payment = $acc_statement['uncleared_payment'];
+				$cancelled_tilldate = $acc_statement['cancelled_tilldate'];
 				$ordered_tilldate = $acc_statement['ordered_tilldate'];
-				$current_balance = $acc_statement['current_balance'];
-			 
-			 	 if($current_balance > -2000)
-			 	 		continue ;
-					
-				$current_balance = 	formatInIndianStyle($current_balance);
-				$uncleared_payment = formatInIndianStyle($uncleared_payment);
+				$not_shipped_amount = $acc_statement['not_shipped_amount'];
+				$acc_adjustments_val = $acc_statement['acc_adjustments_val'];
 				
-				$sms_msg = "Dear $franchise_name,Your current balance is Rs.$current_balance,under clearance Rs $uncleared_payment ,please make timely payments to avoid suspension.Happy Shopping - PayNearHome";
+				
+				$current_balance = $shipped_tilldate-($paid_tilldate+$acc_adjustments_val+$credit_note_amt);
+				
+			 	$current_balance = 	format_price($current_balance);
+				$uncleared_payment = format_price($uncleared_payment);
+				
+				$sms_msg = "Dear $franchise_name,Your current balance is Rs.$current_balance,amount under clearance is Rs $uncleared_payment ,please make timely payments to avoid hold up in supplies.Happy Shopping - Store King";
 				$this->erpm->pnh_sendsms($login_mobile1,$sms_msg,$current_balance_det['franchise_id'],0,'CUR_BALANCE');	
-					
 				
 			}
 	

@@ -2469,6 +2469,8 @@ where (b.dispatch_id = ? or c.ref_dispatch_id = ? )
 
 
 		$res = $this->db->query($sql,array($from,$to,$is_active));
+		
+		//echo $this->db->last_query();
 
 		
 
@@ -5528,6 +5530,8 @@ Brands Under this category please add!!!</span></div>';
 			$this->load->dbutil();
 			echo $this->dbutil->csv_from_result($res); 
 		}
+
+		
 		
 		 
 	}

@@ -337,9 +337,6 @@ select dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b
 
 select * from pnh_m_manifesto_sent_log
 
-select unix_timestamp('2013-10-20') as utime;
-select from_unixtime(1382207400) as time;
-
 
 #Dec_16_2013
 
@@ -852,3 +849,55 @@ select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.
                     where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and unix_timestamp(sd.shipped_on) between 1383244200 and 1387477800 #and f.territory_id ='3'
 			group by f.territory_id
 			order by f.territory_id DESC;
+
+select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,group_concat(distinct sd.invoice_no) as invoice_no_str,count(tr.franchise_id) as ttl_franchises
+			,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises
+		from pnh_m_manifesto_sent_log man
+			join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+		    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+		    join king_transactions tr on tr.transid = pi.transid
+		    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+ 			join m_town_territory_link ttl on ttl.territory_id = f.territory_id and is_active=1
+			join m_employee_info emp on emp.employee_id = ttl.employee_id
+			join pnh_m_territory_info t on t.id = f.territory_id
+                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and date(man.sent_on) between from_unixtime('1383244200') and from_unixtime('1387477800') #and f.territory_id ='3'
+			group by f.territory_id
+			order by f.territory_id DESC;
+
+select group_concat(man.sent_invoices) grp_invs from pnh_m_manifesto_sent_log man where date(man.sent_on) between from_unixtime('1383244200') and from_unixtime('1387477800')
+
+select  from pnh_m_manifesto_sent_log man
+join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+where date(man.sent_on) between from_unixtime('1383244200') and from_unixtime('1387477800')
+
+
+select m_town_territory_link
+
+select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped
+                    ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
+                                                from pnh_m_manifesto_sent_log man
+                                                        join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                                    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                    join king_transactions tr on tr.transid = pi.transid
+                                                    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                        join pnh_m_territory_info t on t.id = f.territory_id
+                                                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and unix_timestamp(sent_on) between 1387564200 and 1387391400 
+                                                group by f.territory_id
+                                                order by t.territory_name ASC;
+select from_unixtime('1383244200')
+
+#=======================================================================================================
+select unix_timestamp('2013-10-20') as utime;
+select from_unixtime(1382207400) as time;
+#=======================================================================================================
+
+select group_concat(man.sent_invoices) grp_invs
+from pnh_m_manifesto_sent_log man 
+join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+join king_transactions tr on tr.transid = pi.transid
+join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+join pnh_m_territory_info t on t.id = f.territory_id
+where date(man.sent_on) between from_unixtime('1383244200') and from_unixtime('1387477800') and f.territory_id='3';
+
+select * from pnh_m_manifesto_sent_log

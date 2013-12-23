@@ -1,36 +1,13 @@
 <style>
     .leftcont { display: none;}
-    table.datagridsort tbody td { padding: 4px; }
+    /*table.datagridsort tbody td { padding: 4px; }
     .datagrid td { padding: 1px; }
-    /*.datagrid td:hover { background-color: rgb(248, 249, 250) !important; }*/
+    .datagrid td:hover { background-color: rgb(248, 249, 250) !important; }
     .datagrid th { background: #443266;color: #C3C3E5; }
     .subdatagrid {    width: 100%; }
-    .subdatagrid th {
-        padding: 4px 0 2px 4px !important;
-        font-size: 11px !important;
-        color: #130C09;
-        background-color: rgba(112, 100, 151, 0.51);
-    }
-    .subdatagrid td {
-            /*font-size: 11px !important;*/
-            padding: 4px !important;
-    }
-    .terr_manager {
-        margin: 5px;
-        padding: 5px 8px;
-        background-color: #EFF0F5;
-        color: #09010A;
-        overflow: hidden;
-        width: 150px;
-    }
-    .town_executive {
-        margin: 5px;
-        padding: 5px 8px;
-        background-color: #EFF0F5;
-        color: #09010A;
-        overflow: hidden;
-        width: 150px;
-    }
+    .subdatagrid th {padding: 4px 0 2px 4px !important;font-size: 11px !important;color: #130C09;background-color: rgba(112, 100, 151, 0.51);}
+    .subdatagrid td {padding: 4px !important;}*/
+    
     .loading { display: block; padding-left: 20px;}
 </style>
 <div class="page_wrap container">
@@ -47,15 +24,15 @@
                     </select>
                 </div>
                 
-		<div class="page_action_buttons fl_right" align="right">
-                    <form id="trans_date_form" name="trans_date_form" method="post" action="">
+		<div class="page_action_buttons fl_left" align="right">
+                    <form id="trans_date_form" name="trans_date_form" method="post" action="<?php echo site_url("admin/print_invoice_acknowledgementbydate"); ?>">
                         <table cellpadding="5" cellspacing="0" border="0">
 
                             <tr>
-                                <td><label for="date_from">From:</label></td>
-                                <td><input type="text" id="date_from" name="date_from" value="<?php echo date('Y-m-01',time()-60*60*24*7*4);// ?>" size="10" /></td>
-                                <td><label for="date_to">To:</label></td>
-                                <td><input type="text" id="date_to" name="date_to" value="<?php echo date('Y-m-d',time())?>"  size="10"/></td>
+                                <td><label for="date_from">From:</label></td><?php //date('Y-m-01',time()-60*60*24*7*4); ?>
+                                <td><input type="text" id="date_from" name="date_from" value="<?php echo $date_from; ?>" size="10" /></td>
+<!--                                <td><label for="date_to">To:</label></td>
+                                <td><input type="text" id="date_to" name="date_to" value="<?php // echo $date_to; ?>"  size="10"/></td>-->
                                 <td colspan="4" align="right"><input type="submit" value="Submit"></td>
                             </tr>
 <!--                            <tr>
@@ -68,10 +45,16 @@
 	<div style="clear:both">&nbsp;</div>
 	<div class="page_content">
             <div class="block_list_acknowledgements">
+                <?php
+                    if(!isset($terr_info)) {?>
+                        <h2>No records found change date range</h2>
+                <?php }
+                    else {
+                ?>
                     <form action='' name='' id=''>
                         <table class='datagrid' cellspacing='4' cellpadding='4' width='100%'>
                             <tr>
-                                <th>Slno</th>
+                                <th width="25">#</th>
                                 <th>Territory Name</th>
                                 <th>
                                     <abbr title='Territory Manager'>Territory Manager</abbr>
@@ -79,10 +62,13 @@
                                 <th>
                                     <abbr title='Business Executive'>Business Executives</abbr>
                                 </th>
-                                <th><< 9/12/2013 - 11/12/2013</th>
-                                <th> 9/12/2013 - 11/12/2013</th>
-                                <th> 9/12/2013 - 11/12/2013 >></th>
-                                <th><input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'>
+                                <th width="50">
+                                    <abbr title='Total Franchises'>Franchises</abbr>
+                                </th>
+                                <th width="200"><?=$set1["date_from"]; ?> - <?=$set1["date_to"];?></th>
+                                <th width="200"> <?=$set2["date_from"]; ?> - <?=$set2["date_to"];?></th>
+                                <th width="200"><?=$set3["date_from"]; ?> - <?=$set3["date_to"];?> >></th>
+                                <th width="50"><input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'>
                                 </th>
                             </tr>
                             <?php 
@@ -91,24 +77,42 @@
                                     <td><?=++$i;?></td>
                                     <td><?=$terr['territory_name'];?></td>
                                     <td>
-                                        <?php 
+                                        <?php
                                             $new_arr = $terr_manager_info[$terr['territory_id']];
                                             foreach($new_arr as $tm) { ?>
-                                                    <div class="terr_manager"><?=$tm['name'];?></div>
+                                                    <div class=""><a target="_blank" href="<?=site_url('admin/view_employee/'.$tm['employee_id'])?>"><?=$tm['name'];?></a></div>
                                         <?php } ?>
                                     </td>
                                     <td>
-                                        <?php 
+                                        <?php
                                             $new_arr2 = $busi_executive_info[$terr['territory_id']];
                                             foreach($new_arr2 as $be) { ?>
-                                                    <div class="town_executive"><?=$be['name'];?></div>
+                                                    <div class=""><a target="_blank" href="<?=site_url('admin/view_employee/'.$be['employee_id'])?>"><?=$be['name'];?></a></div>
                                         <?php } ?>
                                     </td>
-                                    <td id='load_franchise_order_acks_block_<?=$terr['territory_id']?>' class='load_franchise_order_acks_block'></td>
-                                    <td><?=$terr['ttl_franchises']; ?>  franchise, <?=$terr['ttl_invs'];?> items</td>
                                     <td>
-                                        <!--2 franchise, 50 items, 35,000,00 Rs-->
+                                         <b><?=$terr['ttl_franchises']; ?></b> <br> 
                                     </td>
+                                    <td>
+                                        <div class="ack_det">
+                                            <b><?=$set1[$terr['territory_id']]['ttl_invs'];?></b> Invoices
+<!--                                            <span class="label_fld">
+                                                <a href="">Generate</a>
+                                            </span>-->
+                                        </div>
+                                   </td>
+                                   <td>
+                                        <div class="ack_det">
+                                            <b><?=$set2[$terr['territory_id']]['ttl_invs'];?></b> Invoices
+                                        </div>
+                                   </td>
+                                   <td>
+                                        <div class="ack_det">
+                                           
+                                            <b><?=$set3[$terr['territory_id']]['ttl_invs'];?></b> Invoices
+                                        </div>
+                                   </td>
+                                    
                                     <td><input type='checkbox' name='' id='' class='chk_terr_print'></td>
                                 </tr>
 
@@ -120,6 +124,7 @@
                             </table>
                    </form>
             </div>
+            <?php } ?>
         </div>
         
 </div>

@@ -1027,3 +1027,20 @@ alter table `shipment_batch_process_invoice_link` drop column `assigned_userid`;
 alter table `shipment_batch_process_invoice_link` add column `is_acknowlege_printed` int (11) DEFAULT '0' NULL  after `delivered_by`;
 
 create table `picklist_log_reservation` (  `id` bigint NOT NULL AUTO_INCREMENT , `group_no` bigint (20) DEFAULT '0', `p_inv_no` int (100) , `created_by` int (11) DEFAULT '0', `createdon` datetime , `printcount` int (100) , PRIMARY KEY ( `id`));
+CREATE TABLE `t_imei_update_log` (                        
+                     `id` bigint(11) NOT NULL AUTO_INCREMENT,                
+                     `imei_no` varchar(255) DEFAULT NULL,                    
+                     `product_id` bigint(11) DEFAULT '0',                    
+                     `stock_id` bigint(11) DEFAULT '0',                      
+                     `grn_id` bigint(11) DEFAULT '0',                        
+                     `alloted_order_id` bigint(11) DEFAULT '0',              
+                     `alloted_on` datetime DEFAULT NULL,                     
+                     `invoice_no` bigint(11) DEFAULT '0',                    
+                     `return_id` bigint(11) DEFAULT '0',                     
+                     `is_cancelled` tinyint(1) DEFAULT '0',                  
+                     `cancelled_on` datetime DEFAULT NULL,                   
+                     `is_active` tinyint(1) DEFAULT '0',                     
+                     `logged_on` datetime DEFAULT NULL,                      
+                     `logged_by` int(11) DEFAULT '0',                        
+                     PRIMARY KEY (`id`)                                      
+                   );
