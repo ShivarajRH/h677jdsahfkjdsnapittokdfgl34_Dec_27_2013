@@ -83,7 +83,48 @@ class Reservation extends Voucher {
             }
             echo json_encode($output);
         }*/
+        function jx_get_acknowledgement_list() {
+                $user=$this->auth(ORDER_BATCH_PROCESS_ROLE|OUTSCAN_ROLE|INVOICE_PRINT_ROLE);
+                if(!isset($_POST['p_invoice_ids_str'])) { show_error("Invoices not found"); }
+                
+                
+                /*$sdate=$_POST['date_from']; //'2013-10-20';
+                $edate=$_POST['date_to']; //'2013-11-07';
+                $territory_id=$_POST['sel_territory'];
+                $consider_printed_ack=$_POST['consider_printed_ack'];
+                if($sdate == '' || $edate == '')show_error("Input date range");
+                $cond=$cond_join='';
+                if($territory_id!='00') { $cond =' and f.territory_id='.$territory_id;
+                        //$terr = $this->reservations->get_territory_info($territory_id);
+                        //$data['territory_name']=$terr['territory_name'];  }
+                if($consider_printed_ack != 'y') {$cond_join = ' and b.is_acknowlege_printed = 0 ';}
+                $dispatch_list_res = $this->db->query("select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,count(distinct b.invoice_no) as ttl_invs from pnh_m_manifesto_sent_log a
+                                                        join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 $cond_join
+                                                        join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
+                                                        join king_transactions d on d.transid = c.transid 
+                                                        join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
+                                                        where date(sent_on) between ? and ? and dispatch_id != 0 $cond
+                                                group by d.franchise_id order by f.territory_id asc ",array($sdate,$edate));
+                if($dispatch_list_res->num_rows()) {
+                        $data['dispatch_list'] = $dispatch_list_res->result_array();
+                        $data['sdate']=$sdate;$data['edate']=$edate;
+                        $data['page']="print_invoice_acknowledgement";
+                        $this->load->view("admin",$data);
+                } else {
+                        echo '<script type="text/javascript">alert("Warning:\nNo invoices found for the selected dates and territory!")</script>';
+                        redirect('admin/print_invoice_acknowledgementbydate','refresh');
+                }*/
+                
+                
+                $data['dispatch_det'] = array('invs' => $this->input->post('p_invoice_ids_str') );
+                
+                $data['sdate'] = date("Y-m-d",strtotime($this->input->post('date_from')));
+                $data['edate'] = date("Y-m-d",strtotime($this->input->post('date_to')));
+                
+                print_r($data); die();
+                $this->load->view("admin/body/print_invoice_acknowledgement",$data);
 
+        }
         /**
         * Updating the acknowledgement printed log into invoices
         */
@@ -103,136 +144,178 @@ class Reservation extends Voucher {
         /**
         * function to generate bulk invoice acknowledgement by date range 
         */
-        function print_invoice_acknowledgementbydate()
-        {
+        function print_invoice_acknowledgementbydate($get_date_from='') {
+            
                 $this->erpm->auth();
-                $date_from = $this->input->post('date_from');
-                
-                if($date_from == '' ) {
-                    $today = time()-(60*60*24*6);
-                    $date_from = date('Y-m-d',$today);
-                    
-                }
-                else {
+                if(isset($_POST['date_from'])) {
                     $date_from = $this->input->post('date_from');
-                    $today = strtotime($date_from);
                 }
-                
-                
-                if( $today <= time() ) {
-                    
+                elseif($get_date_from != '') {
+                    $date_from = $get_date_from;
                 }
-                
-                
-                $min2days = $today+60*60*24*2;
-                $min4days = $today+60*60*24*4;
-                $min6days = $today+60*60*24*6;
-                
-                
-                $date_to= date('Y-m-d',$min6days);
-                
-//                echo ($date_from ."=". $date_to);die();
-//                  echo '<pre>';print_r($_POST); die();
-                    /*$sdate=$_POST['date_from']; //'2013-10-20';
-                    $edate=$_POST['date_to']; //'2013-11-07';
-                    $territory_id=$_POST['sel_territory'];
-                    $consider_printed_ack=$_POST['consider_printed_ack'];
-
-                    if($sdate == '' || $edate == '')
-                            show_error("Input date range");*/
-                    /*
-                    $cond=$cond_join='';
-                    if($territory_id!='00') {
-                        $cond =' and f.territory_id='.$territory_id;
-                            //$terr = $this->reservations->get_territory_info($territory_id);
-                            //$data['territory_name']=$terr['territory_name'];
-                    }
-
-                    if($consider_printed_ack != 'y') {
-                        $cond_join = ' and b.is_acknowlege_printed = 0 ';
-                    }
-
-                    $dispatch_list_res = $this->db->query("select f.territory_id,dispatch_id,group_concat(distinct a.id) as man_id,group_concat(distinct b.invoice_no) as invs,count(distinct b.invoice_no) as ttl_invs
-                                                            from pnh_m_manifesto_sent_log a
-                                                            join shipment_batch_process_invoice_link b on a.manifesto_id = b.inv_manifesto_id and b.invoice_no != 0 $cond_join
-                                                            join proforma_invoices c on c.p_invoice_no = b.p_invoice_no and c.invoice_status = 1  
-                                                            join king_transactions d on d.transid = c.transid 
-                                                            join pnh_m_franchise_info f on f.franchise_id = d.franchise_id
-                                                            where date(sent_on) between ? and ? and dispatch_id != 0 $cond
-                                                    group by d.franchise_id order by f.territory_id asc ",array($sdate,$edate));
-
-                    if($dispatch_list_res->num_rows()) {
-                            $data['dispatch_list'] = $dispatch_list_res->result_array();
-//                            echo '<pre>'.$this->db->last_query().'</pre>';die();
-                            $data['sdate']=$sdate;
-                            $data['edate']=$edate;
-
-                            $data['page']="print_invoice_acknowledgement";
-                            $this->load->view("admin",$data);
-                    }
-                    else {
-                            echo '<script type="text/javascript">alert("Warning:\nNo invoices found for the selected dates and territory!")</script>';
-                            redirect('admin/print_invoice_acknowledgementbydate','refresh');
-                    }*/
-                
-                $data['date_from']=$date_from;
-                $data['date_to']=$date_to;
-                
-                $data['l_date_from']=date('Y-m-d',$min4days);
-                $data['l_date_to']=date('Y-m-d',$min6days);
-                
-                $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
-                $rdata = array();
-
-                $sdate = strtotime($date_from);
-                $edate = strtotime($date_to);
-                
-                $rslt = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,count(tr.franchise_id) as ttl_franchises
-                    ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
-                                                from pnh_m_manifesto_sent_log man
-                                                        join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
-                                                    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
-                                                    join king_transactions tr on tr.transid = pi.transid
-                                                    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
-                                                        join pnh_m_territory_info t on t.id = f.territory_id
-                                                    where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and unix_timestamp(sent_on) between ? and ? $cond
-                                                group by f.territory_id
-                                                order by t.territory_name ASC",array($sdate,$edate))->result_array();
-                if(count($rslt)==0 ) {
-
+                                
+                if($date_from == '' ) {
+                        $today = time()-(60*60*24*7);
+                        $date_from = date('Y-m-d',$today);
                 }
                 else {
-
-                    $data['terr_info'] = $rslt;
-                    
-                    $data['set1']['date_from'] =  date("d/M/Y", $today );
-                    $data['set1']['date_to'] =  date("d/M/Y",$min2days );//2 days
-                    
-                    $data['set2']['date_from'] =  date("d/M/Y",$min2days);
-                    $data['set2']['date_to'] =  date("d/M/Y",$min4days);
-                                        
-                    $data['set3']['date_from'] =  date("d/M/Y",$min4days);
-                    $data['set3']['date_to'] =  date("d/M/Y",$min6days);
-                    
-                    foreach($rslt as $row)
-                    {
-                            $data['terr_manager_info'][$row['territory_id']] = $this->get_territory_managers($row['territory_id']);
-                            $data['busi_executive_info'][$row['territory_id']] = $this->get_town_executives($row['territory_id']);
-
-                            $data['set1'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$today,$min2days);
-                            $data['set2'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min2days,$min4days);
-                            $data['set3'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min4days,$min6days);
-
-                    }
+                        $today = strtotime($date_from);
                 }
                 
-//              echo '<pre>';print_r($data);die();
+                
+                $week_day = date("w",strtotime($date_from));
+                
+                $get_slab_det = $this->get_slab_details($week_day,$date_from);
+                
+                foreach($get_slab_det as $slab) {
+                   
+                
+//                $min2days = $today+(60*60*24*2);
+//                $min4days = $today+(60*60*24*3);
+//                $min6days = $today+(60*60*24*7);
+//                                
+//                $date_to= date('Y-m-d',$min6days);
+                
+                
+                
+                        $data['date_from']=$date_from;
+                        $data['date_to']=$date_to;
 
+                        $data['l_date_from']=date('Y-m-d',$min4days);
+                        $data['l_date_to']=date('Y-m-d',$min6days);
+
+                        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
+                        $rdata = array();
+
+                        $sdate = $slab['date_from'];//strtotime($date_from);
+                        $edate = $slab['date_to'];//strtotime($date_to);
+
+                        $rslt = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,count(tr.franchise_id) as ttl_franchises
+                                                        ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
+                                                        from pnh_m_manifesto_sent_log man
+                                                                join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                                            join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                            join king_transactions tr on tr.transid = pi.transid
+                                                            join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                                join pnh_m_territory_info t on t.id = f.territory_id
+                                                            where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and unix_timestamp(sent_on) between ? and ? $cond
+                                                        group by f.territory_id
+                                                        order by t.territory_name ASC",array($sdate,$edate))->result_array();
+                        $data[$slab['name']]=$rslt;
+                        /*if(count($rslt)>0 ) {
+                            $data['terr_info'] = $rslt;
+
+                            $data['set1']['date_from'] =  date("d/M/Y", $today );
+                            $data['set1']['date_to'] =  date("d/M/Y",$min2days );//2 days
+
+                            $data['set2']['date_from'] =  date("d/M/Y",$min2days);
+                            $data['set2']['date_to'] =  date("d/M/Y",$min4days);
+
+                            $data['set3']['date_from'] =  date("d/M/Y",$min4days);
+                            $data['set3']['date_to'] =  date("d/M/Y",$min6days);
+
+                            foreach($rslt as $row)
+                            {
+                                    $data['terr_manager_info'][$row['territory_id']] = $this->get_territory_managers($row['territory_id']);
+                                    $data['busi_executive_info'][$row['territory_id']] = $this->get_town_executives($row['territory_id']);
+
+                                    $data['set1'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$today,$min2days);
+                                    $data['set2'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min2days,$min4days);
+                                    $data['set3'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min4days,$min6days);
+
+        //                            $data['set1'][$row['territory_id']]['ttl_fran'] = $this->get_total_manifest_franchises($row['territory_id'],$today,$min2days);
+        //                            $data['set2'][$row['territory_id']]['ttl_fran'] = $this->get_total_manifest_invoices($row['territory_id'],$min2days,$min4days);
+        //                            $data['set3'][$row['territory_id']]['ttl_fran'] = $this->get_total_manifest_invoices($row['territory_id'],$min4days,$min6days);
+
+                            }
+                        }*/
+                        
+                }
+                        
                 $data['page']="gen_invoice_acknowledgement";
                 $this->load->view("admin",$data);
-
          }
+        
     //==========================================================
+    function get_slab_details($week_day,$date_from) {
+        $date_from=strtotime($date_from);
+        $date_from_date=date('Y-m-d',strtotime($date_from));
+        
+        
+        $slab_arr = array();
+        $slab_arr[1] = array(date('Y-m-d',time()-(7)),2);
+        $slab_arr[2] = array(3,4);
+        $slab_arr[3] = array(5,7);
+        
+        $cur_slab_no = floor($week_day/2)+1;
+        
+        $slab_dates = array();
+        for($k=1;$k<=3;$k++)
+        {
+            $cur_slab_no--;
+            if($cur_slab_no <= 0)
+                $cur_slab_no = 3;
+            
+            $tmp = array();
+            $tmp[] = date('Y-m-d',time()-24*60*60*($slab_arr[$cur_slab_no][0]));
+            $tmp[] = date('Y-m-d',time()-24*60*60*($slab_arr[$cur_slab_no][1]));
+            $slab_dates[] = $tmp;
+        }
+        print_r($slab_dates);
+        exit;
+        
+        
+        
+        
+        exit;
+        
+        
+//        $min2days = $date_from_time+(60*60*24*2);
+//        $min4days = $date_from_time+(60*60*24*3);
+//        $min6days = $date_from_time+(60*60*24*7);
+
+        if($week_day >= 1 and $week_day <= 2 ) {
+
+            $slab_array=array(
+                 'slab1'=>array('date_from'=>$date_from-(60*60*24*5),'date_to'=>$date_from-(60*60*24*6),'print'=>1)
+                ,'slab2'=>array('date_from'=>$date_from-(60*60*24*3),'date_to'=>$date_from-(60*60*24*4),'print'=>1)
+                ,'slab3'=>array('date_from'=>$date_from             ,'date_to'=>$date_from-(60*60*24*2),'print'=>0)
+                ,'name'=>"slab1"
+            );
+        }
+        elseif($week_day >= 3 and $week_day <= 4 ) {
+
+            $slab_array=array(
+                'slab1'=>array('date_from'=>$date_from-(60*60*24*1),'date_to'=>$date_from-(60*60*24*2),'print'=>1)
+                ,'slab2'=>array('date_from'=>$date_from-(60*60*24*5),'date_to'=>$date_from-(60*60*24*6),'print'=>1)
+                ,'slab3'=>array('date_from'=>$date_from-(60*60*24*3),'date_to'=>$date_from-(60*60*24*4),'print'=>0)
+                ,'name'=>"slab2"
+            );
+        }
+        elseif($week_day >= 5 and $week_day <= 6 ) {
+
+            $slab_array=array(
+                'slab1'=>array('date_from'=>$date_from -(60*60*24*2),'date_to'=>$date_from-(60*60*24*2),'print'=>1)
+                ,'slab2'=>array('date_from'=>$date_from-(60*60*24*3),'date_to'=>$date_from-(60*60*24*4),'print'=>1)
+                ,'slab3'=>array('date_from'=>$date_from-(60*60*24*5),'date_to'=>$date_from-(60*60*24*6),'print'=>0)
+                ,'name'=>"slab3"
+            );
+            
+        }
+        elseif($week_day == 0) {
+
+            $slab_array=array(
+                'slab1'=>array('date_from'=>$date_from              ,'date_to'=>$date_from+(60*60*24*2),'print'=>1)
+                ,'slab2'=>array('date_from'=>$date_from+(60*60*24*3),'date_to'=>$date_from+(60*60*24*4),'print'=>1)
+                ,'slab3'=>array('date_from'=>$date_from+(60*60*24*5),'date_to'=>$date_from+(60*60*24*6),'print'=>0)
+                ,'name'=>"slab4"
+            );
+            
+        }
+
+        return $slab_array;
+    }
+    
     /**
      * Get total manifesto sent count
      * @param type $date_from
@@ -242,18 +325,17 @@ class Reservation extends Voucher {
     function get_total_manifest_invoices($territory_id,$date_from,$date_to) {
         $grp_invs_str = $this->db->query("select group_concat(man.sent_invoices) grp_invs from pnh_m_manifesto_sent_log man where date(man.sent_on) between from_unixtime(?) and from_unixtime(?)",array($date_from,$date_to) )->row()->grp_invs;
         $grp_invs_str = $this->db->query("select group_concat(man.sent_invoices) grp_invs
-from pnh_m_manifesto_sent_log man 
-join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
-join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
-join king_transactions tr on tr.transid = pi.transid
-join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
-join pnh_m_territory_info t on t.id = f.territory_id
-where date(man.sent_on) between from_unixtime(?) and from_unixtime(?) and f.territory_id=?",array($territory_id,$date_from,$date_to) )->row()->grp_invs;
+                                            from pnh_m_manifesto_sent_log man 
+                                            join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                            join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                            join king_transactions tr on tr.transid = pi.transid
+                                            join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                            join pnh_m_territory_info t on t.id = f.territory_id
+                                            where f.territory_id=? and date(man.sent_on) between from_unixtime(?) and from_unixtime(?) ",array($territory_id,$date_from,$date_to) )->row()->grp_invs;
         $total_count=0;
-
         if($grp_invs_str != '')
             $total_count = count(explode(',',trim($grp_invs_str,',') ));
-        
+       
         return ($total_count);
     }
     

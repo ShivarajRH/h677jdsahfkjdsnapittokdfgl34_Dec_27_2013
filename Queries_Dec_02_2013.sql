@@ -901,3 +901,20 @@ join pnh_m_territory_info t on t.id = f.territory_id
 where date(man.sent_on) between from_unixtime('1383244200') and from_unixtime('1387477800') and f.territory_id='3';
 
 select * from pnh_m_manifesto_sent_log
+
+select group_concat(man.sent_invoices) grp_invs
+	    from pnh_m_manifesto_sent_log man 
+	    join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+	    join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+	    join king_transactions tr on tr.transid = pi.transid
+	    join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+	    join pnh_m_territory_info t on t.id = f.territory_id
+	    where date(man.sent_on) between from_unixtime('3') and from_unixtime(1384281000) and f.territory_id=1384453800
+
+
+
+set @dd = '2013-12-25';
+select weekday(@dd),date_add(@dd,interval weekday(@dd) day );
+
+4,3 
+3-4 -1day 

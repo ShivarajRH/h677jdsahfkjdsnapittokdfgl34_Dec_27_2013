@@ -6,7 +6,7 @@
 	<?php if($this->session->userdata("admin_user")){ ?>
 	<div style="margin:10px;" class="hideinprint">
             <div style="float:right;"><input type="button" value="Print invoice acknowlegement" onclick='print_taxinv_acknowledgement(this)'></div>
-            <div style="float:left;"><input type="button" value="Refresh" onclick='page_refresh(this)'></div>
+            <!--<div style="float:left;"><input type="button" value="Refresh" onclick='page_refresh(this)'></div>-->
 	</div>
 	<?php }  ?>
     </div>
@@ -28,11 +28,11 @@
         </style>
 <?php
 $list_invs_group_arr=array();
-        foreach($dispatch_list as $dispatch_det)
-        {
+        //foreach($dispatch_list as $dispatch_det)
+        //{
                     $ttl_inv_amt = 0;
 
-                    $dispatch_id = $dispatch_det['dispatch_id'];
+//                    $dispatch_id = $dispatch_det['dispatch_id'];
                     $invs = $dispatch_det['invs'];
                     $invoice_list = explode(',',$invs);
                     $orderslist_byproduct = $this->db->query("select terr.territory_name,a.transid,a.createdon as invoiced_on,b.bill_person,b.bill_address,b.bill_landmark,b.bill_city,b.bill_state,b.bill_pincode,bill_phone,d.init,b.itemid,c.name,if(c.print_name,c.print_name,c.name) as print_name,c.pnh_id,group_concat(distinct a.invoice_no) as invs,
@@ -46,7 +46,7 @@ $list_invs_group_arr=array();
                                                             join pnh_m_territory_info terr on terr.id=f.territory_id
                                                             where a.invoice_no in ($invs) 
                                                             group by itemid,amt
-                                                            order by c.name ")->result_array();
+                                                            order by c.name")->result_array();
                     $order = $orderslist_byproduct[0];									
 ?>
                 
@@ -75,7 +75,6 @@ $list_invs_group_arr=array();
 
                                                         <td>Territory</td>
                                                             <td width="75"><b><?=$order['territory_name']; ?></b></td>
-                                                            <!--//($territory_name==''?'----':$territory_name);-->
                                                     </tr>
                                             </table>
                                     </td>
@@ -146,7 +145,7 @@ $list_invs_group_arr=array();
 
                 </div>
 
-<?php       }
+<?php       //}
 
        $list_invs_group_arr = array_unique($list_invs_group_arr);
        $list_invs_group_str = implode(',',$list_invs_group_arr);

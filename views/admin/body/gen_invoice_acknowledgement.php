@@ -9,6 +9,31 @@
     .subdatagrid td {padding: 4px !important;}*/
     
     .loading { display: block; padding-left: 20px;}
+    .block {
+        /*float: left;*/
+        margin: 5px 5px;
+        padding: 5px 8px;
+        background-color: #8D8CB1;
+    }
+    .block:hover {
+        background-color:#706EC7;
+    }
+    .block_link {
+/*        float: right;
+        margin: 5px 5px;*/
+        padding: 3px 3px;
+        font-size: 11px;
+        background-color: #999C98;
+    }
+    .block_link:hover {
+        background-color:#706EC7;
+    }
+    .anchor a {
+        color: #f1f1f1;
+    }
+    .anchor a:hover {
+        text-decoration: none;
+    }
 </style>
 <div class="page_wrap container">
 	
@@ -27,7 +52,6 @@
 		<div class="page_action_buttons fl_left" align="right">
                     <form id="trans_date_form" name="trans_date_form" method="post" action="<?php echo site_url("admin/print_invoice_acknowledgementbydate"); ?>">
                         <table cellpadding="5" cellspacing="0" border="0">
-
                             <tr>
                                 <td><label for="date_from">From:</label></td><?php //date('Y-m-01',time()-60*60*24*7*4); ?>
                                 <td><input type="text" id="date_from" name="date_from" value="<?php echo $date_from; ?>" size="10" /></td>
@@ -41,6 +65,16 @@
                         </table>
                     </form>
 		</div>
+                <div class="fl_right"><?php
+                    if( strtotime($l_date_to) < time() ) {
+                    ?>
+                    <div class="block fl_right anchor"><a href="<?=site_url("admin/print_invoice_acknowledgementbydate/".$l_date_to);?>" title="Show Next 7 Days Shipment Log"> Next </a></div>
+                    <?php
+                    }
+                    ?>
+                    <div class="block fl_right anchor"><a href="<?=site_url("admin/print_invoice_acknowledgementbydate/".date("Y-m-d",strtotime($date_from)-(60*60*24*6)));?>" title="Show Last 7 Days Shipment Log"> Prev </a></div>
+                    
+                </div>
 	</div>
 	<div style="clear:both">&nbsp;</div>
 	<div class="page_content">
@@ -65,11 +99,10 @@
                                 <th width="50">
                                     <abbr title='Total Franchises'>Franchises</abbr>
                                 </th>
-                                <th width="200"><?=$set1["date_from"]; ?> - <?=$set1["date_to"];?></th>
-                                <th width="200"> <?=$set2["date_from"]; ?> - <?=$set2["date_to"];?></th>
-                                <th width="200"><?=$set3["date_from"]; ?> - <?=$set3["date_to"];?> >></th>
-                                <th width="50"><input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'>
-                                </th>
+                                <th width="200"><span><?=$set1["date_from"]; ?> - <?=$set1["date_to"];?></span></th>
+                                <th width="200"><span><?=$set2["date_from"]; ?> - <?=$set2["date_to"];?></span></th>
+                                <th width="200"><span><?=$set3["date_from"]; ?> - <?=$set3["date_to"];?></span></th>
+                                <!--<th width="50"><input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'></th>-->
                             </tr>
                             <?php 
                             foreach($terr_info as $i=>$terr) { ?>
@@ -95,42 +128,79 @@
                                     </td>
                                     <td>
                                         <div class="ack_det">
-                                            <b><?=$set1[$terr['territory_id']]['ttl_invs'];?></b> Invoices
-<!--                                            <span class="label_fld">
-                                                <a href="">Generate</a>
-                                            </span>-->
+                                            <?php $total_invs = $set1[$terr['territory_id']]['ttl_invs'];?>
+                                            <b><?=$total_invs;?></b> Invoices
+                                            <?php if($total_invs != 0) { ?>
+                                            <span class="label_fld fl_right block_link anchor">
+                                                <a href="javascript:void(0);" onclick="return print_acknowledgement_inoices(this,'<?=$terr['territory_id']?>','set1');">Generate</a>
+                                                <input type="hidden" name="grp_invoices_set1_<?=$terr['territory_id']?>" id="grp_invoices_set1_<?=$terr['territory_id']?>" class="grp_invoices_set" value="<?=$terr['invoice_no_str']?>" date_from="<?=$set1["date_from"]; ?>" date_to="<?=$set1["date_to"];?>" />
+                                            </span>
+                                            <?php } ?>
                                         </div>
                                    </td>
                                    <td>
                                         <div class="ack_det">
-                                            <b><?=$set2[$terr['territory_id']]['ttl_invs'];?></b> Invoices
+                                            <?php $total_invs = $set2[$terr['territory_id']]['ttl_invs'];?>
+                                            <b><?=$total_invs;?></b> Invoices
+                                            <?php if($total_invs != 0) { ?>
+                                            <span class="label_fld fl_right block_link anchor">
+                                                <a href="javascript:void(0);" onclick="return print_acknowledgement_inoices(this,'<?=$terr['territory_id']?>','set2');">Generate</a>
+                                                <input type="hidden" name="grp_invoices_set2_<?=$terr['territory_id']?>" id="grp_invoices_set2_<?=$terr['territory_id']?>" class="grp_invoices_set" value="<?=$terr['invoice_no_str']?>" date_from="<?=$set2["date_from"]; ?>" date_to="<?=$set2["date_to"];?>" />
+                                            </span>
+                                            <?php } ?>
                                         </div>
                                    </td>
                                    <td>
                                         <div class="ack_det">
-                                           
-                                            <b><?=$set3[$terr['territory_id']]['ttl_invs'];?></b> Invoices
+                                            <?php $total_invs = $set3[$terr['territory_id']]['ttl_invs'];?>
+                                            <b><?=$total_invs;?></b> Invoices
+                                            <?php if($total_invs != 0 ) { ?>
+                                            <span class="label_fld fl_right block_link anchor">
+                                                <a href="javascript:void(0);" onclick="return print_acknowledgement_inoices(this,'<?=$terr['territory_id']?>','set3');">Generate</a>
+                                                <input type="hidden" name="grp_invoices_set3_<?=$terr['territory_id']?>" id="grp_invoices_set3_<?=$terr['territory_id']?>" class="grp_invoices_set" value="<?=$terr['invoice_no_str']?>" date_from="<?=$set3["date_from"]; ?>" date_to="<?=$set3["date_to"];?>" />
+                                            </span>
+                                            <?php } ?>
                                         </div>
                                    </td>
                                     
-                                    <td><input type='checkbox' name='' id='' class='chk_terr_print'></td>
+                                    <!--<td><input type='checkbox' name='' id='' class='chk_terr_print'></td>-->
                                 </tr>
 
-                            <?php } ?>
+                        <?php } ?>
 
-                                <tr>
-                                    <td colspan='8' align='right'><input type='submit' name='' id='' class='btn_generate_inv' value='Generate'></td>
-                                </tr>
-                            </table>
+<!--                                <tr><td colspan='8' align='right'><input type='submit' name='' id='' class='btn_generate_inv' value='Generate'></td></tr>-->
+                        </table>
                    </form>
             </div>
             <?php } ?>
         </div>
-        
+        <div id="dlg_block" name="dlg_block" style="display:none;"></div>
 </div>
 
 <script type="text/javascript">
 // <![CDATA[
+$("#dlg_block").dialog({
+    autoOpen: false,
+    height: 650,
+    width:950,
+    position: ['center', 'center'],
+    modal: true
+});
+
+function print_acknowledgement_inoices(e,territory_id,set) {
+    var lnk = $("#grp_invoices_"+set+"_"+territory_id)
+    var p_invoice_ids_str = lnk.val();
+    var date_from = lnk.attr("date_from");
+    var date_to = lnk.attr("date_to");
+    
+    var postData = {p_invoice_ids_str:p_invoice_ids_str,date_from:date_from,date_to:date_to};
+    
+    $.post(site_url+"admin/jx_get_acknowledgement_list",postData,function(resp) {
+            $("#dlg_block").html(resp).dialog("open").dialog('option', 'title', 'Print Acknowledgement list');
+    },'html');
+    return false;
+}
+
     $(".chk_all_terr_print").bind("click",function() {
         var elt = $(this);
         if(elt.is(":checked")) {
@@ -193,6 +263,11 @@
                     rdata +="Error : <b>"+resp.response+"<b>";
                 }*/
     }
-    loadAcknowledgementList(0);
+   // loadAcknowledgementList(0);
+   
+// Auto center the dialog boxes
+$(window).resize(function() { //on resize window center the dialog
+    $("#dlg_block").dialog("option", "position", ['center', 'center']);
+});
 // ]]>
 </script>
