@@ -28,13 +28,16 @@
         </style>
 <?php
 $list_invs_group_arr=array();
-        //foreach($dispatch_list as $dispatch_det)
-        //{
+        //foreach($dispatch_list as $dispatch_det) //{
                     $ttl_inv_amt = 0;
 
 //                    $dispatch_id = $dispatch_det['dispatch_id'];
+                    
                     $invs = $dispatch_det['invs'];
                     $invoice_list = explode(',',$invs);
+                    
+//                    echo count($invoice_list); 
+//                    die();
                     $orderslist_byproduct = $this->db->query("select terr.territory_name,a.transid,a.createdon as invoiced_on,b.bill_person,b.bill_address,b.bill_landmark,b.bill_city,b.bill_state,b.bill_pincode,bill_phone,d.init,b.itemid,c.name,if(c.print_name,c.print_name,c.name) as print_name,c.pnh_id,group_concat(distinct a.invoice_no) as invs,
                                                                     ((a.mrp-(a.discount))) as amt,
                                                                     sum(a.invoice_qty) as qty 
@@ -102,7 +105,7 @@ $list_invs_group_arr=array();
                                     <th>Item</th>
                                     <th width="70">Amount</th>
                                     <th width="40">Qty</th>
-                                    <!--<th width="">Invoices</th>-->
+                                    <th width="">Invoices</th>
                                     <th width="70">Total</th>
                             </tr>
                             <?php 
@@ -120,12 +123,14 @@ $list_invs_group_arr=array();
                                             <span class="hideinprint"><?php echo $itm_ord['name'].'-'.$itm_ord['pnh_id'];?></span>
                                     </td>
                                     <td><?php echo $itm_ord['amt'];?></td>
-                                    <?php //<td>
-                                    //$ind_invs = $itm_ord['invs'];
-                                    //echo str_replace(',',', ',$itm_ord['invs']);
-                                    //echo "<br>".count($list_invs_group_arr);
-                                    //</td>?>
                                     <td><?php echo $itm_ord['qty'];?></td>
+                                    <td>
+                                    <?php 
+                                        $ind_invs = $itm_ord['invs'];
+                                        echo str_replace(',',', ',$itm_ord['invs']);
+                                        //echo count($list_invs_group_arr);
+                                    ?>
+                                    </td>
                                     <td><?php echo $inv_amt;?></td>
                             </tr>
                             <?php 		
@@ -135,7 +140,7 @@ $list_invs_group_arr=array();
                                     }
                             ?>
                             <tr>
-                                    <td colspan="4" align="right">
+                                    <td colspan="5" align="right">
                                         
                                         <span  style="margin-right: 20px;">Total amount to be collected</span>
                                     </td>

@@ -6,26 +6,7 @@
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
     //==========================================================
-        function get_territory_managers($territory_id) {
-            $rdata = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
-                        from m_employee_info emp
-                        join m_town_territory_link ttl on ttl.employee_id = emp.employee_id and ttl.is_active=1
-                        join pnh_m_territory_info t on t.id = ttl.territory_id
-                        where job_title = 4 and is_suspended=0 and t.id=?
-                        order by job_title ASC",$territory_id)->result_array();## and ttl.is_active=1 group by emp.employee_id
-//                echo ''.  json_encode($rdata);
-                return $rdata;
-        }
-        function get_town_executives($territory_id) { //,$employee_id
-            $rdata = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
-                        from m_employee_info emp
-                        join m_town_territory_link ttl on ttl.employee_id = emp.employee_id and ttl.is_active=1
-                        join pnh_m_territory_info t on t.id = ttl.territory_id
-                        where job_title = 5 and is_suspended=0 and t.id=?
-                        order by job_title ASC",array($territory_id))->result_array();// #group by emp.employee_id # and ttl.is_active=1and ttl.parent_emp_id=? ,$employee_id
-//             $rdata['result'] = echo ''.  json_encode($rdata);
-            return $rdata;
-        }
+        
         
         /**
          * Get acknowledgement list for given territory, and between dates range
@@ -118,10 +99,10 @@ class Reservation extends Voucher {
                 
                 $data['dispatch_det'] = array('invs' => $this->input->post('p_invoice_ids_str') );
                 
-                $data['sdate'] = date("Y-m-d",strtotime($this->input->post('date_from')));
-                $data['edate'] = date("Y-m-d",strtotime($this->input->post('date_to')));
+                $data['sdate'] = date("Y-m-d",strtotime($this->input->post('date_from')) );
+                $data['edate'] = date("Y-m-d",strtotime($this->input->post('date_to')) );
                 
-                print_r($data); die();
+//                print_r($data); die();
                 $this->load->view("admin/body/print_invoice_acknowledgement",$data);
 
         }
@@ -144,8 +125,7 @@ class Reservation extends Voucher {
         /**
         * function to generate bulk invoice acknowledgement by date range 
         */
-        function print_invoice_acknowledgementbydate($get_date_from='') {
-            
+        function print_invoice_acknowledgementbydate($get_date_from='',$territory_id='') {
                 $this->erpm->auth();
                 if(isset($_POST['date_from'])) {
                     $date_from = $this->input->post('date_from');
@@ -161,159 +141,164 @@ class Reservation extends Voucher {
                 else {
                         $today = strtotime($date_from);
                 }
+                $data['territory_id'] = $territory_id;
+                $data['date_from'] = $date_from;
+                $data['date_to'] = date("Y-m-d",strtotime($date_from)+24*60*60*6);
+//                echo '-';
+//                echo $territory_id;
+//                echo '-';
+//                 echo '<pre>';print_r($data); exit("");
+                 
+                $get_slab_det = $this->sugg_slabs($date_from);
+                $cond='';
                 
+                $data['terr_info'] = $terr_info = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
                 
-                $week_day = date("w",strtotime($date_from));
+                if($territory_id != '') {
+//                    $cond .= ' and f.territory_id = '.$territory_id;
+                }
+                foreach($terr_info as $terr) {
+//                    if($territory_id != '' and $territory_id == $terr['id'] ) {
+//                         $cond .= ' and f.territory_id = '.$territory_id;
+                         
+                            foreach($get_slab_det as $slan_no => $slab) {
+
+                                    $arr_rdata[$slan_no]['date_from']=$slab['date_from'];
+                                    $arr_rdata[$slan_no]['date_to']=$slab['date_to'];
+
+                                    $rslt = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,count(tr.franchise_id) as ttl_franchises
+                                                                        ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
+                                                                        from pnh_m_manifesto_sent_log man
+                                                                                join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                                                            join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                                            join king_transactions tr on tr.transid = pi.transid
+                                                                            join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                                                join pnh_m_territory_info t on t.id = f.territory_id
+                                                                            where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and date(sent_on) between ? and ? $cond
+                                                                        group by f.territory_id
+                                                                        order by t.territory_name ASC",array($slab['date_from'],$slab['date_from']))->result_array();
+
+                                        $arr_rdata[$slan_no]['result'][$terr['id']] = $rslt;
+
+            //                            $data[$row['territory_id']]['slabs_info']=$arr_rdata;
+            //                            $arr_rdata[$slan_no]['ttl_franchises']=$rslt;
+
+                            }
+//                    }
+                }
+                $data['slabs_data'] = $arr_rdata;
                 
-                $get_slab_det = $this->get_slab_details($week_day,$date_from);
-                
-                foreach($get_slab_det as $slab) {
-                   
-                
-//                $min2days = $today+(60*60*24*2);
-//                $min4days = $today+(60*60*24*3);
-//                $min6days = $today+(60*60*24*7);
-//                                
-//                $date_to= date('Y-m-d',$min6days);
-                
-                
-                
+//                echo '<pre>';print_r($arr_rdata);exit(""); exit("");
+                        /*
+                        $min2days = $today+(60*60*24*2);
+                        $min4days = $today+(60*60*24*3);
+                        $min6days = $today+(60*60*24*7);
+                        $date_to= date('Y-m-d',$min6days);
                         $data['date_from']=$date_from;
                         $data['date_to']=$date_to;
-
                         $data['l_date_from']=date('Y-m-d',$min4days);
                         $data['l_date_to']=date('Y-m-d',$min6days);
-
                         $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
                         $rdata = array();
-
                         $sdate = $slab['date_from'];//strtotime($date_from);
                         $edate = $slab['date_to'];//strtotime($date_to);
-
                         $rslt = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,count(tr.franchise_id) as ttl_franchises
-                                                        ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
-                                                        from pnh_m_manifesto_sent_log man
-                                                                join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
-                                                            join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
-                                                            join king_transactions tr on tr.transid = pi.transid
-                                                            join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
-                                                                join pnh_m_territory_info t on t.id = f.territory_id
-                                                            where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and unix_timestamp(sent_on) between ? and ? $cond
-                                                        group by f.territory_id
-                                                        order by t.territory_name ASC",array($sdate,$edate))->result_array();
-                        $data[$slab['name']]=$rslt;
+                                                    ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
+                                                    from pnh_m_manifesto_sent_log man
+                                                            join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
+                                                        join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
+                                                        join king_transactions tr on tr.transid = pi.transid
+                                                        join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
+                                                            join pnh_m_territory_info t on t.id = f.territory_id
+                                                        where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and unix_timestamp(sent_on) between ? and ? $cond
+                                                    group by f.territory_id
+                                                    order by t.territory_name ASC",array($sdate,$edate))->result_array();
+                        $data[$slab['name']]=$rslt;*/
                         /*if(count($rslt)>0 ) {
                             $data['terr_info'] = $rslt;
-
                             $data['set1']['date_from'] =  date("d/M/Y", $today );
                             $data['set1']['date_to'] =  date("d/M/Y",$min2days );//2 days
-
                             $data['set2']['date_from'] =  date("d/M/Y",$min2days);
                             $data['set2']['date_to'] =  date("d/M/Y",$min4days);
-
                             $data['set3']['date_from'] =  date("d/M/Y",$min4days);
                             $data['set3']['date_to'] =  date("d/M/Y",$min6days);
-
-                            foreach($rslt as $row)
-                            {
+                            foreach($rslt as $row){
                                     $data['terr_manager_info'][$row['territory_id']] = $this->get_territory_managers($row['territory_id']);
                                     $data['busi_executive_info'][$row['territory_id']] = $this->get_town_executives($row['territory_id']);
-
                                     $data['set1'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$today,$min2days);
                                     $data['set2'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min2days,$min4days);
                                     $data['set3'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min4days,$min6days);
-
-        //                            $data['set1'][$row['territory_id']]['ttl_fran'] = $this->get_total_manifest_franchises($row['territory_id'],$today,$min2days);
-        //                            $data['set2'][$row['territory_id']]['ttl_fran'] = $this->get_total_manifest_invoices($row['territory_id'],$min2days,$min4days);
-        //                            $data['set3'][$row['territory_id']]['ttl_fran'] = $this->get_total_manifest_invoices($row['territory_id'],$min4days,$min6days);
-
                             }
                         }*/
-                        
-                }
-                        
                 $data['page']="gen_invoice_acknowledgement";
                 $this->load->view("admin",$data);
          }
         
     //==========================================================
-    function get_slab_details($week_day,$date_from) {
-        $date_from=strtotime($date_from);
-        $date_from_date=date('Y-m-d',strtotime($date_from));
-        
-        
-        $slab_arr = array();
-        $slab_arr[1] = array(date('Y-m-d',time()-(7)),2);
-        $slab_arr[2] = array(3,4);
-        $slab_arr[3] = array(5,7);
-        
-        $cur_slab_no = floor($week_day/2)+1;
-        
-        $slab_dates = array();
-        for($k=1;$k<=3;$k++)
-        {
-            $cur_slab_no--;
-            if($cur_slab_no <= 0)
-                $cur_slab_no = 3;
-            
-            $tmp = array();
-            $tmp[] = date('Y-m-d',time()-24*60*60*($slab_arr[$cur_slab_no][0]));
-            $tmp[] = date('Y-m-d',time()-24*60*60*($slab_arr[$cur_slab_no][1]));
-            $slab_dates[] = $tmp;
-        }
-        print_r($slab_dates);
-        exit;
-        
-        
-        
-        
-        exit;
-        
-        
-//        $min2days = $date_from_time+(60*60*24*2);
-//        $min4days = $date_from_time+(60*60*24*3);
-//        $min6days = $date_from_time+(60*60*24*7);
+    function sugg_slabs($d='2013-12-01',$consider_cur_slab=0)
+    {
+		$week_slabs = array();
+		$week_slabs[1] = 1;
+		$week_slabs[2] = 1;
+		$week_slabs[3] = 2;
+		$week_slabs[4] = 2;
+		$week_slabs[5] = 2;
+		$week_slabs[6] = 3;
+		$week_slabs[0] = 3;
+		
+		$slab_days = array();
+		foreach($week_slabs as $dno=>$slabno)
+		{
+			if(!isset($slab_days[$slabno]))
+				$slab_days[$slabno] = array();
+			array_push($slab_days[$slabno],$dno);
+		}
+		
+		$ttl_slabs = count($slab_days);
+		
+		$cur_week_day = date('w',strtotime($d)); 
+		
+		$cur_day_slab = $week_slabs[$cur_week_day];
+		
+		if($consider_cur_slab)
+		{
+			$ttl_slab_days = count($slab_days[$cur_day_slab]);
+			$d = date('Y-m-d',strtotime($d)+$ttl_slab_days*24*60*60);
+			return $this->sugg_slabs($d,0); 
+		}
+			
+		
+		//reset cur_slab_date to slab start index  
+		$cur_slab_st_indx = array_search($cur_week_day, $slab_days[$cur_day_slab]);
+		$slab_start_date = date('Y-m-d',(strtotime($d)-$cur_slab_st_indx*24*60*60));
+		
+		/*echo "Current Week Day :".$cur_week_day.'<br>';
+		echo "Current Day Slab :".$cur_day_slab.'<br>';echo '<pre>';
+		print_r($slab_days[$cur_day_slab]);echo '</pre>';
+		echo "Slab Start Date : ".$slab_start_date.'<br>';*/
+		
+		$slab_date = $slab_start_date;
+		$slab_dates = array();
+		for($k=1;$k<=$ttl_slabs;$k++)
+		{
+			$cur_day_slab--;
+			if($cur_day_slab == 0)
+				$cur_day_slab = $ttl_slabs;
+			$ttl_slab_days = count($slab_days[$cur_day_slab]);
+			$t_slab_dates = array();
+			for($j=1;$j<=$ttl_slab_days;$j++)
+			{
+				$slab_date = date('Y-m-d',strtotime($slab_date)-1*24*60*60);
+				$t_slab_dates[] = $slab_date;
+			}
+			
+			//$slab_dates[] = array_reverse($t_slab_dates);//array($t_slab_dates[0],$t_slab_dates[$ttl_slab_days-1]); //full date range
+			$slab_dates['slab'.$k] = array('date_from'=>$t_slab_dates[$ttl_slab_days-1],'date_to'=>$t_slab_dates[0]); // date range
 
-        if($week_day >= 1 and $week_day <= 2 ) {
-
-            $slab_array=array(
-                 'slab1'=>array('date_from'=>$date_from-(60*60*24*5),'date_to'=>$date_from-(60*60*24*6),'print'=>1)
-                ,'slab2'=>array('date_from'=>$date_from-(60*60*24*3),'date_to'=>$date_from-(60*60*24*4),'print'=>1)
-                ,'slab3'=>array('date_from'=>$date_from             ,'date_to'=>$date_from-(60*60*24*2),'print'=>0)
-                ,'name'=>"slab1"
-            );
-        }
-        elseif($week_day >= 3 and $week_day <= 4 ) {
-
-            $slab_array=array(
-                'slab1'=>array('date_from'=>$date_from-(60*60*24*1),'date_to'=>$date_from-(60*60*24*2),'print'=>1)
-                ,'slab2'=>array('date_from'=>$date_from-(60*60*24*5),'date_to'=>$date_from-(60*60*24*6),'print'=>1)
-                ,'slab3'=>array('date_from'=>$date_from-(60*60*24*3),'date_to'=>$date_from-(60*60*24*4),'print'=>0)
-                ,'name'=>"slab2"
-            );
-        }
-        elseif($week_day >= 5 and $week_day <= 6 ) {
-
-            $slab_array=array(
-                'slab1'=>array('date_from'=>$date_from -(60*60*24*2),'date_to'=>$date_from-(60*60*24*2),'print'=>1)
-                ,'slab2'=>array('date_from'=>$date_from-(60*60*24*3),'date_to'=>$date_from-(60*60*24*4),'print'=>1)
-                ,'slab3'=>array('date_from'=>$date_from-(60*60*24*5),'date_to'=>$date_from-(60*60*24*6),'print'=>0)
-                ,'name'=>"slab3"
-            );
-            
-        }
-        elseif($week_day == 0) {
-
-            $slab_array=array(
-                'slab1'=>array('date_from'=>$date_from              ,'date_to'=>$date_from+(60*60*24*2),'print'=>1)
-                ,'slab2'=>array('date_from'=>$date_from+(60*60*24*3),'date_to'=>$date_from+(60*60*24*4),'print'=>1)
-                ,'slab3'=>array('date_from'=>$date_from+(60*60*24*5),'date_to'=>$date_from+(60*60*24*6),'print'=>0)
-                ,'name'=>"slab4"
-            );
-            
-        }
-
-        return $slab_array;
+		}
+//		echo '<pre>';print_r($slab_dates);die();
+                
+		return 	$slab_dates;
     }
     
     /**

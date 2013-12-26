@@ -8,10 +8,31 @@
 class reservation_model extends Model
 {
     
-	function __construct() {
+    function __construct() {
             parent::__construct();
     }
     
+    function get_territory_managers($territory_id) {
+        $rdata = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
+                    from m_employee_info emp
+                    join m_town_territory_link ttl on ttl.employee_id = emp.employee_id and ttl.is_active=1
+                    join pnh_m_territory_info t on t.id = ttl.territory_id
+                    where job_title = 4 and is_suspended=0 and t.id=?
+                    order by job_title ASC",$territory_id)->result_array();## and ttl.is_active=1 group by emp.employee_id
+//                echo ''.  json_encode($rdata);
+            return $rdata;
+    }
+    function get_town_executives($territory_id) { //,$employee_id
+        $rdata = $this->db->query("select distinct emp.employee_id,emp.name,emp.email,emp.gender,emp.city,emp.contact_no,if(emp.job_title=4,'TM','BE') as job_role 
+                    from m_employee_info emp
+                    join m_town_territory_link ttl on ttl.employee_id = emp.employee_id and ttl.is_active=1
+                    join pnh_m_territory_info t on t.id = ttl.territory_id
+                    where job_title = 5 and is_suspended=0 and t.id=?
+                    order by job_title ASC",array($territory_id))->result_array();// #group by emp.employee_id # and ttl.is_active=1and ttl.parent_emp_id=? ,$employee_id
+//             $rdata['result'] = echo ''.  json_encode($rdata);
+        return $rdata;
+    }
+
     function get_territory_info($territory_id) {
         return $this->db->query("select * from pnh_m_territory_info where id=?",$territory_id)->row_array();
     }

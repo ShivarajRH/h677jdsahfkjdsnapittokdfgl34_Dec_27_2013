@@ -34,6 +34,11 @@
     .anchor a:hover {
         text-decoration: none;
     }
+    .label_text {
+        margin-top: 10px;
+        margin-right: 10px;
+        font-size: 16px;
+    }
 </style>
 <div class="page_wrap container">
 	
@@ -43,9 +48,16 @@
                 <div class="fl_left">
                     <select id="sel_territory" name="sel_territory" style="width:200px;">
                         <option value="00">All Territory</option>
-                        <?php foreach($pnh_terr as $terr):?>
-                                <option value="<?php echo $terr['id'];?>"><?php echo $terr['territory_name'];?></option>
-                        <?php endforeach;  ?>
+                        <?php foreach($terr_info as $terr) {
+                                if($terr['id'] == $territory_id) {
+                                        echo '<option value="'.$terr['id'].'" selected>'.$terr['territory_name'].'</option>';
+                                }
+                                else {
+                            ?>
+                                <option value="<?=$terr['id'];?>"><?=$terr['territory_name'];?></option>
+                        <?php   } 
+                            }
+                        ?>
                     </select>
                 </div>
                 
@@ -66,14 +78,18 @@
                     </form>
 		</div>
                 <div class="fl_right"><?php
+                    $l_date_to = $date_to;//
                     if( strtotime($l_date_to) < time() ) {
                     ?>
-                    <div class="block fl_right anchor"><a href="<?=site_url("admin/print_invoice_acknowledgementbydate/".$l_date_to);?>" title="Show Next 7 Days Shipment Log"> Next </a></div>
+                        <div class="block fl_right anchor"><a href="<?=site_url("admin/print_invoice_acknowledgementbydate/".$l_date_to);?>" title="Show Next 7 Days Shipment Log"> Next </a></div>
                     <?php
                     }
                     ?>
                     <div class="block fl_right anchor"><a href="<?=site_url("admin/print_invoice_acknowledgementbydate/".date("Y-m-d",strtotime($date_from)-(60*60*24*6)));?>" title="Show Last 7 Days Shipment Log"> Prev </a></div>
                     
+                </div>
+                <div class="fl_right">
+                    <div class="label_text">Showing from <b><?=$date_from;?></b> to <b><?=$date_to;?></b></div>
                 </div>
 	</div>
 	<div style="clear:both">&nbsp;</div>
@@ -96,48 +112,95 @@
                                 <th>
                                     <abbr title='Business Executive'>Business Executives</abbr>
                                 </th>
-                                <th width="50">
-                                    <abbr title='Total Franchises'>Franchises</abbr>
-                                </th>
-                                <th width="200"><span><?=$set1["date_from"]; ?> - <?=$set1["date_to"];?></span></th>
-                                <th width="200"><span><?=$set2["date_from"]; ?> - <?=$set2["date_to"];?></span></th>
-                                <th width="200"><span><?=$set3["date_from"]; ?> - <?=$set3["date_to"];?></span></th>
+                               
+                                <th width="200"><span><?=date("d_M_Y",strtotime($slabs_data['slab1']["date_from"]) ); ?> - <?=date("d_M_Y",strtotime($slabs_data['slab1']["date_to"]) );?></span></th>
+                                <th width="200"><span><?=date("d_M_Y",strtotime($slabs_data['slab2']["date_from"]) ); ?> - <?=date("d_M_Y",strtotime($slabs_data['slab2']["date_to"]) );?></span></th>
+                                <th width="200"><span><?=date("d_M_Y",strtotime($slabs_data['slab3']["date_from"]) ); ?> - <?=date("d_M_Y",strtotime($slabs_data['slab3']["date_to"]) );?></span></th>
                                 <!--<th width="50"><input type='checkbox' name='' id='' title='Pick for printing' class='chk_all_terr_print'></th>-->
                             </tr>
-                            <?php 
-                            foreach($terr_info as $i=>$terr) { ?>
+                            <?php // echo '<pre>';print_r($terr_info);
+                            
+                            foreach($terr_info as $i=>$terr) { 
+                                ?>
                                 <tr>
                                     <td><?=++$i;?></td>
                                     <td><?=$terr['territory_name'];?></td>
                                     <td>
                                         <?php
-                                            $new_arr = $terr_manager_info[$terr['territory_id']];
-                                            foreach($new_arr as $tm) { ?>
+                                            $tm_info = $this->reservations->get_territory_managers($terr['id']);
+                                            foreach($tm_info as $tm) { ?>
                                                     <div class=""><a target="_blank" href="<?=site_url('admin/view_employee/'.$tm['employee_id'])?>"><?=$tm['name'];?></a></div>
                                         <?php } ?>
                                     </td>
                                     <td>
                                         <?php
-                                            $new_arr2 = $busi_executive_info[$terr['territory_id']];
-                                            foreach($new_arr2 as $be) { ?>
+                                            $executive_info = $this->reservations->get_town_executives($terr['id']);
+                                            foreach($executive_info as $be) { ?>
                                                     <div class=""><a target="_blank" href="<?=site_url('admin/view_employee/'.$be['employee_id'])?>"><?=$be['name'];?></a></div>
                                         <?php } ?>
                                     </td>
+                                   <?php /* <td>
+                                         <b>$terr['ttl_franchises']; </b> <br> 
+                                    </td> */?>
+                                    <?php
+                                    if(isset($slabs_data)) 
+                                    foreach($slabs_data as $slab_name=>$slab) {
+                                    ?>
                                     <td>
-                                         <b><?=$terr['ttl_franchises']; ?></b> <br> 
-                                    </td>
-                                    <td>
-                                        <div class="ack_det">
-                                            <?php $total_invs = $set1[$terr['territory_id']]['ttl_invs'];?>
-                                            <b><?=$total_invs;?></b> Invoices
-                                            <?php if($total_invs != 0) { ?>
-                                            <span class="label_fld fl_right block_link anchor">
-                                                <a href="javascript:void(0);" onclick="return print_acknowledgement_inoices(this,'<?=$terr['territory_id']?>','set1');">Generate</a>
-                                                <input type="hidden" name="grp_invoices_set1_<?=$terr['territory_id']?>" id="grp_invoices_set1_<?=$terr['territory_id']?>" class="grp_invoices_set" value="<?=$terr['invoice_no_str']?>" date_from="<?=$set1["date_from"]; ?>" date_to="<?=$set1["date_to"];?>" />
-                                            </span>
-                                            <?php } ?>
-                                        </div>
+                                            <div class="ack_det">
+                                                <?php
+                                                $elt = $slabs_data[$slab_name]['result'][$terr['id']][0];
+                                                $total_invs = $elt['ttl_invs'];
+                                                $ttl_franchises = $elt['ttl_franchises'];
+
+                                                if($ttl_franchises != 0) {
+                                                    echo '<b>'.$ttl_franchises.'</b> Franchises<br>';
+                                                
+//                                                    if($total_invs != 0) {
+                                                        echo '<b>'.$total_invs.'</b> Invoices';
+
+                                                        echo '<span class="label_fld fl_right block_link anchor">
+                                                                <a href="javascript:void(0);" onclick="return print_acknowledgement_inoices(this,\''.$terr["id"].'\',\''.$slab_name.'\');">Generate</a>
+                                                                <input type="hidden" name="grp_invoices_'.$slab_name.'_'.$terr['id'].'" id="grp_invoices_'.$slab_name.'_'.$terr['id'].'" class="grp_invoices_set" value="'.$elt['invoice_no_str'].'" date_from="'.$slabs_data[$slab_name]["date_from"].'" date_to="'.$slabs_data[$slab_name]["date_to"].'" />
+                                                            </span>';
+//                                                    }
+                                                    
+                                                }
+                                                else 
+                                                {
+                                                    echo '--';
+                                                }
+                                                ?>
+                                            
+                                            </div>
                                    </td>
+                                <?php  }
+                                   
+//                                foreach($slabs_info as $slab_array) {
+//                                    foreach($slab_array as $slab) {
+                                       
+                                      // echo '<pre>';print_r($slab);
+                                       //echo ''.$slab['ttl_invs'];exit;
+                                    /*
+                                       ?>
+                                   
+                                        <td>
+                                            <div class="ack_det">
+                                                <?php $total_invs = $slab['ttl_invs']; ?>
+                                                <b><?=$total_invs;?></b> Invoices
+                                                <?php if($total_invs != 0) { ?>
+<!--                                                <span class="label_fld fl_right block_link anchor">
+                                                    <a href="javascript:void(0);" onclick="return print_acknowledgement_inoices(this,'<?=$terr['territory_id']?>','set2');">Generate</a>
+                                                    <input type="hidden" name="grp_invoices_set2_<?php //$terr['territory_id']?>" id="grp_invoices_set2_<?php //$terr['territory_id']?>" class="grp_invoices_set" value="<?php // $terr['invoice_no_str']?>" date_from="<?php //$set2["date_from"]; ?>" date_to="<?php //$set2["date_to"];?>" />
+                                                </span>-->
+                                                <?php } ?>
+                                            </div>
+                                       </td>
+                                       
+                                   <?php  */ //  } 
+//                                }
+                                   /*
+                                                                       ?>
                                    <td>
                                         <div class="ack_det">
                                             <?php $total_invs = $set2[$terr['territory_id']]['ttl_invs'];?>
@@ -161,7 +224,7 @@
                                             </span>
                                             <?php } ?>
                                         </div>
-                                   </td>
+                                   </td>*/?>
                                     
                                     <!--<td><input type='checkbox' name='' id='' class='chk_terr_print'></td>-->
                                 </tr>
@@ -185,6 +248,18 @@ $("#dlg_block").dialog({
     width:950,
     position: ['center', 'center'],
     modal: true
+});
+$("#sel_territory").change(function(e) {
+    e.preventDefault();
+    var date_from = $("#date_from").val();
+    var terr_id = $(this).find(":selected").val();
+    if(terr_id!= '00') {
+        window.location.href=site_url+"admin/print_invoice_acknowledgementbydate/"+date_from+"/"+terr_id;
+    }
+    else {
+        window.location.href=site_url+"admin/print_invoice_acknowledgementbydate/"+date_from;
+    }
+    
 });
 
 function print_acknowledgement_inoices(e,territory_id,set) {
