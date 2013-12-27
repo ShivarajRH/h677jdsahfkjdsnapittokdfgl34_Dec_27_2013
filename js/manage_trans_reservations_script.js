@@ -294,6 +294,7 @@ function reallot_stock_for_all_transaction(userid,pg) {
     var rdata='';
     $('#trans_list_replace_block').html("<div class='loading'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Loading...</div>");
     $.post(site_url+"admin/jx_reserve_avail_stock_all_transaction/"+updated_by,"",function(resp) {
+        console.log(resp);
             if(resp.status == 'fail') {
                         rdata = resp.response+"";
             }
@@ -346,15 +347,40 @@ function reserve_stock_for_trans(userid,transid,pg) {
     $.post('reserve_stock_for_trans/'+transid+'/'+ttl_num_orders+'/'+batch_remarks+'/'+updated_by+'',"",function(resp) {
         
             if(resp.status == 'fail') {
-                        rdata = resp.response;
+                    rdata = resp.response+"";
             }
             else {
-                
-                $.each(resp.result,function(i,row){
-                        rdata += row;
-                });
-                
+                rdata += "<div class='dash_bar'>Alloted : "+resp.alloted+"</div><div class='dash_bar_red'>No Stock : "+resp.nostock+"</div>";
+                if(resp.alloted!=0) {
+                    
+                    rdata += "<div><div class='clear'></div><h3>Following transactions alloted:</h3> <table class='subdatagrid'><tr><th>Transactions</th><th>Products</th></tr>";
+                    $.each(resp.alloted_msg,function(transid,row){
+                        
+                        rdata += "<tr><td><a href='"+site_url+"admin/product/"+transid+"' target='_blank'>"+transid+"</a></td><td>";
+                        $.each(row,function(i,val) {
+                                rdata += "<a href='"+site_url+"admin/product/"+val.product_id+"' target='_blank'>"+val.product_id+"</a>"+"("+val.stock+"), ";
+                        });
+                        rdata += "</td></tr>";
+                    });
+                    rdata += "</table></div>";
+                    
+                    
+                }
+                else if(resp.nostock!=0){
+                    rdata += "<div><div class='clear'></div><h3>Following transactions have no stock:</h3> <table class='subdatagrid'><tr><th>Transactions</th><th>Products</th></tr>";
+                    $.each(resp.nostock_msg,function(transid,row){
+                        
+                        rdata += "<tr><td><a href='"+site_url+"admin/product/"+transid+"' target='_blank'>"+transid+"</a></td><td>";
+                        $.each(row,function(i,val) {
+                                rdata += "<a href='"+site_url+"admin/product/"+val.product_id+"' target='_blank'>"+val.product_id+"</a>"+"("+val.stock+"), ";
+                        });
+                        rdata += "</td></tr>";
+                    });
+                    rdata += "</table></div>";
+                }
+//                $.each(resp.result,function(i,val_arr){$.each(val_arr,function(i,row){rdata += row;});});
             }
+            
             loadTransactionList(pg);
             $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
 
@@ -370,18 +396,47 @@ function reallot_frans_all_trans(elt,userid,franchise_id,pg) {
     var batch_remarks='';
     var updated_by = userid;
     
-    var  postData = {all_trans: '"'+all_trans+'"'};
-    $.post(site_url+'admin/jx_reallot_frans_all_trans/'+batch_remarks+'/'+updated_by+'',postData,function(rdata) {
-        
-            if(rdata == '') {
-                rdata=("No franchise transaction processed for allotment.");
-            }else {
-                
+    var rdata='';
+    var  postData = {all_trans: all_trans};
+    $.post(site_url+'admin/jx_reallot_frans_all_trans/'+batch_remarks+'/'+updated_by+'',postData,function(resp) {
+            
+             if(resp.status == 'fail') {
+                    rdata = resp.response+"";
             }
-            loadTransactionList(pg);
+            else {
+                rdata += "<div class='dash_bar'>Alloted : "+resp.alloted+"</div><div class='dash_bar_red'>No Stock : "+resp.nostock+"</div>";
+                if(resp.alloted != 0) {   
+                    rdata += "<div><div class='clear'></div><h3>Following transactions alloted:</h3> <table class='subdatagrid'><tr><th>Transactions</th><th>Products</th></tr>";
+                    $.each(resp.alloted_msg,function(transid,row){
+                        
+                        rdata += "<tr><td><a href='"+site_url+"admin/product/"+transid+"' target='_blank'>"+transid+"</a></td><td>";
+                        $.each(row,function(i,val) {
+                                rdata += "<a href='"+site_url+"admin/product/"+val.product_id+"' target='_blank'>"+val.product_id+"</a>"+"("+val.stock+"), ";
+                        });
+                        rdata += "</td></tr>";
+                    });
+                    rdata += "</table></div>";
+                    
+                    
+                }
+                else if(resp.nostock!=0){
+                    rdata += "<div><div class='clear'></div><h3>Following transactions have no stock:</h3> <table class='subdatagrid'><tr><th>Transactions</th><th>Products</th></tr>";
+                    $.each(resp.nostock_msg,function(transid,row){
+                        
+                        rdata += "<tr><td><a href='"+site_url+"admin/product/"+transid+"' target='_blank'>"+transid+"</a></td><td>";
+                        $.each(row,function(i,val) {
+                                rdata += "<a href='"+site_url+"admin/product/"+val.product_id+"' target='_blank'>"+val.product_id+"</a>"+"("+val.stock+"), ";
+                        });
+                        rdata += "</td></tr>";
+                    });
+                    rdata += "</table></div>";
+                }
+//                $.each(resp.result,function(i,val_arr){$.each(val_arr,function(i,row){rdata += row;});});
+            }
             $(".reservation_action_status").html(rdata).dialog("open").dialog('option', 'title', 'Re-allot Transaction Reservation report');
+            loadTransactionList(pg);
 
-    });
+    },'json');
     return false;
 }
 

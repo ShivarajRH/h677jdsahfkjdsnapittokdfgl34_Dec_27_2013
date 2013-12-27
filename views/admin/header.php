@@ -45,7 +45,7 @@
 	$submenu['products']=array("addproduct"=>"Add Product","products_report"=>"Product report");
 	$submenu['categories']=array("addcat"=>"Add Category");
 	$submenu['brands']=array("addbrand"=>"Add Brand");
-	$submenu['vendors']=array("addvendor"=>"Add Vendor");
+	$submenu['vendors']=array("addvendor"=>"Add Vendor","vendor_margin_bulk_update"=>"vendor margin bulk update");
 	$submenu['support']=array("addticket"=>"Add Ticket");
 	//$submenu['generate_manifesto']=array("pnh_pending_shipments"=>"Pending shipments for delivery","generate_manifesto"=>"Generate Manifesto","view_manifesto_sent_log"=>"View Driver Sent Log");
 	$submenu['pnh_pending_shipments']=array("outscan/1"=>"Already Packed- Outscan","pnh_pending_shipments"=>"Choose shipments for delivery","view_manifesto_sent_log"=>"Print manifesto ","shipments_transit_log"=>"Shipments Transit log","update_bulk_lrdetails"=>"Bulk Update LR Details","pnh_scan_delivery_akw"=>"Scan delivery acknowledgement");
@@ -248,9 +248,9 @@ background: #6B6A6A;}
 #hd #searchresults a span.viewall { text-align: center;}
 
 </style>
+
 <script type="text/javascript">
-    var userid="<?php echo $user["userid"];?>"; 
-    
+    var userid="<?php echo $user["userid"];?>";    
 </script>
 <?php 
 $menu=$tmenu;

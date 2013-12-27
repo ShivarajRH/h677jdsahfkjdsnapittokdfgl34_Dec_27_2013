@@ -1,4 +1,5 @@
 <style>
+.container_div{visibility:hidden}
 .leftcont{display: none}.fran_suspendlink{
 border-radius:5px;
 background:#f77;
@@ -12,6 +13,15 @@ background:#f00;
 text-decoration:none;
 }
 li.required{color: #cd0000;list-style: none}
+.jqplot-highlighter-tooltip, .jqplot-canvasOverlay-tooltip
+{
+	font-size: 13px !important;
+    margin-left:10px;margin-top:-5px;
+    background:none repeat scroll 0 0 #FFFFFF !important; 
+}
+.sbutton span {
+    color: #FFFFFF;
+}
 </style>
 <?php 
 $f=$fran; 
@@ -24,8 +34,8 @@ foreach($menu_list as $menu_li)
 
 ?>
 <style>
-	.dash_bar_right{font-size: 11px;min-width: 100px !important;text-align: center;padding:3px 6px;}
-	.dash_bar_right span{display: block;font-size: 16px;}
+	.dash_bar_right{font-size: 11px;min-width: 100px !important;text-align: center;padding:3px 5px;}
+	.dash_bar_right span{display: block;font-size: 15px;}
 	h4{margin:5px 0px;}
 </style>
 
@@ -113,41 +123,43 @@ foreach($menu_list as $menu_li)
 <div style="margin-bottom: 0px;clear: both;overflow: hidden">
 	
 <div class="dash_bar_right" style="background: tomato">
-Pending Payment : <span>Rs <?=formatInIndianStyle($shipped_tilldate-($paid_tilldate+$acc_adjustments_val+$credit_note_amt),2)?></span>
+Pending Payment : <span>Rs <?=format_price($shipped_tilldate-($paid_tilldate+$acc_adjustments_val+$credit_note_amt),2)?></span>
 </div>
 <div class="dash_bar_right">
-UnCleared Payments : <span>Rs <?=formatInIndianStyle($uncleared_payment,2)?></span>
-</div>
-
-<div class="dash_bar_right">
-	Adjustments : <span>Rs <?=formatInIndianStyle($acc_adjustments_val,2)?></span>
+UnCleared Payments : <span>Rs <?=format_price($uncleared_payment,2)?></span>
 </div>
 
 <div class="dash_bar_right">
-Paid till Date : <span>Rs <?=formatInIndianStyle($paid_tilldate,2)?></span>
+	Adjustments : <span>Rs <?=format_price($acc_adjustments_val,2)?></span>
 </div>
 
 <div class="dash_bar_right">
-Credit Notes Raised : <span>Rs <?=formatInIndianStyle($credit_note_amt,2)?></span>
-</div>
-<div class="dash_bar_right">
-Bounced/Cancelled : <span>Rs <?=formatInIndianStyle($cancelled_tilldate,2)?></span>
-</div>
-<div class="dash_bar_right">
-Unshipped : <span>Rs <?=formatInIndianStyle($not_shipped_amount,2)?></span>
-</div>
-<div class="dash_bar_right">
-Shipped : <span>Rs <?=formatInIndianStyle($shipped_tilldate,2)?></span>
-</div>
-<div class="dash_bar_right">
-Ordered : <span>Rs <?=formatInIndianStyle($ordered_tilldate,2)?></span>
+Paid till Date : <span>Rs <?=format_price($paid_tilldate,2)?></span>
 </div>
 
 <div class="dash_bar_right">
-Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
+Credit Notes Raised : <span>Rs <?=format_price($credit_note_amt,2)?></span>
+</div>
+<div class="dash_bar_right">
+Bounced/Cancelled : <span>Rs <?=format_price($cancelled_tilldate,2)?></span>
+</div>
+<div class="dash_bar_right">
+Unshipped : <span>Rs <?=format_price($not_shipped_amount,2)?></span>
+</div>
+<div class="dash_bar_right">
+Shipped : <span>Rs <?=format_price($shipped_tilldate,2)?></span>
+</div>
+<div class="dash_bar_right">
+Ordered : <span>Rs <?=format_price($ordered_tilldate,2)?></span>
+</div>
+
+<div class="dash_bar_right">
+Credit Limit : <span>Rs <?=format_price($f['credit_limit'])?></span>
 </div>
 </div>
 <div style="clear: both">&nbsp;</div>
+
+<div id="loading_container_div" align="center" style="padding:10px;"><img src="<?php echo base_url().'/images/loading_bar.gif';?>" ></div>
 
 <div class="container_div" style="margin-top: 0px;">
 
@@ -156,7 +168,7 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 	<ul class="fran_tabs">
 	<li><a href="#name">Basic Details</a></li>
 	<?php if($this->erpm->auth(PNH_EXECUTIVE_ROLE|CALLCENTER_ROLE,true)){?>
-	<li><a href="#actions" onclick="load_receipts(this,'actions',0,<?=$f['franchise_id']?>)">Credits and MIDs</a></li>
+	<li><a href="#actions" onclick="load_receipts(this,'actions',0,<?=$f['franchise_id']?>,100)">Credits and MIDs</a></li>
 	<?php }?>
 	<li><a href="#statement" class="account_statement">Account Statement &amp; Topup</a></li>
 	<li><a href="#orders" >Orders</a></li>
@@ -172,6 +184,7 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 	<li><a href="#shipped_imeimobslno" onclick="load_allshipped_imei(0)">IMEINO Activations</a></li>
 	<?php }?>
 	<li><a href="#status_log">Status Log</a></li>
+	<li><a href="#analytics" class="analytics">Analytics</a></li>
 	</ul>
 	
 	<div id="credit_notes">
@@ -297,6 +310,70 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 			</div>
 	<!-- franchise status log END -->
 	
+	<!-- Analytics graph section start ---->
+		<div id="analytics">
+			<table width="100%">
+				<tr>
+					<td width="50%">
+						<h4><div class="head_wrap"></div></h4>
+					</td>
+					<td width="50%">
+						<div class="fr_menu_by_mn">
+							<form id="grid_list_frm_to" method="post">
+                                    <div style="margin:2.5px 0px;font-size:12px;text-align: right">
+                                    	<b>From</b> : <input type="text" style="width: 90px;" id="frm"
+                                                name="date_from" value="<?php echo date('d-m-Y',time()-90*60*60*24)?>" />
+                                        <b>To</b> : <input type="text" style="width: 90px;" id="to"
+                                                name="date_to" value="<?php echo date('d-m-Y',time())?>" /> 
+                                        <button type="submit" class="sbutton small green"><span>Go</span></button>
+                                    </div>
+                            </form>
+						</div>
+					</td>
+				</tr>
+			</table>
+			 
+				<div id="payment_stat">
+					<div class="payment_stat_view">
+					</div>
+				</div>
+				<div id="fr_det_popup">
+				</div>
+					 
+			<table width="100%">
+				<tr>
+					<td width="30%">
+						<div id="fr_order_stat">
+							<h5 style="margin: 4px 6px;">Menu Sales</h5>
+							<div class="order_piestat_view">
+							</div>
+						</div>
+					</td>
+					<td>
+						<div id="top_brand_bymenu_stat">
+							<h5 style="margin:6px 43px"><div class="stat_head_wrap"></div></h5>
+							<div class="fr_brand_stat_view">
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+			
+			<table width="100%">
+				<tr>
+					<td width="35%">
+						<div id="menu_det_tab" style="clear: both;">
+							<h5 style="margin:4px 6px"><div class="stat_head_wrap"></div></h5>
+							<div class="fr_top_sold"></div>
+						</div>
+					</td>
+					<td></td>
+				</tr>
+			</table>
+		</div>
+	<!-- Analytics graph section end ---->
+	
+	
 	<!-- List Franchise Returns Start -->
 	<div id="return_products">
 		
@@ -355,15 +432,15 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 	<div id="voucher_activity">
 				<b>Voucher Activity</b>
 				<div class="dash_bar_right" style="padding: 12px 6px;">
-					<b>Voucher Book Value:<?php echo 'Rs'.formatInIndianStyle($this->db->query("SELECT SUM(`value`) AS ttl_value FROM `pnh_t_voucher_details` WHERE franchise_id=? AND `status`<=1 AND is_alloted=1 ",$f['franchise_id'])->row()->ttl_value)?></b>
+					<b>Voucher Book Value:<?php echo 'Rs'.format_price($this->db->query("SELECT SUM(`value`) AS ttl_value FROM `pnh_t_voucher_details` WHERE franchise_id=? AND `status`<=1 AND is_alloted=1 ",$f['franchise_id'])->row()->ttl_value)?></b>
 				</div>
 
 				<div class="dash_bar_right" style="padding: 12px 6px;">
-					<b>Activated Voucher Value:<?php echo 'Rs'.formatInIndianStyle($this->db->query("SELECT SUM(`value`) AS ttl_value FROM `pnh_t_voucher_details` WHERE franchise_id=? AND `status`>=3 AND is_alloted=1 and is_activated=1",$f['franchise_id'])->row()->ttl_value)?></b>
+					<b>Activated Voucher Value:<?php echo 'Rs'.format_price($this->db->query("SELECT SUM(`value`) AS ttl_value FROM `pnh_t_voucher_details` WHERE franchise_id=? AND `status`>=3 AND is_alloted=1 and is_activated=1",$f['franchise_id'])->row()->ttl_value)?></b>
 				</div>
 
 				<div class="dash_bar_right" style="padding: 12px 6px;">
-					<b>Not Activated Voucher Value:<?php echo 'Rs'.formatInIndianStyle($this->db->query("SELECT SUM(`value`) AS ttl_value FROM `pnh_t_voucher_details` WHERE franchise_id=? AND `status`<=1 AND is_alloted=1 and is_activated=0",$f['franchise_id'])->row()->ttl_value)?></b>
+					<b>Not Activated Voucher Value:<?php echo 'Rs'.format_price($this->db->query("SELECT SUM(`value`) AS ttl_value FROM `pnh_t_voucher_details` WHERE franchise_id=? AND `status`<=1 AND is_alloted=1 and is_activated=0",$f['franchise_id'])->row()->ttl_value)?></b>
 				</div>
 				<br> <br>
 
@@ -418,11 +495,35 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 	
 	<!-- IMEI slno log Start-->
 	<?php if($is_membrsch_applicable){?>
-	<div id="shipped_imeimobslno">
+	
+			<div id="shipped_imeimobslno">
 			<?php 	
-				$ttl_purchased=$this->db->query("SELECT COUNT(DISTINCT i.id) AS ttl FROM king_orders o JOIN king_transactions t ON t.transid=o.transid JOIN t_imei_no i ON i.order_id=o.id WHERE o.imei_scheme_id > 0 and t.franchise_id=?",$f['franchise_id'])->row()->ttl;
-				$ttl_activated_msch=$this->db->QUERY("SELECT COUNT(DISTINCT i.id) AS active_msch FROM king_orders o JOIN king_transactions t ON t.transid=o.transid JOIN t_imei_no i ON i.order_id=o.id WHERE is_imei_activated=1 AND o.imei_scheme_id > 0 AND t.franchise_id=? ",$f['franchise_id'])->ROW()->active_msch;
-				$ttl_inactiv_msch=$this->db->QUERY("SELECT COUNT(DISTINCT i.id) AS inactive_msch FROM king_orders o JOIN king_transactions t ON t.transid=o.transid JOIN t_imei_no i ON i.order_id=o.id WHERE is_imei_activated=0 AND o.imei_scheme_id > 0 AND t.franchise_id=?",$f['franchise_id'])->ROW()->inactive_msch;
+			
+				$ttl_imei_status_res = $this->db->query("select franchise_id,is_imei_activated,count(distinct i.id) as ttl_orders
+					from t_imei_no i
+					join king_orders b on i.order_id = b.id
+					join king_dealitems c on c.id = b.itemid
+					join m_product_deal_link d on d.itemid = c.id
+					join king_transactions e on e.transid = b.transid
+					where b.status in (1,2) and b.imei_scheme_id > 0 and e.franchise_id = ?  
+					group by is_imei_activated ",$f['franchise_id']);
+					
+				$ttl_purchased = 0;	
+				$ttl_inactiv_msch = 0;
+				foreach($ttl_imei_status_res->result_array() as $ttl_imei_det)
+				{
+					if($ttl_imei_det['is_imei_activated'])
+						$ttl_activated_msch = $ttl_imei_det['ttl_orders'];
+					else
+						$ttl_inactiv_msch = $ttl_imei_det['ttl_orders'];
+					
+				}	
+				
+				$ttl_purchased = $ttl_activated_msch+$ttl_inactiv_msch;
+					
+				//$ttl_purchased=$this->db->query("SELECT COUNT(DISTINCT i.id) AS ttl FROM king_orders o JOIN king_transactions t ON t.transid=o.transid JOIN t_imei_no i ON i.order_id=o.id WHERE o.imei_scheme_id > 0 and t.franchise_id=?",$f['franchise_id'])->row()->ttl;
+				//$ttl_activated_msch=$this->db->QUERY("SELECT COUNT(DISTINCT i.id) AS active_msch FROM king_orders o JOIN king_transactions t ON t.transid=o.transid JOIN t_imei_no i ON i.order_id=o.id WHERE is_imei_activated=1 AND o.imei_scheme_id > 0 AND t.franchise_id=? ",$f['franchise_id'])->ROW()->active_msch;
+				//$ttl_inactiv_msch=$this->db->QUERY("SELECT COUNT(DISTINCT i.id) AS inactive_msch FROM king_orders o JOIN king_transactions t ON t.transid=o.transid JOIN t_imei_no i ON i.order_id=o.id WHERE is_imei_activated=0 AND o.imei_scheme_id > 0 AND t.franchise_id=?",$f['franchise_id'])->ROW()->inactive_msch;
 				
 				$ttl_imei_activation_credit=$this->db->QUERY("select sum(imei_reimbursement_value_perunit) as imei_credit  
 																from king_orders a 
@@ -433,17 +534,23 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 		<div class="module_cont">
 			<!--  <h3 class="module_cont_title">IMEI List</h3>-->
 			<div class="module_cont_block">
-				<div class="module_cont_block_grid_total fl_left">
+				<div class="module_cont_block_grid_total fl_left" style="padding:5px;">
 						<span class="stat total">Total Purchased : <b><?php echo  $ttl_purchased ;?></b></span> 
-						<span class="stat total">Total Active : <b><?php echo $ttl_activated_msch?></b></span> 
-						<span class="stat total">Total Inactive : <b><?php echo $ttl_inactiv_msch?></b></span> 
+						<span class="stat total">Active : <b><?php echo $ttl_activated_msch?></b></span> 
+						<span class="stat total">Inactive : <b><?php echo $ttl_inactiv_msch?></b></span> 
 				</div>
-				<div class="module_cont_block_grid_total fl_right">
-						<span class="stat total  fl_right">Total Credit On activation : <b><?php echo 'Rs'.formatInIndianStyle($ttl_imei_activation_credit)?></b></span> 
+				<div class="module_cont_block_grid_total fl_right" style="padding:5px;">
+						<span class="stat total  fl_right">Total Credit On activation : <b><?php echo 'Rs '.format_price($ttl_imei_activation_credit)?></b></span> 
 				</div>
 				
-				<div class="module_cont_block_filters fl_left" style="background: #e6e6e6;padding:-1px;margin:2px;">
-					<span class="" style="margin-right:10px;" >
+				<div class="module_cont_block_filters clearboth" style="background: #f5f5f5;margin:0px;height: 27px;padding:3px;">
+					
+					<span class="filter_bykwd fl_right" >
+						Search : <input type="text" name="imei_srch_kwd" style="font-size: 12px;padding:3px 7px;width: 200px;" value="" placeholder="" >
+						<input type="button" onclick = "load_shipped_imei(0)" value="Search" />
+					</span>
+					
+					<span style="margin-right:10px;padding:5px;font-size:12px;" >
 						<b>Filter IMEI By</b>&nbsp;Activated Date : 
 						<input type="text" name="active_ondate" style="font-size: 12px;padding:3px 7px;width: 80px;" value="" placeholder="" >
 						to 
@@ -457,10 +564,7 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 						</select>
 					</span>
 					
-					<span class="filter_bykwd" style="margin-left:300px;">
-						Search : <input type="text" name="imei_srch_kwd" style="font-size: 12px;padding:3px 7px;width: 200px;" value="" placeholder="" >
-						<input type="button" onclick = "load_shipped_imei(0)" value="Search" />
-					</span>
+					
 				</div>
 				<div class="module_cont_block_grid" style="clear:both">
 					<table class="datagrid" width="100%">
@@ -518,7 +622,7 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 								$f['town_name'] = $this->db->query("select town_name from pnh_towns a join pnh_m_franchise_info b on a.id = b.town_id where franchise_id = ? ",$f['franchise_id'])->row()->town_name; 
 							?>
 							<tr><td class="label">Town  | Territory</td><td><b><?=$f['town_name']?> | </b><b><?=$f['territory_name']?></b></td></tr>
-							<tr><td class="label">Town Courier Priorities</td><td>
+							<tr><td class="label">Town Courier Priorities</td><td style="background: #f9f9f9">
                                                         <?php
                                                         
                                                         $courier = $this->erpm->get_fran_courier_details($f['franchise_id']);
@@ -528,22 +632,26 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
                                                         <?php }
                                                         else {
 							?>
-                                                        <ol>
+                                                        <ol style="padding:5px 20px">
                                                             <li><span>
                                                                 <b><?=$courier["c1"]['courier_name']?> / </b>
                                                                 <b><?=$courier["c1"]['delivery_hours_1']?> Hrs</b> / 
                                                                 Deliver <b><?php echo $this->erpm->get_delivery_type_msg($courier["c1"]['delivery_type_priority1']); ?></b>
                                                             </span></li>
+                                                            <?php if($courier["c2"]['courier_name']){?>
                                                             <li><span>
                                                                 <b><?=$courier["c2"]['courier_name']?> / </b>
                                                                 <b><?=$courier["c2"]['delivery_hours_2']?> Hrs</b> / 
                                                                 Deliver <b><?php echo $this->erpm->get_delivery_type_msg($courier["c2"]['delivery_type_priority2']); ?></b>
                                                             </span></li>
+                                                            <?php } ?>
+                                                            <?php if($courier["c3"]['courier_name']){?>
                                                             <li><span>
                                                                 <b><?=$courier["c3"]['courier_name']?> / </b>
                                                                 <b><?=$courier["c3"]['delivery_hours_3']?> Hrs</b> / 
                                                                 Deliver <b><?php echo $this->erpm->get_delivery_type_msg($courier["c3"]['delivery_type_priority3']); ?></b>
                                                             </span></li>
+                                                            <?php } ?>
                                                         </ol>
 							<?php } ?>
                                                         </td></tr>
@@ -668,22 +776,22 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 									action="<?=site_url("admin/pnh_download_stat/{$f['franchise_id']}")?>"
 									method="post">
 									<h4 style="margin: 0px;">Download account statement</h4>
-									from <input type="text" name="from" id="d_ac_from" size=10> To
-									<input size=10 type="text" name="to" id="d_ac_to"> 
-									<select name="type">
+									From <input type="text" name="from" id="d_ac_from" value="<?php echo (date('Y-m-d',$f['created_on']))?>" size=10> To
+									<input size=10 type="text" name="to" id="d_ac_to" value="<?php echo (date('Y-m-d'))?>"> 
+									<select name="type" style="display: none">
 										<option value="new">New</option>
-										<option value="old">Old</option>
 									</select>
-									<input
-										type="submit" value="Go"> &nbsp;<input type="button" class="button-flat-highlight" value="Download" onclick="import_sales_summary(<?php echo $f['franchise_id']?>)" style="width:86px;height:23px;">
+									<b>Output</b> : 
+									<select name="op_type">
+										<option value="pdf">PDF</option>
+										<option value="xls">XLS</option>
+									</select>
+									<input type="submit" value="Go">
 								</form>
-								</div>
+							</div>
 						</div>
-						
 					</div>	
-				 
 				</td>
-					 
 			</tr>
 			</table>
 			 
@@ -1095,98 +1203,99 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 			<?php if(1){?>	
 			<div id="statement">
 				<?php if(1){?>
-					<div class="box_module fl_left" >
-						<h4 class="box_module_title" style="">Make a Topup/Security Deposit</h4>
-						<div class="box_module_content">
-							<form method="post" id="top_form" action="<?=site_url("admin/pnh_topup/{$fran['franchise_id']}")?>">
-								<table cellpadding=3 width="100%" cellpadding="5">
-									<tr>
-										<td width="150">Type</td><td>:</td>
-										<td>
-											<select name="r_type" id="r_type">
-												<option value="1">Topup</option>
-												<option value="0">Security Deposit</option>
-											</select>
-										</td>
-									</tr>
-									<tr>
-										<td>Amount (Rs)</td><td>:</td>
-										<td><input type="text" class="inp amount" name="amount" size="5">
-										</td>
-									</tr>
-									<tr>
-										<td>Instrument Type</td><td> :</td>
-										<td><select name="type" class="inst_type">
-												<option value="0">Cash</option>
-												<option value="1">Cheque</option>
-												<option value="2">DD</option>
-												<option value="3">Transfer</option>
-										</select></td>
-									</tr>
-									<tr>
-										<td>Instrument Status</td><td> :</td>
-										<td><select name="transit_type">
-												<option value="0">In Hand</option>
-												<option value="1">Via Courier</option>
-												<option value="2">With Executive</option>
-										</select></td>
-									</tr>
-									<tr class="inst inst_name">
-										<td class="label">Bank name </td><td>:</td>
-										<td><input type="text" name="bank" size=30></td>
-									</tr>
-									<tr class="inst inst_no">
-										<td class="label">Instrument No</td><td> :</td>
-										<td><input type="text" name="no" size=10></td>
-									</tr>
-									<tr class="inst inst_date">
-										<td class="label">Instrument Date</td><td> :</td>
-										<td><input type="text" name="date" id="sec_date" size=15></td>
-									</tr>
-									<tr class="inst_msg">
-										<td>Message</td><td> :</td>
-										<td><textarea class="inp msg" name="msg" class="inp" style="width: 300px;height: 60px;"></textarea></td>
-									</tr>
-									<tr>
-										<td align="right" colspan="3"><input type="submit" class="button button-rounded button-tiny button-flat-highlight" value="Submit"></td>
-									</tr>
-								</table>
-								</form>
-							</div>
+					<div style="float: left; margin-top: 33px; margin-left: 20px; background: #f9f9f9; padding: 5px; width: 500px;font-size: 12px;">
+					<h4 style="background: #C97033; color: #fff; padding: 10px; margin: -5px -5px 5px -5px;">Make a Topup/Security Deposit</h4>
+						<form method="post" id="top_form" action="<?=site_url("admin/pnh_topup/{$fran['franchise_id']}")?>">
+							<table cellpadding=3 width="100%">
+								<tr>
+									<td>Type</td><td>:</td>
+									<td>
+										<select name="r_type" id="r_type">
+											<option value="1">Topup</option>
+											<option value="0">Security Deposit</option>
+										</select>
+									</td>
+								</tr>
+								<tr>
+									<td>Amount (Rs)</td><td>:</td>
+									<td><input type="text" class="inp amount" name="amount"
+										size=5>
+									</td>
+								</tr>
+								<tr>
+									<td>Instrument Type</td><td> :</td>
+									<td><select name="type" class="inst_type">
+											<option value="0">Cash</option>
+											<option value="1">Cheque</option>
+											<option value="2">DD</option>
+											<option value="3">Transfer</option>
+									</select></td>
+								</tr>
+								<tr>
+									<td>Instrument Status</td><td> :</td>
+									<td><select name="transit_type">
+											<option value="0">In Hand</option>
+											<option value="1">Via Courier</option>
+											<option value="2">With Executive</option>
+									</select></td>
+								</tr>
+								<tr class="inst inst_name">
+									<td class="label">Bank name </td><td>:</td>
+									<td><input type="text" name="bank" size=30></td>
+								</tr>
+								<tr class="inst inst_no">
+									<td class="label">Instrument No</td><td> :</td>
+									<td><input type="text" name="no" size=10></td>
+								</tr>
+								<tr class="inst inst_date">
+									<td class="label">Instrument Date</td><td> :</td>
+									<td><input type="text" name="date" id="sec_date" size=15></td>
+								</tr>
+								<tr class="inst_msg">
+									<td>Message</td><td> :</td>
+									<td><textarea class="msg" name="msg" style="width:350px;height:80px;" ></textarea></td>
+								</tr>
+								<tr>
+									<td align="right" colspan="3"><input type="submit" class="button button-rounded button-small button-flat-action" value="Submit"></td>
+								</tr>
+							</table>
+						</form>
 					</div>
 
-					<div class="box_module fl_left" >
-						<h4 class="box_module_title" style="">Account Statement Correction</h4>
-						<div class="box_module_content"> 
-							<form method="post" id="acc_change_form"
-								action="<?=site_url("admin/pnh_acc_stat_c/{$fran['franchise_id']}")?>">
-								<table cellpadding=3 width="100%">
-									<tr>
-										<td width="150">Type</td><td>:</td>
-										<td><select name="type"><option value="0">In (credit)</option>
-												<option value="1">Out (debit)</option>
-										</select></td>
-									</tr>
-									<tr>
-										<td>Amount (Rs)</td><td>:</td>
-										<td><input type="text" name="amount" class="inp" size=5>
-										</td>
-									</tr>
-									<tr>
-										<td>Description</td><td>:</td>
-										<td><textarea name="desc" class="inp" style="width: 300px;height: 107px;"></textarea></td>
-									</tr>
-									<tr>
-									<td>Send SMS to Franchise</td><td>:</td>
-										<td><label><input type="checkbox" name="sms" value="1"></label></td>
-										
-									</tr>
-									<tr>
-										<td colspan="3" align="right"><input type="submit" class="button button-rounded button-tiny button-flat-highlight" value="Make correction" ></td>
-									</tr>
-								</table>
-							</form>
-						</div>
+
+					<div
+						style="float: left; margin-top: 33px; margin-left: 20px; background: #f9f9f9; padding: 5px; width: 580px;font-size: 12px;">
+						<h4
+							style="background: #C97033; color: #fff; padding: 10px; margin: -5px -5px 5px -5px;">Account
+							Statement Correction</h4>
+						<form method="post" id="acc_change_form"
+							action="<?=site_url("admin/pnh_acc_stat_c/{$fran['franchise_id']}")?>">
+							<input type="hidden" name="is_manual_corr" value="1">
+							<table cellpadding=3>
+								<tr>
+									<td width="100">Type</td><td>:</td>
+									<td><select name="type"><option value="0">In (credit)</option>
+											<option value="1">Out (debit)</option>
+									</select></td>
+								</tr>
+								<tr>
+									<td>Amount (Rs)</td><td>:</td>
+									<td><input type="text" name="amount" class="inp" size=5>
+									</td>
+								</tr>
+								<tr>
+									<td>Description</td><td>:</td>
+									<td><textarea name="desc" class="inp" style="width:400px;height:100px;" ></textarea></td>
+								</tr>
+								<tr>
+								<td>Send SMS to Franchise</td><td>:</td>
+									<td><label><input type="checkbox" name="sms" value="1"></label></td>
+								</tr>
+								<tr>
+									<td colspan="3" align="right"><input type="submit" class="button button-rounded button-small button-flat-action" value="Make correction" ></td>
+								</tr>
+							</table>
+						</form>
 					</div>
 				<?php }?>
 					<div class="clear"></div></br></br>
@@ -1201,15 +1310,60 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 						
 						
 						<ul>
-							<li><a href="#pending" onclick="load_receipts(this,'pending',0,<?=$f['franchise_id']?>)" class="pending_receipt">Pending</a></li>
-							<li><a href="#processed" onclick="load_receipts(this,'processed',0,<?=$f['franchise_id']?>)">Processed</a></li>
-							<li><a href="#realized" onclick="load_receipts(this,'realized',0,<?=$f['franchise_id']?>)">Realized</a></li>
-							<li><a href="#cancelled" onclick="load_receipts(this,'cancelled',0,<?=$f['franchise_id']?>)">Cancelled/Bounced</a></li>
-							<li><a href="#acct_stat" onclick="load_receipts(this,'acct_stat',0,<?=$f['franchise_id']?>)">Account Correction</a></li>
+							<li><a href="#pending" onclick="load_receipts(this,'pending',0,<?=$f['franchise_id']?>,100)" class="pending_receipt">Pending</a></li>
+							<li><a href="#processed" onclick="load_receipts(this,'processed',0,<?=$f['franchise_id']?>,100)">Processed</a></li>
+							<li><a href="#realized" onclick="load_receipts(this,'realized',0,<?=$f['franchise_id']?>,100)">Realized</a></li>
+							<li><a href="#cancelled" onclick="load_receipts(this,'cancelled',0,<?=$f['franchise_id']?>,100)">Cancelled/Bounced</a></li>
+							<li><a href="#acct_stat" onclick="load_receipts(this,'acct_stat',0,<?=$f['franchise_id']?>,100)">Account Correction</a></li>
+							<?php if($this->erpm->auth(FINANCE_ROLE,true)){ ?>
+							<li><a href="#security_cheques" >Security Cheque Details</a></li>
+							<?php } ?>
 						</ul>
 						<div id="pending">
 							<div class="tab_content"></div>
 						</div>
+						<?php if($this->erpm->auth(FINANCE_ROLE,true)){ ?>
+						<div id="security_cheques" style="min-height: 100px">
+							<div class="clearboth" align="left" style="padding:10px;">
+								<a href="javascript:void(0)" onclick="load_add_security_cheque_dlg()" style="font-size: 12px;"><b>Add security cheque</b></a>
+							</div>	
+							<div class="grid_view clearboth">
+								<table class="datagrid">
+									<thead><th>Slno</th><th>Cheque no</th><th>Bank name</th><th>Cheque Date</th><th>Amount(Rs)</th><th>Collected on</th></thead>
+									<tbody>
+								<?php
+									$v_fran_security_chq_res = $this->db->query("select * from pnh_m_fran_security_cheques where franchise_id = ? ",$f['franchise_id']);
+									if($v_fran_security_chq_res->num_rows())
+									{
+								?>
+								
+									<?php
+										$ttl = 1;
+										foreach($v_fran_security_chq_res->result_array() as $v_fran_security_chq_row)
+										{
+									?>
+											<tr>
+												<td><?php echo $ttl++;?></td>
+												<td><?php echo $v_fran_security_chq_row['cheque_no'] ?></td>
+												<td><?php echo $v_fran_security_chq_row['bank_name'] ?></td>
+												<td><?php echo $v_fran_security_chq_row['cheque_date'] ?></td>
+												<td><?php echo $v_fran_security_chq_row['amount'] ?></td>
+												<td><?php echo $v_fran_security_chq_row['collected_on'] ?></td>
+											</tr>
+									<?php				
+										}
+									?>
+								
+								<?php				
+									}
+								?>
+									</tbody>
+								</table>
+							</div>
+						</div>
+						<?php				
+							}
+						?>
 						
 						<div id="processed">
 							<div class="tab_content"></div>
@@ -1230,6 +1384,10 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 					<div class="clear"></div>
 				</div>
 				<?php } ?>
+				
+				
+				
+				
 				
 				<?php if($this->erpm->auth(PNH_EXECUTIVE_ROLE|CALLCENTER_ROLE,true)){?>
 				<div id="actions">
@@ -1755,23 +1913,22 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 					<td valign="top"><b>Suspension Type</b></td>
 					<td valign="top"><b>:</b></td>
 					<td valign="top"><select name="sus_type" class="sus_type"
-						data-placeholder="Select Suspension type" data-required="true">
+						data-placeholder="Select Suspension type" style="width:230px;" data-required="true">
 							<option value="1"> Permanent Suspension</option>
 							<option value="2">Payment Suspension</option>
 							<option value="3">Temporary Suspension</option>
 					</select></td>
 				</tr>
-				<tr></tr>
+				<tr class="credit_edit">
+					<td valign="top"><b style="color:#cd0000">Mark Credit Limit 0</b></td>
+					<td valign="top"><b>:</b></td>
+					<td valign="top"><input type="checkbox" checked name="credit_edit" value="1"></td>
+				</tr>
 				<tr>
 					<td valign="top"><b>Reason</b></td>
 					<td valign="top"><b>:</b></td>
 					<td valign="top"><textarea name="sus_reason" data-required="true"
-							style="width: 289px; height: 110px;"></textarea></td>
-				</tr>
-				<tr class="credit_edit">
-					<td valign="top"><b>Make Credit Limit 0</b></td>
-					<td valign="top"><b>:</b></td>
-					<td valign="top"><input type="checkbox" name="credit_edit" value="1"></td>
+							style="width: 320px; height: 110px;"></textarea></td>
 				</tr>
 			</table>
 		</form>
@@ -1783,9 +1940,9 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 	<input type="hidden" name="unsuspend_fid" id="unsuspend_fid">
 			<table cellspacing="5" width="100%">
 			<tr>
-					<td valign="top"><b>Reason</b></td>
+					<td valign="top" valign="top"><b>Reason</b></td>
 					<td valign="top"><b>:</b></td>
-					<td valign="top"><textarea name="unsus_reason" data-required="true" style="width: 289px; height: 73px;"></textarea></td>
+					<td valign="top"><textarea name="unsus_reason" data-required="true" style="width: 320px; height: 110px;"></textarea></td>
 			</tr>
 			</table>
 	</form>
@@ -1809,6 +1966,22 @@ Credit Limit : <span>Rs <?=formatInIndianStyle($f['credit_limit'])?></span>
 	</div>
 	<!-- mark prepaid franchise modal end-->
 	
+	
+	<div style="display:none">
+		<div id="dlg_add_security_cheque_det" title="Add Security Cheque Details">
+			<form action="<?php echo site_url('admin/jx_add_security_chqdet');?>" method="post">
+				<input type="hidden" name="f_schq_fid" value="<?php echo $f['franchise_id'];?>">
+				<table width="100%" cellpadding="5" cellspacing="0">
+					<tr><td><b>Bank name</b></td> <td><input type="text" name="f_schq_bankname" value=""></td></tr>
+					<tr><td><b>Cheque no</b></td> <td><input type="text" name="f_schq_no" value=""></td></tr>
+					<tr><td><b>Cheque Date</b></td> <td><input type="text" name="f_schq_date" value=""></td></tr>
+					<tr><td><b>Amount (Rs)</b></td> <td><input type="text" name="f_schq_amt" value=""></td></tr>
+					<tr><td><b>Collected On</b></td> <td><input type="text" name="f_schq_colon" value=""></td></tr>
+				</table>
+			</form>
+		</div>
+	</div>
+				
 	<style>
 .subdatagrid {
 	width: 100%
@@ -1857,6 +2030,12 @@ background:#eee !important;
 </style>
 </div>
 <script>
+$('.tab_view').tabs();
+$('#loading_container_div').remove();
+$('.container_div').css('visibility','visible');
+
+
+
 $('.select_brand').chosen();
 $('.select_cat').chosen();
 $('.sus_type').chosen();
@@ -1933,9 +2112,12 @@ function load_allcatgory()
 		return false;
 	}
 $(function(){
+	$('#menu_det_tab').hide();
+	
 	var fran_reg_date = "<?php echo date('m/d/Y',$f['created_on'])?>";
 	prepare_daterange('ord_fil_from','ord_fil_to');
 	$("#d_start,#d_end").datepicker({minDate:0});
+	$("#frm,#to").datepicker({dateFormat:'dd-mm-yy'});
 	prepare_daterange('msch_start','msch_end');
 	$('#msch_applyfrm').datepicker();
 	$("#sec_date").datepicker();
@@ -2006,7 +2188,7 @@ $(function(){
 					{
 						$("#sch_form").data('psubumit',false);
 						alert(resp.message);
-						
+												
 					}else
 					{
 						$("#sch_form").data('psubumit',true);
@@ -2020,6 +2202,18 @@ $(function(){
 	});
 	
 
+	$('.analytics').click(function(){
+		setTimeout(function(){
+			fran_menu_stat();
+			payment_order_stat();
+			brands_byfranch();	
+		},400);
+	});
+	
+	
+	if(location.hash == '#analytics')
+		$('.analytics').click();
+	
 	
 	$(".credit_form").submit(function(){
 		if(!is_integer($("input[name=limit]",$(this)).val()))
@@ -2268,8 +2462,8 @@ $( "#members" ).dialog({
 
 $("#members .m_pg a").live("click",function(e){
 	e.preventDefault();
-	var link=$(this).attr('href').split('/');
-	load_members(link[7],link[8])
+	var link_parts=$(this).attr('href').split('/');
+		load_members($( "#members" ).data('fid'),link_parts[link_parts.length-1]*1);
 });
 
 function load_members(fid,pg)
@@ -2308,11 +2502,11 @@ function load_members(fid,pg)
 //------menber list handle end------
 
 //-----------receipts handle---------
-function load_receipts(ele,type,pg,fid)
+function load_receipts(ele,type,pg,fid,limit)
 {
 	$($(ele).attr('href')+' div.tab_content').html('<div align="center"><img src="'+base_url+'/images/jx_loading.gif'+'"></div>');
 
-	$.post(site_url+'/admin/jx_pnh_franchise_reports/'+fid+'/'+type+'/'+pg*1,'',function(resp){
+	$.post(site_url+'/admin/jx_pnh_franchise_reports/'+fid+'/'+type+'/'+limit+'/'+pg*1,'',function(resp){
 		$($(ele).attr('href')+' div.tab_content').html(resp.page);
 		$($(ele).attr('href')+' div.tab_content .datagridsort').tablesorter();
 		
@@ -2429,7 +2623,7 @@ $('.schmenu').change(function()
 
 });
 
-$('.tab_view').tabs();
+
 $( ".fran_tabs a" ).click(function()
 {
 	window.location.hash = $(this).attr('href');   
@@ -2657,6 +2851,20 @@ $("#pnh_membersch").dialog({
 			$('input[name="return_on_date"]').val('');
 			$('input[name="return_on_date_end"]').val('');
 		});
+		
+		//$('select[name="order_by_mnth"]').change(function(){
+			
+			//fran_menu_stat();
+		//});
+		$("#grid_list_frm_to").bind("submit",function(e){
+			$('#payment_stat .payment_stat_view').unbind('jqplotDataClick');
+		    e.preventDefault();
+		    fran_menu_stat();
+		    payment_order_stat();
+		    brands_byfranch();
+		    return false;
+		});
+		
 		
 		 
 		function load_all_return_prods(pg)
@@ -2930,6 +3138,7 @@ $("#pnh_membersch").dialog({
 				var dlg=$(this);
 				$('.credit_edit').hide();
 				$('#suspend_reasonfrm input[name="franchise_id"]',this).val(dlg.data('franchise_id'));
+				$('#suspend_reasonfrm select[name="sus_type"]',this).trigger('change');
 				//$("#r_receiptid b",this).html(dlg.data('receipt_id'));
 				$("#suspend_reasonfrm",this).attr('action',site_url+'/admin/pnh_suspend_fran/'+dlg.data('franchise_id'));
 			},
@@ -2986,7 +3195,310 @@ $("#pnh_membersch").dialog({
 			}
 
 		});
-
+		
+		function payment_order_stat()
+		{
+			var start_date=$('#frm').val();
+    		var end_date=$('#to').val();
+			var franid = "<?php echo $this->uri->segment(3);?>";
+			$('.head_wrap').html("Orders & Payments summary for period of "+start_date+" "+end_date);
+			$('#payment_stat .payment_stat_view').html('<div class="anmtd_loading_img"><span></span></div>'); 
+			$.getJSON(site_url+'/admin/jx_order_payment_det/'+start_date+'/'+end_date+'/'+franid,'',function(resp)
+	    	{
+	    		if(resp.summary == 0 && resp.payment == 0)
+				{
+					$('#payment_stat .payment_stat_view').html("<div class='fr_alert_wrap' style='padding:113px 0px'>No Sales statisticks found between "+start_date+" and "+end_date+"</div>" );	
+				}
+				else
+				{
+					// reformat data ;
+					 var types = ['Order Placed', 'Payment'];
+					$('#payment_stat .payment_stat_view').empty();
+					var summary=resp.summary;
+					var payment=resp.payment;
+					plot2 = $.jqplot('payment_stat .payment_stat_view', [summary,payment], {
+				       	seriesDefaults: {
+				        showMarker:true,
+				        pointLabels: { show:true }
+				      },
+				      axesDefaults: {
+					        tickRenderer: $.jqplot.CanvasAxisTickRenderer ,
+					        tickOptions: {
+					          fontFamily: 'tahoma',
+					          fontSize: '11px',
+					          angle: -30
+					        }
+					    },
+					    legend: {
+			                show: true,
+			                location: 'ne',
+			                placement: 'inside',
+			                labels: types
+			            },
+				        axes:{
+					        xaxis:{
+					          renderer: $.jqplot.CategoryAxisRenderer,
+					          ticks:resp.ticks,
+					          	label:'Date',
+						          labelOptions:{
+						            fontFamily:'Arial',
+						            fontSize: '14px'
+						          },
+						          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+					        },
+					        yaxis:{
+						          min : 0,
+								  label:'Sales & Payment in Rs',
+						          labelOptions:{
+						            fontFamily:'Arial',
+						            fontSize: '14px'
+						          },
+						          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+						        }
+					      }
+					});	
+					$('#payment_stat .payment_stat_view').bind('jqplotDataClick', function(ev,seriesIndex,pointIndex,data) {
+						if(seriesIndex == 0)
+						{
+							var date = summary[pointIndex][2];
+							var amt = summary[pointIndex][1];
+							ord_det(date,amt,franid);
+						}
+					 });
+				}	
+		    });
+		}
+		
+		function ord_det(date,amt,franid)
+		{
+			$.post(site_url+'/admin/jx_order_det_franchise_id/',{date:date,franid:franid},function(resp){
+			if(resp.status == 'error')
+			{
+				alert(resp.error);
+			}else
+			{
+				 var list = '';
+				 list += '<h4>Order Details on '+date+'<span style="float:right">Total Value : '+amt+'</span></h4>';
+				 list +='<span class="popclose_button b-close"><span>X</span></span><div style="overflow:auto;float:left;height:265px;width:600px;">';
+				 list += '<table class="datagrid" width="100%"><thead><tr><th>Sl.No</th><th>Product Name</th><th>Brand Name</th><th>Quantity</th><th>Amount</th></tr></thead><tbody>';
+					$.each(resp.ord_det,function(a,b){
+						list += '<tr>'
+												+'<td>'+(++a)+'</td>'
+												+'<td>'+b.product_name+'</td>'
+												+'<td>'+b.name+'</td>'
+												+'<td>'+b.q+'</td>'
+												+'<td>'+b.total_value+'</td>'
+											+'</tr>';
+					});
+				list += '</tbody></table></div>';
+				$('#fr_det_popup').html(list);
+				
+			}
+			},'json');
+			$('#fr_det_popup').bPopup({
+			easing: 'easeOutBack', //uses jQuery easing plugin
+			    speed: 450,
+			    transition: 'slideDown'
+			});
+		}
+		
+		function fran_menu_stat()
+		{
+			var start_date=$('#frm').val();
+    		var end_date=$('#to').val();
+			var franid = "<?php echo $this->uri->segment(3);?>";
+			
+			$.getJSON(site_url+'/admin/jx_order_getsales_bymenu/'+franid+'/'+start_date+'/'+end_date,'',function(resp){
+				// reformat data ;
+				$('#fr_order_stat .order_piestat_view').empty();
+				var resp = resp.result;
+				plot3 = jQuery.jqplot('fr_order_stat .order_piestat_view', [resp], 
+				{
+					seriesDefaults:{
+			            renderer: jQuery.jqplot.PieRenderer,
+			            pointLabels: { show: true },
+		                rendererOptions: {
+		                    // Put data labels on the pie slices.
+		                    // By default, labels show the percentage of the slice.
+		                    showDataLabels: true,
+		                  }
+			        },
+			        highlighter: {
+					    show: true,
+					    useAxesFormatters: false, // must be false for piechart   
+					    tooltipLocation: 's',
+					    formatString:'Menu : %s'
+					},
+					grid: {borderWidth:0, shadow:false,background:'#ccc'},
+			        legend:{show:true}
+			        
+			    });
+			    $('#fr_order_stat .order_piestat_view').bind('jqplotDataClick', function(ev,seriesIndex,pointIndex,data) {
+			    	$('.fr_menu_by_mn').show();
+			    	$('#menu_det_tab').show();
+			    	var menu_id = resp[pointIndex][2];
+			    	var menu_name = resp[pointIndex][0];
+			    	
+			    	 //top sold products list for selected menu
+					 prods_bymenu(menu_id,menu_name);
+					 
+					 // top sold brands for selected menu
+					 brands_bymenu(menu_id,menu_name);
+			    });
+			});
+		}
+		
+		function brands_byfranch()
+		{
+			var franid = "<?php echo $this->uri->segment(3);?>";
+			var fran_name="<?php echo $f['franchise_name']?>";
+			var start_date=$('#frm').val();
+    		var end_date=$('#to').val();
+    		$('#top_brand_bymenu_stat .fr_brand_stat_view').html('<div class="bar"><span></span></div>'); 
+							
+			$.getJSON(site_url+'/admin/jx_brandsbyfranid/'+franid+'/'+start_date+'/'+end_date,'',function(resp){
+			$('#top_brand_bymenu_stat .stat_head_wrap').html("Top Brands for "+fran_name);
+			if(resp.summary == 0)
+			{
+				$('#top_brand_bymenu_stat .fr_brand_stat_view').html("<div class='fr_alert_wrap' style='padding:113px 10px'>No brands ordered from "+start_date+" to "+end_date+"</div>")	
+			}
+			else
+			{
+				// reformat data ;
+				$('#top_brand_bymenu_stat .fr_brand_stat_view').empty();
+				plot2 = $.jqplot('top_brand_bymenu_stat .fr_brand_stat_view', [resp.summary], {
+			       	 seriesDefaults:{
+			            renderer:$.jqplot.BarRenderer,
+			            rendererOptions: {
+			                // Set the varyBarColor option to true to use different colors for each bar.
+			                // The default series colors are used.
+			                varyBarColor: true
+			            },pointLabels: { show: true }
+			        },
+				    axesDefaults: {
+				        tickRenderer: $.jqplot.CanvasAxisTickRenderer ,
+				        tickOptions: {
+				          fontFamily: 'tahoma',
+				          fontSize: '11px',
+				          angle: -30
+				        }
+				    },
+				    axes:{
+				        xaxis:{
+				          renderer: $.jqplot.CategoryAxisRenderer,
+				          	label:'Brands',
+					          labelOptions:{
+					            fontFamily:'Arial',
+					            fontSize: '14px'
+					          },
+					          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+				        },
+				        yaxis:{
+					          
+							  label:'Total Sales in Rs',
+					          labelOptions:{
+					            fontFamily:'Arial',
+					            fontSize: '14px'
+					          },
+					          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+					        }
+				      }
+					});
+					$('#top_brand_bymenu_stat .fr_brand_stat_view').bind('jqplotDataClick', function(ev,seriesIndex,pointIndex,data) {
+				    	
+				    });
+				}
+			});
+		}
+		
+		function brands_bymenu(id,name)
+		{
+			var franid = "<?php echo $this->uri->segment(3);?>";
+			var start_date=$('#frm').val();
+    		var end_date=$('#to').val();
+			$('#top_brand_bymenu_stat .fr_brand_stat_view').html('<div class="bar"><span></span></div>'); 
+			$.getJSON(site_url+'/admin/jx_brandsbymenuid/'+id+'/'+franid+'/'+start_date+'/'+end_date,'',function(resp){
+			$('#top_brand_bymenu_stat .stat_head_wrap').html("Brands of "+name+" menu ");
+			if(resp.summary == 0)
+			{
+				$('#top_brand_bymenu_stat .fr_brand_stat_view').html("<div class='fr_alert_wrap' style='padding:113px 10px'>No brands for "+name+" menu</div>")
+			}
+			else
+			{
+				// reformat data ;
+				$('#top_brand_bymenu_stat .fr_brand_stat_view').empty();
+				plot2 = $.jqplot('top_brand_bymenu_stat .fr_brand_stat_view', [resp.summary], {
+			       	 seriesDefaults:{
+			            renderer:$.jqplot.BarRenderer,
+			            rendererOptions: {
+			                // Set the varyBarColor option to true to use different colors for each bar.
+			                // The default series colors are used.
+			                varyBarColor: true
+			            },pointLabels: { show: true }
+			        },
+				    axesDefaults: {
+				        tickRenderer: $.jqplot.CanvasAxisTickRenderer ,
+				        tickOptions: {
+				          fontFamily: 'tahoma',
+				          fontSize: '11px',
+				          angle: -30
+				        }
+				    },
+				    axes:{
+				        xaxis:{
+				          renderer: $.jqplot.CategoryAxisRenderer,
+				          	label:'Brands',
+					          labelOptions:{
+					            fontFamily:'Arial',
+					            fontSize: '14px'
+					          },
+					          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+				        },
+				        yaxis:{
+					          
+							  label:'Total Sales in Rs',
+					          labelOptions:{
+					            fontFamily:'Arial',
+					            fontSize: '14px'
+					          },
+					          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+					        }
+				      }
+					});
+					$('#top_brand_bymenu_stat .fr_brand_stat_view').bind('jqplotDataClick', function(ev,seriesIndex,pointIndex,data) {
+				    	
+				    });
+				}
+			});
+		}
+		
+		function prods_bymenu(id,name)
+		{
+			var franid = "<?php echo $this->uri->segment(3);?>";
+			var start_date=$('#frm').val();
+    		var end_date=$('#to').val();
+    		$('.fr_top_sold').html('<div class="bar"><span></span></div>'); 
+			$.post("<?=site_url("admin/jx_prod_det_bymenu")?>",{menu_id:id,franid:franid,start_date:start_date,end_date:end_date},function(resp){
+				$('#menu_det_tab .stat_head_wrap').html("Top sold Products of "+name+" menu ");
+					var topsold_prod_list="";
+				 
+				 	if(resp.status == 'error')
+				 	{
+				 		topsold_prod_list +='<span>'+resp.message+'</span>';
+				 		$('.fr_top_sold').html(topsold_prod_list);
+				 	}
+				 	else
+				 	{
+				 		topsold_prod_list +='<table class="datagrid" width="100%"><thead><tr><th>Product Name</th><th>Date</th><th>Qty Sold</th><th>Total Value</th></tr></thead><tbody>';
+				 		$.each(resp.top_prod_list,function(i,p){
+							topsold_prod_list +='<tr><td><a target="blank" href="'+site_url+'/admin/product/'+p.product_id+'">'+p.product_name+'</a></td><td>'+p.d+'</td><td>'+p.qty_sold+'</td><td>'+p.total_value+'</td></tr>';	
+						});
+				 		topsold_prod_list +='</tbody></table>';
+				 		$('.fr_top_sold').html(topsold_prod_list);
+				 	}
+			 },'json');
+		}
+		
 		function mark_prepaid_franchise(fid,flag)
 		{
 			$("#mark_prepaid_franchise").data('franchise_id',fid,'p_flg',flag).dialog('open');
@@ -3026,22 +3538,62 @@ $("#pnh_membersch").dialog({
 			}
 		}
 		});
-
-	function import_sales_summary(fid)
-	{
-		if($("#d_ac_from").val().length==0 || $("#d_ac_to").val().length==0)
-		{
-			alert("Please enter valid from and to date");
-			return false;
-		}
-		else
-		{	
-			frm_date=$('#d_ac_from').val();
-			to_date=$('#d_ac_to').val();
-			location.href = site_url+'/admin/to_download_franstat_exl_format/'+fid+'/'+frm_date+'/'+to_date;
-			return false;
-		}
-	}	
-	</script>
+	 
+					$('#dlg_add_security_cheque_det').dialog({
+																width:400,
+																height:'auto',
+																autoOpen:false,
+																modal:true,
+																buttons:{
+																	'Add':function(){
+																		var dlg = $('#dlg_add_security_cheque_det');
+																		
+																		var f_schq_bankname = $('input[name="f_schq_bankname"]',dlg).val();
+																		var f_schq_no = $('input[name="f_schq_no"]',dlg).val();
+																		var f_schq_date = $('input[name="f_schq_date"]',dlg).val();
+																		var f_schq_amt = $('input[name="f_schq_amt"]',dlg).val();
+																		var f_schq_colon = $('input[name="f_schq_colon"]',dlg).val();
+																		
+																		var error_str = new Array();
+																			
+																			if(!f_schq_bankname.length)
+																				error_str.push("Please enter bankname");
+																			if(!f_schq_no.length)
+																				error_str.push("Please cheque no");
+																			if(!f_schq_date.length)
+																				error_str.push("Please cheque date");
+																			if(!f_schq_amt.length)
+																				error_str.push("Please cheque amount(Rs)");
+																			if(!f_schq_colon.length)
+																				error_str.push("Please enter cheque collected date");
+																			
+																			if(error_str.length)
+																			{
+																				alert(error_str.join("\r\n"));
+																			}else
+																			{
+																				$.post(site_url+'/admin/jx_add_security_chqdet',$('form',dlg).serialize(),function(resp){
+																					if(resp.status == 'error')
+																					{
+																						alert(resp.error);
+																					}else
+																					{
+																						
+																						$('#security_cheques table tbody').append('<tr><td>'+$('#security_cheques table tbody tr').length+'</td><td>'+f_schq_no+'</td><td>'+f_schq_bankname+'</td><td>'+f_schq_date+'</td><td>'+f_schq_amt+'</td><td>'+f_schq_colon+'</td></tr>');
+																						dlg.dialog('close');
+																					}
+																				},'json');
+																			}
+																	}
+																}
+														});
+					function load_add_security_cheque_dlg()
+					{
+						$('#dlg_add_security_cheque_det').dialog('open');
+					}
+					
+					$('input[name="f_schq_date"],input[name="f_schq_colon"]').datepicker({dateFormat:'yy-mm-dd'});
+					
+				</script>
  
 <?php

@@ -27,7 +27,7 @@
 }
 #deal_stat
 {
-	margin-top:30px;clear: both;width:800px;
+	margin-left:7px;clear: both;width:800px;
 }
 #deal_stat_terr
 {
@@ -37,7 +37,7 @@
 .franch_list
 {
     float: right;
-    margin: 10px 9px 0 0;
+    margin: 43px 9px 0 0;
     width: 363px;
 }
 ul.tabs 
@@ -132,6 +132,55 @@ ul.tabs li.active
   background-image: -o-linear-gradient(top, #a5dd8c, #77cc51);
   background-image: linear-gradient(to bottom, #a5dd8c, #77cc51);
 }
+.sbutton span {
+    color: #FFFFFF;
+
+}
+.sbutton {
+    -moz-border-bottom-colors: none;
+    -moz-border-left-colors: none;
+    -moz-border-right-colors: none;
+    -moz-border-top-colors: none;
+    -moz-user-select: none;
+    background: -moz-linear-gradient(center top , rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.1) 100%) repeat scroll 0 0 rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.4);
+    border-image: none;
+    border-style: solid;
+    border-width: 1px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    line-height: 11px;
+    margin-right:7px;
+    outline: medium none;
+    overflow: visible;
+    position: relative;
+    white-space: nowrap;
+}
+
+.sbutton.green {
+    background-color: #91BD09;
+}
+.sbutton, .sbutton span {
+    border-radius: 3px;
+    display: inline-block;
+}
+.state_filter
+{
+	 margin: 9px 10px 0;
+    text-align: right;
+}
+.alert_wrap
+{
+	 color: #FF0000;
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 50px;
+    text-align: center;
+}
+.jqplot-highlighter-tooltip
+{
+	
+}
 /*
 .badge.yellow {
   background: #faba3e;
@@ -156,12 +205,17 @@ ul.tabs li.active
 <link class="include" rel="stylesheet" type="text/css" href="<?php echo base_url();?>/js/jq_plot/jquery.jqplot.min.css" />
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/jquery.jqplot.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.highlighter.min.js"></script>
+<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.pointLabels.min.js"></script>
+
+
+<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.dateAxisRenderer.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.cursor.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.barRenderer.min.js"></script>
 <script class="include"  type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.pieRenderer.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.categoryAxisRenderer.min.js"></script>
-<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
-<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+
 
 <?php $linked_prod = $this->db->query("select gl.*,g.group_name from m_product_group_deal_link gl join products_group g on g.group_id=gl.group_id where gl.itemid=?",$deal['id']);
 	
@@ -660,20 +714,15 @@ ul.tabs li.active
 										
 										<td>
 											<div>
-												<?php $deal_yr=$this->db->query("select year(date(from_unixtime(b.init))) as year
-																			from king_orders a 
-																			join king_transactions b on b.transid = a.transid
-																			where itemid ='".$item_id."' and a.status != 3 group by year")->result_array();?> 	
-													<select name="deal_by_year" style="float:right;margin: 5px" >
-														<?php
-															foreach($deal_yr as $dr)
-															{
-														?>
-														<option value="<?=$dr['year']?>"><?=$dr['year']?></option>
-														<?php
-															}
-														?>
-													</select>
+												<form id="grid_list_frm_to" method="post">
+					                                    <div style="margin:2.5px 0px;font-size:12px;text-align: right">
+					                                    	<b>From</b> : <input type="text" style="width: 90px;" id="date_from"
+					                                                name="date_from" value="<?php echo date('Y-m-d',time()-60*3600*24)?>" />
+					                                        <b>To</b> : <input type="text" style="width: 90px;" id="date_to"
+					                                                name="date_to" value="<?php echo date('Y-m-d',time())?>" /> 
+					                                        <button type="submit" class="sbutton small green"><span>Go</span></button>
+					                                    </div>
+					                            </form>
 													
 													<div id="deal_stat">
 														<div class="deal_grph_view">
@@ -683,8 +732,18 @@ ul.tabs li.active
 													<div class="franch_list">
 														
 													</div>
-													
+													<?php $state_lst=$this->db->query("select state_id,state_name from pnh_m_states order by state_id asc "); ?>
+														
 													<div id="deal_stat_terr">
+														 
+														<div class="state_filter">
+															<b>State</b> :
+															<select name="state" id="state_filter">
+																<?php foreach($state_lst->result_array() as $s) {?>
+																	<option value="<?=$s['state_id']?>"><?=$s['state_name']?></option>
+																<?php } ?>
+															</select>
+														</div>
 														<div class="deal_piestat_view">
 														</div>
 													</div>
@@ -720,8 +779,9 @@ $(document).ready(function()
 	$(".tabcontent:first").show(); 
 	
 	$('.sales_anl').click(function(){
-			var deal_yr = $('select[name="deal_by_year"]').val();
-			deal_sale_stat(deal_yr);
+			deal_sale_stat();
+			state_id = $('select[name="state"]').val();
+			deal_stat_pieview(state_id);
 	});
 
 	
@@ -735,14 +795,12 @@ $(document).ready(function()
 	});
 });
 
-$('#analytics').click(function(){
-	$('select[name="deal_by_year"]').change(function(){
-		var deal_yr = $('select[name="deal_by_year"]').val();
-		deal_sale_stat(deal_yr);
-	});
-});
-
 var itemid = "<?php echo $this->uri->segment(3);?>";
+
+$('select[name="state"]').change(function(){
+	state_id = $('select[name="state"]').val();
+	deal_stat_pieview(state_id);
+});
 
 $(function()
 {
@@ -751,7 +809,9 @@ $(function()
 	$('#margin_his').tabs();
 
 	$("#sm_from,#sm_to").datepicker();
-
+	$("#date_from,#date_to").datepicker();
+	
+	
 	$('#description').prepend("<div style='text-align:right'><a stat='1' href='javascript:void(0)' class='tgl_desc'>More</a></div>");
 
 	$('.tgl_desc').click(function(){
@@ -776,128 +836,152 @@ $(function()
 	});
 });
 
+$("#grid_list_frm_to").bind("submit",function(e){
+    e.preventDefault();
+    deal_sale_stat();
+    return false;
+});
 
-function deal_sale_stat(deal_yr)
+
+
+function deal_sale_stat()
 {
-	var yr = $('select[name="deal_by_year"]').val();
-	$.getJSON(site_url+'/admin/jx_deal_getsales/'+yr+'/'+itemid,'',function(resp){
+	var start_date = $('#date_from').val();
+	var end_date = $('#date_to').val();
+	$.getJSON(site_url+'/admin/jx_deal_getsales/'+start_date+'/'+end_date+'/'+itemid,'',function(resp){
 		
-		if(resp.status == 'error')
+		if(resp.summary == 0)
 		{
-			alert(resp.message);	
+			$('#deal_stat .deal_grph_view').html("<div class='alert_wrap' style='padding:113px 0px'>No Sales statisticks found between "+start_date+" and "+end_date+"</div>" );	
 		}
 		else
 		{
 			// reformat data ;
+			if(resp.date_diff <= 31)
+		  	{
+		  		var interval = 2;
+		    }
+			else
+			{
+				var interval = 2;
+			}
 			$('#deal_stat .deal_grph_view').empty();
-			plot2 = $.jqplot('deal_stat .deal_grph_view', [resp.summary.ttl], {
-		       	pointLabels: 
-		       	{
-		           show: true
-		        },
-		       
-		       	series:
-		       	[
-		       	
-		       			{highlighter: {formatString: "Deal<br />Month : %d<br />Quantity : %d"},label:'Deal'}
-		      	
-		      	],
-		       
-		       	legend: 
-		       	{
-	                show: true,
-	                location: 't',
-	                placement: 'inside',
-	                top:'0'
-	            },
-	            
-	            highlighter: {
-			        show: true,
-			        sizeAdjust: 7.5
-			    },
-			    
-		        axes: 
-		        {
-		           xaxis: 
-		           {
-	                pad: 0,
-	                // a factor multiplied by the data range on the axis to give the            
-	                renderer: $.jqplot.CategoryAxisRenderer,
-	                // renderer to use to draw the axis,     
-		                  ticks: resp.month
-		            },
-			            
-		            yaxis: 
-		            {
-		
-		            }
-		        }
+			plot2 = $.jqplot('deal_stat .deal_grph_view', [resp.summary], {
+		       		seriesDefaults: {
+			        showMarker:false,
+			        pointLabels: { show:true }
+			      },
 			      
-		    });
- 
+			        axes:{
+			        xaxis:{
+			          renderer: $.jqplot.CategoryAxisRenderer,
+			          	label:'Date',
+				          labelOptions:{
+				            fontFamily:'Arial',
+				            fontSize: '14px'
+				          },
+				          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+			        },
+			        yaxis:{
+				          min : 0,
+						tickInterval : interval,
+						  label:'Quantity',
+				          labelOptions:{
+				            fontFamily:'Arial',
+				            fontSize: '14px'
+				          },
+				          labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+				        }
+			      }
+				});
+				
+				/*
+ 				$("#deal_stat .deal_grph_view").bind('jqplotMouseMove', function(ev, gridpos, datapos, neighbor, plot) {
+ 					  if (neighbor) {
+ 					  	if(resp.date_diff <= 31)
+ 					  	{
+ 					  		var tick = 'Date : '+plot.axes.xaxis.ticks[neighbor.pointIndex][0]+plot.axes.xaxis.ticks[neighbor.pointIndex][1]+plot.axes.xaxis.ticks[neighbor.pointIndex][2]+plot.axes.xaxis.ticks[neighbor.pointIndex][3]+plot.axes.xaxis.ticks[neighbor.pointIndex][4]+plot.axes.xaxis.ticks[neighbor.pointIndex][5]+plot.axes.xaxis.ticks[neighbor.pointIndex][6]+plot.axes.xaxis.ticks[neighbor.pointIndex][7]+plot.axes.xaxis.ticks[neighbor.pointIndex][8]+plot.axes.xaxis.ticks[neighbor.pointIndex][9];
+ 					    }
+						else
+						{
+							var tick = 'Month : '+plot.axes.xaxis.ticks[neighbor.pointIndex][0]+plot.axes.xaxis.ticks[neighbor.pointIndex][1]+plot.axes.xaxis.ticks[neighbor.pointIndex][2]+plot.axes.xaxis.ticks[neighbor.pointIndex][3]+plot.axes.xaxis.ticks[neighbor.pointIndex][4]+plot.axes.xaxis.ticks[neighbor.pointIndex][5]+plot.axes.xaxis.ticks[neighbor.pointIndex][6];
+						}			           
+			            console.log("plot.axes.xaxis.ticks="+tick);
+			            $(".jqplot-highlighter-tooltip").html("<div>" + tick+"<br /> Quantity : " + datapos.yaxis.toFixed(0)+"</div>");
+			        }
+			    });
+			   */ 
 			}
 		});
-		
-		$.getJSON(site_url+'/admin/jx_deal_getsales_by_territory/'+itemid,'',function(resp){
+}
+
+function deal_stat_pieview(state_id)
+{
+	var state_id=state_id;
+	var state_name_name = document.getElementById('state_filter').options[document.getElementById('state_filter').selectedIndex].text;
+	$.getJSON(site_url+'/admin/jx_deal_getsales_by_territory/'+itemid+'/'+state_id,'',function(resp){
 			
-		if(resp.status == 'error')
+	if(resp.result == 0)
+	{
+		//var state_name_name = document.getElementById('state_filter').options[document.getElementById('state_filter').selectedIndex].text;
+		$('#deal_stat_terr .deal_piestat_view').html("<div class='alert_wrap'>No territories found</div>");
+		$('.franch_list').hide();
+	}
+	else
+	{
+		// reformat data ;
+		$('#deal_stat_terr .deal_piestat_view').empty();
+		var resp = resp.result;
+		plot3 = jQuery.jqplot('deal_stat_terr .deal_piestat_view', [resp], 
 		{
-			alert(resp.message);	
-		}
-		else
-		{
-			// reformat data ;
-			$('#deal_stat_terr .deal_piestat_view').empty();
-			var resp = resp.result;
-			plot3 = jQuery.jqplot('deal_stat_terr .deal_piestat_view', [resp], 
-			{
-				seriesDefaults:{
-		            renderer: jQuery.jqplot.PieRenderer,
-		            pointLabels: { show: true },
-	                rendererOptions: {
-	                    // Put data labels on the pie slices.
-	                    // By default, labels show the percentage of the slice.
-	                    showDataLabels: true,
-	                  }
-		        },
-		        highlighter: {
-				    show: true,
-				    useAxesFormatters: false, // must be false for piechart   
-				    tooltipLocation: 's',
-				    formatString:'Territory : %s <br />Quantity : %P'
-				},
-				grid: {borderWidth:0, shadow:false,background:'#ccc'},
-		        legend:{show:true,rendererOptions: {
-			            numberColumns: 2
-			        } }
-		   });
-		    
-		    $(".jqplot-xaxis-label")
-		    .css({
-		        cursor: "pointer",
-		        zIndex: "1"
-		    });
-		    $('#deal_stat_terr .deal_piestat_view').bind('jqplotDataClick', function(ev,seriesIndex,pointIndex,data) {
-		    	var territory_id = resp[pointIndex][2];
-		    	var territory_name = resp[pointIndex][0];
-		    	//alert(territory_id);
-		    	$.getJSON(site_url+'/admin/jx_deal_getfranchise_by_territory/'+territory_id+'/'+itemid,'',function(resp)
-		    	{
-		    		var fran_html='';
-		    		if(resp.status == 'error')
-					{
-						alert(resp.message);	
-					}
-					else
-					{
-						fran_html+="<b style='float:left;margin-bottom:10px'>Franchises in "+territory_name+" territory</b>";
-						fran_html+='<table class="datagrid" width="100%"><tr><th style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">Sl.No</th><th style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">Franchise Name</th></tr>';
-						var k=1;
-						$.each(resp.fran_list,function(i,f){
-							fran_html+='<tr><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">'+(k++)+'</td><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;"><a href="<?php echo site_url("admin/pnh_franchise/'+f.franchise_id+'") ?>">'+f.franchise_name+'</td></tr>';
-						});
-						fran_html+='</table>';
-						$('.franch_list').html(fran_html);
+			seriesDefaults:{
+	            renderer: jQuery.jqplot.PieRenderer,
+	            pointLabels: { show: true },
+                rendererOptions: {
+                    // Put data labels on the pie slices.
+                    // By default, labels show the percentage of the slice.
+                    showDataLabels: true,
+                  }
+	        },
+	        highlighter: {
+			    show: true,
+			    useAxesFormatters: false, // must be false for piechart   
+			    tooltipLocation: 's',
+			    formatString:'Territory : %s <br />Quantity : %P'
+			},
+			grid: {borderWidth:0, shadow:false,background:'#ccc'},
+	        legend:{show:true,rendererOptions: {
+		            numberColumns: 2
+		        } }
+	   });
+	    
+	    $(".jqplot-xaxis-label")
+	    .css({
+	        cursor: "pointer",
+	        zIndex: "1"
+	    });
+	    $('#deal_stat_terr .deal_piestat_view').bind('jqplotDataClick', function(ev,seriesIndex,pointIndex,data) {
+	    	var territory_id = resp[pointIndex][2];
+	    	var territory_name = resp[pointIndex][0];
+	    	$('.franch_list').show();
+	    	//alert(territory_id);
+	    	$.getJSON(site_url+'/admin/jx_deal_getfranchise_by_territory/'+territory_id+'/'+itemid,'',function(resp)
+	    	{
+	    		var fran_html='';
+	    		if(resp.status == 'error')
+				{
+					alert(resp.message);	
+				}
+				else
+				{
+					fran_html+="<b style='float:left;margin-bottom:10px'>Franchises in "+territory_name+" territory</b>";
+					fran_html+='<table class="datagrid" width="100%"><tr><th style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">Sl.No</th><th style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">Franchise Name</th></tr>';
+					var k=1;
+					$.each(resp.fran_list,function(i,f){
+						fran_html+='<tr><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;">'+(k++)+'</td><td style="font-size: 10px;line-height: 5px;padding: 7px 8px !important;"><a href="<?php echo site_url("admin/pnh_franchise/'+f.franchise_id+'") ?>">'+f.franchise_name+'</td></tr>';
+					});
+					fran_html+='</table>';
+					$('.franch_list').html(fran_html);
 						}	
 			    	});
 				});

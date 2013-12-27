@@ -228,7 +228,7 @@
 											<td><a target="_blank" href="<?php echo site_url('/admin/pnh_viewmember/'.$c['user_id'])?>"><?php echo $c['pnh_member_id'];?></a></td>
 											<td><?php echo $c['first_name'].''.$c['last_name'];?></td>
 											<td><a target="_blank" href="<?php echo site_url('/admin/pnh_franchise/'.$c['franchise_id'])?>"><?php echo $c['franchise_name'];?></a></td>
-											<td><?php echo $c['value'];?></td>
+											<td><?php echo $c['customer_value'];?></td>
 											<td><?php echo format_datetime($c['activated_on']);?></td>
 											</tr>
 											<?php $i++; }}?>
@@ -279,8 +279,7 @@
 												<th>Member Name</th>
 												<th>Franchise name</th>
 												<th>Voucher Value</th>
-												<th>Voucher Balance</th>
-												<th>Redeemed On</th>
+												<th>Activated On</th>
 											</thead>
 											
 											<tbody>
@@ -296,7 +295,6 @@
 											<td><a target="_blank" href="<?php echo site_url('/admin/pnh_viewmember/'.$c['user_id'])?>"><?php echo $c['member_id'];?></a></td>
 											<td><?php echo $c['first_name'].''.$c['last_name'];?></td>
 											<td><a target="_blank" href="<?php echo site_url('/admin/pnh_franchise/'.$c['franchise_id'])?>"><?php echo $c['franchise_name'];?></a></td>
-											<td><?php echo $c['value'];?></td>
 											<td><?php echo $c['customer_value'];?></td>
 											<td><?php echo format_datetime($c['redeemed_on']);?></td>
 											</tr>
@@ -767,7 +765,7 @@ $('#coupon_redeem').click(function(){
 	qty=[];
 	
 	
-	$("#prods_order .price").each(function(){
+	$("#prods_order .stotal").each(function(){
 		total+=parseFloat($(this).html());
 	});
 

@@ -4,6 +4,7 @@
 		<?php echo $pagination;?>
 	</div>
 	<div class="receipt_totals">Total Receipts:<?php echo $total_records;?>&nbsp;&nbsp;Total value:Rs <?php echo formatInIndianStyle($pending_ttlvalue['total'])?></div>
+	<div class="clear"></div>
 	<table class="datagrid smallheader" width="100%">
 		<thead>
 			<tr>
@@ -78,6 +79,7 @@
 		<?php echo $pagination;?>
 	</div>
 	<div class="receipt_totals">Total Receipts:<?php echo $total_records;?>&nbsp;&nbsp;Total value:Rs <?php echo formatInIndianStyle($processed_ttlvalue['total'])?></div>
+	<div class="clear"></div>
 	<table class="datagrid smallheader"  width="100%">
 		<thead>
 			<tr>
@@ -173,6 +175,7 @@
 		<?php echo $pagination;?>
 	</div>
 	<div class="receipt_totals"><b>Total Receipts: </b><?php echo $total_records;?>&nbsp;&nbsp;<b>Total value:</b> Rs <?php echo formatInIndianStyle($realized_ttlvalue['total'])?></div>
+	 <div class="clear"></div>
 	 <table class="datagrid smallheader"  width="100%" >
 		<thead>
 			<tr>
@@ -236,6 +239,7 @@
 		<?php echo $pagination;?>
 	</div>
 	<div class="receipt_totals">Total Receipts:<?php echo $total_records;?>&nbsp;&nbsp;Total value:Rs <?php echo formatInIndianStyle($cancelled_ttlvalue['total'])?></div>
+	 <div class="clear"></div>
 	 <table class="datagrid smallheader" width="100%" >
 		<thead>
 			<tr>

@@ -1,13 +1,20 @@
 <div class="container">
 
 <h2>Vendors <?=isset($brand)?" for $brand products":""?></h2>
-<a href="<?=site_url("admin/addvendor")?>">add new</a> &nbsp;&nbsp;&nbsp;view by brand : <select id="vend_disp_brands">
+<div width="100%">
+<span style="float: right;margin-right: 8px;"><a href="<?=site_url("admin/addvendor")?>">Add New</a></span> 
+
+<span style="float: left;padding:5px;">
+View by brand : <select id="vend_disp_brands">
 <option value="0">select</option>
 <?php foreach($this->db->query("select distinct(b.id),b.name from m_vendor_info v join m_vendor_brand_link vb on vb.vendor_id=v.vendor_id join king_brands b on b.id=vb.brand_id order by b.name asc")->result_array() as $b){?>
 <option value="<?=$b['id']?>"><?=$b['name']?></option>
 <?php }?>
 </select>
-<table class="datagrid">
+</span>
+</div>
+<div class="clear"></div>
+<table class="datagrid datagridsort" width="100%">
 <thead>
 <tr>
 <th>Name</th>
@@ -16,7 +23,7 @@
 <th>Total POs raised</th>
 <th>Total PO value</th>
 <th>Active</th>
-<th>Actions</th>
+<th width="134px">Actions</th>
 </tr>
 </thead>
 <tbody>
@@ -30,7 +37,8 @@
 <td><?=$v['is_active']?"YES":"NO"?></td>
 <td>
 <a class="link" href="<?=site_url("admin/vendor/{$v['vendor_id']}")?>">view</a> &nbsp;
-<a class="dbllink" href="<?=site_url("admin/editvendor/{$v['vendor_id']}")?>">edit</a>
+<a class="dbllink" href="<?=site_url("admin/editvendor/{$v['vendor_id']}")?>">edit</a>&nbsp;
+<a href="<?php echo site_url("admin/purchaseorder/{$v['vendor_id']}")?>" target="_blank" >Create PO</a>
 </td>
 </tr>
 <?php }?>
@@ -39,6 +47,7 @@
 
 </div>
 <script>
+$(".datagrid").tablesorter({sortList: [[0,0]]});
 $(function(){
 	$("#vend_disp_brands").change(function(){
 		v=$(this).val();
@@ -47,4 +56,7 @@ $(function(){
 	});
 });
 </script>
+<style>
+.leftcont{display:none;}
+</style>
 <?php

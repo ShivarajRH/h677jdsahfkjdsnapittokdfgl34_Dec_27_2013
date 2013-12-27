@@ -30,7 +30,7 @@ Upload partner orders : <input type="file" name="pords"><br><br>
 <h3 style="margin-bottom:0px;">Template</h3>
 <table class="datagrid nowrap">
 <tr>
-<th>Shipping Email</th><th>Notify User</th><th>User Notes</th><th>Product Id<th>	Product	Product<th> Qty<th>	Shipping Charges	<th>Biller Name	<th>Biller Address1	<th>Biller Address2	<th>Biller City	<th>Biller State	<th>Biller Country	<th>Biller Zipcode	<th>Biller Phone	<th>Biller Alt Phone	<th>Biller Mobile	<th>Shipping Name	<th>Shipping Address1	<th>Shipping Address2	<th>Shipping City	<th>Shipping State	<th>Shipping Country	<th>Shipping Zipcode	<th>Shipping Phone	<th>Shipping Alt Phone	<th>Shipping Mobile</th><th>Reference no</th><th>Transaction Mode (cod/pg)</th><th>Order Date (yyyy-mm-dd)</th><th>Courier Name</th><th>AWB NO</th><th>Net Amount</th>
+<th>Shipping Email</th><th>Notify User</th><th>User Notes</th><th>Product Id<th>	Product	Product<th> Qty<th>	Shipping Charges	<th>Biller Name	<th>Biller Address1	<th>Biller Address2	<th>Biller City	<th>Biller State	<th>Biller Country	<th>Biller Zipcode	<th>Biller Phone	<th>Biller Alt Phone	<th>Biller Mobile	<th>Shipping Name	<th>Shipping Address1	<th>Shipping Address2	<th>Shipping City	<th>Shipping State	<th>Shipping Country	<th>Shipping Zipcode	<th>Shipping Phone	<th>Shipping Alt Phone	<th>Shipping Mobile</th><th>Reference no</th><th>Transaction Mode (cod/pg)</th><th>Order Date (yyyy-mm-dd)</th><th>Courier Name</th><th>AWB NO</th><th>Net Amount</th><th>Partner Transaction refno</th>
 </tr>
 </table>
 </div>

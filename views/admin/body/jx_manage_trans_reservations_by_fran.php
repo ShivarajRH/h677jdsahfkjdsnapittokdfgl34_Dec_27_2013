@@ -105,15 +105,12 @@ else
                             <tr>
                         </thead>
                         <tbody>';
-            $all_trans=array();$str_all_trans='';
-            foreach($transactions as $i=>$trans_arr) 
-            {
-                $all_trans[$i] = "'".$arr_trans['transid']."'";
-            }
-            $str_all_trans = implode(",",$all_trans);
             
+
             foreach($transactions as $i=>$trans_arr) 
             {
+                
+                
                 $arr_fran = $this->reservations->fran_experience_info($trans_arr['f_created_on']);
                 $output .= '<tr class="filter_terr_'.$trans_arr['territory_id'].' filter_terr">
                                 <td>'.++$i.'</td>
@@ -125,8 +122,18 @@ else
                         
                         if( $batch_type == "pending") 
                         {
-                                                
-                                $output .= '<td><a href="javascript:void(0);" class="retry_link" all_trans="'.$str_all_trans.'" onclick="return reallot_frans_all_trans(this,'.$user['userid'].',\''.trim($trans_arr['franchise_id']).'\','.$pg.');">Re-Allot all trans</a></td>';
+                                $all_trans=array();$str_all_trans='';
+                                foreach ($arr_trans_set['result'] as $arr_trans) { 
+                                    if($trans_arr['franchise_id'] == $arr_trans['franchise_id']) {
+                                        $all_trans[$arr_trans['transid']] = "'".$arr_trans['transid']."'";
+                                    }
+                                }
+                                array_unique($all_trans);
+                                $str_all_trans = implode(",",$all_trans);
+
+                                $output .= '<td>
+                                    <a href="javascript:void(0);" class="retry_link" all_trans="'.$str_all_trans.'" onclick="return reallot_frans_all_trans(this,'.$user['userid'].',\''.trim($trans_arr['franchise_id']).'\','.$pg.');">Re-Allot all trans</a>
+                                        </td>';
                                 $output .= '</td>
                                          <td>'.$trans_arr['ttl_trans'].'
                                                  <div class="view_all_orders"><a href="javascript:void(0);" class="view_all_link" onclick="return show_orders_list('.$trans_arr['franchise_id'].',\''.$from.'\',\''.$to.'\',\''.$batch_type.'\')" >View Orders</a></div>

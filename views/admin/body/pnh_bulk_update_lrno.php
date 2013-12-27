@@ -1,5 +1,6 @@
 <div class="container">
 
+<a href="<?php echo site_url('admin/manifestolr_log')?>" style="float:right;" target="_blank" class="button button-flat button-flat-highlight ">View Log</a>
 <h2>Bulk Update LR Details</h2>
 
 <div style="float: left;clear: both">

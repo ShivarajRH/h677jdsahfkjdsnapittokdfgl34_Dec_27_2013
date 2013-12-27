@@ -6,7 +6,7 @@
 <?php 
 	if($this->erpm->auth(true,true)){
 ?>
-<div class="dash_bar">Total Value : <span>Rs <?=number_format($this->db->query("select sum(p.mrp*s.available_qty) as n from m_product_info p join t_stock_info s on s.product_id=p.product_id where s.available_qty>0")->row()->n,2)?></span></div>
+<div class="dash_bar">Total Value : <span>Rs <?=format_price($this->db->query("select sum(p.mrp*s.available_qty) as n from m_product_info p join t_stock_info s on s.product_id=p.product_id where s.available_qty>0")->row()->n,2)?></span></div>
 <?php } ?>
 
 <div class="dash_bar">Brands in stock : <span><?=$this->db->query("select count(distinct p.brand_id) as n from m_product_info p join t_stock_info s on s.product_id=p.product_id where s.available_qty>0")->row()->n?></span></div>

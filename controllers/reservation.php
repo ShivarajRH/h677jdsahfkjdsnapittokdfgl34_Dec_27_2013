@@ -1,14 +1,10 @@
 <?php
 /**
  * Transaction/Orders Reservation functions
- * @contact Shivaraj@storeking.in
  */
 include APPPATH.'/controllers/voucher.php';
 class Reservation extends Voucher {
-    //==========================================================
-        
-        
-        /**
+	/**
          * Get acknowledgement list for given territory, and between dates range
          */
        /* function jx_get_acknowledgement_list() {
@@ -143,11 +139,9 @@ class Reservation extends Voucher {
                 }
                 $data['territory_id'] = $territory_id;
                 $data['date_from'] = $date_from;
-                $data['date_to'] = date("Y-m-d",strtotime($date_from)+24*60*60*6);
-//                echo '-';
+                $data['date_to'] = date("Y-m-d",strtotime($date_from)+60*60*24*7);
 //                echo $territory_id;
-//                echo '-';
-//                 echo '<pre>';print_r($data); exit("");
+//                echo '<pre>';print_r($data); exit("");
                  
                 $get_slab_det = $this->sugg_slabs($date_from);
                 $cond='';
@@ -177,62 +171,17 @@ class Reservation extends Voucher {
                                                                             where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and date(sent_on) between ? and ? $cond
                                                                         group by f.territory_id
                                                                         order by t.territory_name ASC",array($slab['date_from'],$slab['date_from']))->result_array();
-
                                         $arr_rdata[$slan_no]['result'][$terr['id']] = $rslt;
-
             //                            $data[$row['territory_id']]['slabs_info']=$arr_rdata;
             //                            $arr_rdata[$slan_no]['ttl_franchises']=$rslt;
-
                             }
 //                    }
                 }
                 $data['slabs_data'] = $arr_rdata;
-                
 //                echo '<pre>';print_r($arr_rdata);exit(""); exit("");
-                        /*
-                        $min2days = $today+(60*60*24*2);
-                        $min4days = $today+(60*60*24*3);
-                        $min6days = $today+(60*60*24*7);
-                        $date_to= date('Y-m-d',$min6days);
-                        $data['date_from']=$date_from;
-                        $data['date_to']=$date_to;
-                        $data['l_date_from']=date('Y-m-d',$min4days);
-                        $data['l_date_to']=date('Y-m-d',$min6days);
-                        $data['pnh_terr'] = $this->db->query("select * from pnh_m_territory_info order by territory_name")->result_array();
-                        $rdata = array();
-                        $sdate = $slab['date_from'];//strtotime($date_from);
-                        $edate = $slab['date_to'];//strtotime($date_to);
-                        $rslt = $this->db->query("select f.territory_id,t.territory_name,pi.dispatch_id,group_concat(distinct man.id) as man_id,sd.shipped_on,sd.shipped,count(tr.franchise_id) as ttl_franchises
-                                                    ,group_concat(distinct sd.invoice_no) as invoice_no_str,count(distinct sd.invoice_no) as ttl_invs,count(distinct f.franchise_id) as ttl_franchises		    
-                                                    from pnh_m_manifesto_sent_log man
-                                                            join shipment_batch_process_invoice_link sd on sd.inv_manifesto_id = man.manifesto_id
-                                                        join proforma_invoices `pi` on pi.p_invoice_no = sd.p_invoice_no and pi.invoice_status = 1 
-                                                        join king_transactions tr on tr.transid = pi.transid
-                                                        join pnh_m_franchise_info f on f.franchise_id = tr.franchise_id
-                                                            join pnh_m_territory_info t on t.id = f.territory_id
-                                                        where shipped=1 and sd.shipped_by>0 and unix_timestamp(sd.shipped_on)!=0 and dispatch_id != 0 and unix_timestamp(sent_on) between ? and ? $cond
-                                                    group by f.territory_id
-                                                    order by t.territory_name ASC",array($sdate,$edate))->result_array();
-                        $data[$slab['name']]=$rslt;*/
-                        /*if(count($rslt)>0 ) {
-                            $data['terr_info'] = $rslt;
-                            $data['set1']['date_from'] =  date("d/M/Y", $today );
-                            $data['set1']['date_to'] =  date("d/M/Y",$min2days );//2 days
-                            $data['set2']['date_from'] =  date("d/M/Y",$min2days);
-                            $data['set2']['date_to'] =  date("d/M/Y",$min4days);
-                            $data['set3']['date_from'] =  date("d/M/Y",$min4days);
-                            $data['set3']['date_to'] =  date("d/M/Y",$min6days);
-                            foreach($rslt as $row){
-                                    $data['terr_manager_info'][$row['territory_id']] = $this->get_territory_managers($row['territory_id']);
-                                    $data['busi_executive_info'][$row['territory_id']] = $this->get_town_executives($row['territory_id']);
-                                    $data['set1'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$today,$min2days);
-                                    $data['set2'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min2days,$min4days);
-                                    $data['set3'][$row['territory_id']]['ttl_invs'] = $this->get_total_manifest_invoices($row['territory_id'],$min4days,$min6days);
-                            }
-                        }*/
                 $data['page']="gen_invoice_acknowledgement";
                 $this->load->view("admin",$data);
-         }
+    }
         
     //==========================================================
     function sugg_slabs($d='2013-12-01',$consider_cur_slab=0)
@@ -369,7 +318,7 @@ class Reservation extends Voucher {
             }
             echo 'Log updated.';
     }
-        
+    
     /**
      * Get Ungrouped transaction details 
      * @param type $territory_id  int
@@ -445,6 +394,7 @@ class Reservation extends Voucher {
             }
             echo json_encode($resp);
     }
+    
     /**
      * Function to process GROUP of invoices for packing, Group based on franchise
      */
@@ -468,6 +418,7 @@ class Reservation extends Voucher {
         $data['page']="pack_invoice";
         $this->load->view("admin",$data);
     }
+    
     /**
      * Process the batch by franchise
      * @param type $bid int
@@ -482,6 +433,7 @@ class Reservation extends Voucher {
         $data['page']="process_batch_by_fran";
         $this->load->view("admin",$data);
     }
+    
     /**
      * Get all perticular franchise orders
      * @param type $franchise_id int
@@ -591,6 +543,7 @@ class Reservation extends Voucher {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE); $output=array();
         echo $this->reservations->do_create_batch_by_group_config();
     }
+    
     /**
      * Suggest menu id under batch groupid
      * @param type $batchgroupid
@@ -616,6 +569,7 @@ class Reservation extends Voucher {
         }
         echo json_encode($output);
     }
+    
     function manage_reservation_create_batch_form() {
         $user=$this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);$output=array();
         $data['batch_conf']=  $this->reservations->getBatchGroupConfig();
@@ -624,6 +578,7 @@ class Reservation extends Voucher {
         $data['userslist']=$this->db->query("select id,username from king_admin where account_blocked=0")->result_array();
         $this->load->view("admin/body/jx_manage_reservation_create_batch_form",$data);
     }
+    
     /**
      * Process proforma ids selected 
      */
@@ -646,6 +601,7 @@ class Reservation extends Voucher {
                     $rslt_arr[$row['menuid']]['menuname'] = $row['menuname'];
                 }
             }
+            
         }
 //        echo '<pre>';print_r($rslt_arr);die();
         $data['prods']=$rslt_arr;
@@ -660,29 +616,57 @@ class Reservation extends Voucher {
     function jx_reallot_frans_all_trans($updated_by,$batch_remarks='By transaction reservation system') {
         
         $user= $this->auth(PRODUCT_MANAGER_ROLE|STOCK_INTAKE_ROLE|PURCHASE_ORDER_ROLE);
+        if(!isset($_POST['all_trans'])) {
+            show_error("No transactions found for processing.");
+        }
+        $all_trans = trim($_POST['all_trans'],'"');
         
-        $all_trans = $_POST['all_trans'];
-        //die($all_trans);
-        if($user) {
-            $rslt_for_trans = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
-                    from king_orders a
-                    join king_transactions tr on tr.transid = a.transid and tr.is_pnh=1
-                    where a.status in (0,1) and tr.batch_enabled=1 and a.transid in ".$all_trans."
-                    group by a.transid) as ddd
-                    where ddd.orders_status=0")->result_array() or die("Error");
-            foreach($rslt_for_trans as $rslt) {
-                $transid = $rslt['transid'];
-                $ttl_num_orders = $rslt['num_order_ids'];
+        $rslt_1 = $this->db->query("select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status
+                                                from king_orders a
+                                                join king_transactions tr on tr.transid = a.transid and tr.is_pnh=1
+                                                where a.status in (0,1) and tr.batch_enabled=1 and a.transid in ($all_trans)
+                                                group by a.transid) as ddd
+                                                where ddd.orders_status=0") or die("Error : <br>".$this->db->last_query());
+        if($rslt_1->num_rows()>0) {
+                $rslt_for_trans = $rslt_1->result_array();
+                foreach($rslt_for_trans as $rslt) {
+                        $transid = $rslt['transid'];
+                        $ttl_num_orders = $rslt['num_order_ids'];
 
-                //echo ("$transid,$ttl_num_orders,$batch_remarks,$updated_by <br>");
-                // Process to batch this transaction
-                $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
-            }
+                        // Process to batch this transaction
+                        $arr_result[$transid] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+
+        //                    print_r($arr_result); //die();
+
+                    foreach ($arr_result as $transid=>$rslt) {
+                            if($rslt["nostock"] == 0 ) {
+                                $arr_result2['nostock'][$transid] = $rslt["nostock"];
+
+                                foreach($rslt["products"] as $prodduct_id=>$stock) {
+                                    $nostock_msg[$transid][] = array("product_id"=>$prodduct_id,"stock"=>$stock);
+                                }
+                            }
+                            elseif(isset($rslt["alloted"])) {
+                                $arr_result2['alloted'][$transid] = $rslt["alloted"];
+
+                                foreach($rslt["products"] as $prodduct_id=>$stock) {
+                                    $allotedstock_msg[$transid][] = array("product_id"=>$prodduct_id,"stock"=>$stock);;
+                                }
+                            }
+                            elseif($rslt["error"] != '') {
+                                $errors[$transid] = $rslt["error"];
+                            }
+                    }
+                    $count_alloted = count($arr_result2["alloted"]);
+                    $count_notalloted = count($arr_result2['nostock']); //count($count_stock['alloted']);count($arr_result2["alloted"]);
+                    $output = array("status"=>"success","alloted"=>$count_alloted,"alloted_msg"=>$allotedstock_msg,"nostock"=>$count_notalloted,"nostock_msg"=>$nostock_msg,"error"=>$errors);
+
+                }
         }
         else {
-            echo 'You dodn\'t have access permission to do this acation';
+            $output = array("status"=>"fail","response"=>"No orders found for any transactions");
         }
-        //$this->output->set_output($output);
+        echo json_encode($output);
     }
     /**
      * Check and reserve available stock for all transactions
@@ -758,7 +742,40 @@ class Reservation extends Voucher {
         $batch_remarks=$batch_remarks=='' ? 'by transaction reservation system' : $batch_remarks ;
         
         // Process to batch this transaction
-        $output['result'] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        $arr_result[$transid] = $this->reservations->do_batching_process($transid,$ttl_num_orders,$batch_remarks,$updated_by);
+        
+        ////===============================
+//                    print_r($arr_result); //die();
+            
+            foreach ($arr_result as $transid=>$rslt) {
+                    if($rslt["nostock"] == 0 ) {
+                        $arr_result2['nostock'][$transid] = $rslt["nostock"];
+                        
+                        foreach($rslt["products"] as $prodduct_id=>$stock) {
+                            $nostock_msg[$transid][] = array("product_id"=>$prodduct_id,"stock"=>$stock);
+                        }
+                        
+                    }
+                    elseif(isset($rslt["alloted"])) {
+                        $arr_result2['alloted'][$transid] = $rslt["alloted"];
+                        
+                        foreach($rslt["products"] as $prodduct_id=>$stock) {
+                            $allotedstock_msg[$transid][] = array("product_id"=>$prodduct_id,"stock"=>$stock);;
+                        }
+                        
+                    }
+                    elseif($rslt["error"] != '') {
+                        $errors[$transid] = $rslt["error"];
+                    }
+            }
+                $count_alloted = count($arr_result2["alloted"]);
+                $count_notalloted = count($arr_result2['nostock']); //count($count_stock['alloted']);count($arr_result2["alloted"]);
+                
+//                $output['result'] = array("alloted"=>$count_alloted);
+//                print_r($count_stock);
+                $output = array("status"=>"success","alloted"=>$count_alloted,"alloted_msg"=>$allotedstock_msg,"nostock"=>$count_notalloted,"nostock_msg"=>$nostock_msg,"error"=>$errors);
+        
+        
         
         echo json_encode($output);
     }

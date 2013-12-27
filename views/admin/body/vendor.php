@@ -1,24 +1,29 @@
 <?php $v=$vendor;?>
 <div class="container">
-<div class="dash_bar_right">
+<h2><?php echo $v['vendor_name']?> Vendor Details</h2>
+
+<div class="dash_bar_right" style="margin-top: -44px; margin-right: 708px;">
 <span><?=$this->db->query("select count(1) as l from t_po_info where vendor_id=?",$v['vendor_id'])->row()->l?></span>
 POs raised
 </div>
-<div class="dash_bar_right">
+
+<div class="dash_bar_right" style="margin-top: -44px; margin-right: 489px;">
 <span>Rs <?=number_format($this->db->query("select sum(total_value) as l from t_po_info where vendor_id=?",$v['vendor_id'])->row()->l)?></span>
 Total PO value
 </div>
-<h2>Vendor Details</h2>
-<a href="<?=site_url("admin/editvendor/{$v['vendor_id']}")?>">edit this vendor</a>
 
-<div class="tabs">
+<div style="float: right; margin-top: -33px;"><a  href="<?=site_url("admin/editvendor/{$v['vendor_id']}")?>" class="vendorpg_btn" >Edit</a>&nbsp;<a href="<?php echo site_url("admin/purchaseorder/{$v['vendor_id']}")?>" target="_blank" class="vendorpg_btn" >Create PO</a></div>
+
+
+
+<div class="tab_view">
 
 <ul>
 <li><a href="#v_details">Basic Details</a></li>
 <li><a href="#v_financials">Finance Details</a></li>
 <li><a href="#v_extra">Extra Details</a></li>
 <li><a href="#v_contacts">Contacts</a></li>
-<li><a href="#v_brands">Brands</a></li>
+<li><a href="#v_brands">Margin Details</a></li>
 <li><a href="#v_pos">POs Raised</a></li>
 </ul>
 
@@ -82,21 +87,26 @@ Total PO value
 </div>
 
 <div id="v_brands">
+<h3>Linked Brands and Category Details</h3>
 <table class="datagrid">
 <thead>
-<tr><th>Brand</th><th>Margin</th><th>Total PO value</th></tr>
+<tr><th>Sl no</th><th>Linked Brands</th><th>Category </th><th>Total PO value</th></tr>
 </thead>
 <tbody>
-<?php foreach($brands as $b){?>
+<?php $i=1; foreach($brands as $b){ $bid=$b['id']; $vid=$b['vendor_id']?>
+			
 <tr>
-<td><a class="link" href="<?=site_url("admin/viewbrand/{$b['id']}")?>"><?=$b['name']?></a></td>
-<td><?=$b['brand_margin']?>%</td>
+<td><?php echo $i;?></td>
+<td><a  href="<?=site_url("admin/viewbrand/{$b['id']}")?>"><?=$b['name']?></a></td>
+<td><?php echo  $b['cat_id']==0 ?'All <p><b>Margin :</b>'.$b['brand_margin'].'%</p>':"<a href='javascript:void(0)' onclick='view_cat($bid)' style='font-size:11px;'>view cat</a>"?></td>
 <td>Rs <?=number_format($this->db->query("select sum(p.purchase_price*p.order_qty) as s from t_po_info po join t_po_product_link p on p.po_id=po.po_id join m_product_info d on d.product_id=p.product_id and d.brand_id=? where po.vendor_id=?",array($b['id'],$v['vendor_id']))->row()->s)?>
 </tr>
-<?php }?>
+<?php $i++; }?>
 </tbody>
 </table>
+
 </div>
+
 
 
 <div id="v_pos">
@@ -149,16 +159,84 @@ Total PO value
 
 
 </div>
-
+<div id="category_det" title='Category Brand Link' style='display:none;'>
+<h3 class='cat_name'></h3>
+<table class="datagrid" id="cat_link_tbl" width='100%'>
+<thead><th>Category Name</th><th>Brand Margin</th><th>Applicable From</th><th>Applicable till</th></thead>
+<tbody></tbody>
+</table>
 </div>
+</div>
+<script>
+var ven_id = '<?php echo $this->uri->segment(3);?>';
+function view_cat(bid)
+{
+	$('#category_det').data('bid',bid).dialog('open');
+	
+}
+	
+$("#category_det").dialog({
+modal:true,
+width:'500',
+height:'400',
+autoOpen:false,
+open:function(){
+	var	dlg = $(this);
+	$('.cat_name').html("");
+	$("#cat_link_tbl tbody").html("");
+	$.post(site_url+'/admin/to_get_linkedcatbybrandvendor',{brandid:dlg.data('bid'),vendorid:ven_id},function(resp){
+		if(resp.status=='success')
+		{
+			$(".cat_name").html('Configured Categories for '+resp.brand_name +'&nbsp;Brand');
+				
+				$.each(resp.l_catlist,function(i,c){
+				var tblrow=''
+					+"<tr>"
+					+"<td>"+c.category_name+"</td>"
+					+"<td>"+c.brand_margin+"</td>"
+					+"<td>"+c.applicable_from+"</td>"
+					+"<td>"+c.applicable_till+"</td>"
+					+"</tr>"
+					
+					$("#cat_link_tbl tbody").append(tblrow);
 
+				
+			});
+		}
+	},'json');
+}
+});
+$('.tab_view').tabs();
+$('.leftcont').hide();
+</script>
 
 <style>
+
 #v_contact_cont table{
 margin:10px;
 border:1px solid #ccc;
 padding:5px;
 }
+
+
+
+.vendorpg_btn{
+	background-color: rgb(227, 227, 227);
+    background-image: linear-gradient(to bottom, rgb(239, 239, 239), rgb(216, 216, 216));
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    border-radius: 3px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 1px rgba(255, 255, 255, 0.8) inset;
+    color: rgb(76, 76, 76);
+    display: inline-block;
+    font-size: 13px;
+    margin: 0;
+    outline: medium none;
+    padding: 3px 12px;
+    text-align: center;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+
+}
+
 </style>
 
 <?php

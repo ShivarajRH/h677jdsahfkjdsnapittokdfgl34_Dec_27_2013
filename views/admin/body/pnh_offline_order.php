@@ -66,9 +66,9 @@
 <b style="float: right;margin-right:398px;margin-top:-44px;margin-bottom:25px;font-size: 11px;background-color:<?php echo $fr_status_color?>;color:#fff;padding:2px 3px;border-radius:3px;"><?php echo $fran_status_arr[$fran_status];?></b>
 <a href="javascript:void(0)" onclick="load_scheme_details()" style="float: right;margin-top: -39px;margin-right:156px;" class="button">Scheme &amp; Menu Details</a>
 <a href="<?php echo site_url('/admin/pnh_deals')?>" target="_blank" style="float:left;margin-top: -38px;margin-left:1171px;" class="button">GoTo Deals</a>
-<div class="fixed_bottom">Search Deal : <div id="srch_results"></div><input type="text" class="inp" style="width:320px;" id="p_srch" autocomplete="off" ></div>
+<div class="fixed_bottom" id="srch_deals_cont">Search Deal : <div id="srch_results"></div><input type="text" class="inp" style="width:320px;" id="p_srch" autocomplete="off" ></div>
 <div class="fixed_bottom" style="left:480px;">PNH PRODUCT ID : <input type="text" class="inp" maxlength="8" size=30 id="p_pid" autocomplete="off" ><input type="button" value="Add" class="add_product"></div>
-<div class="fixed_bottom" style="left:900px;">Barcode : <input type="text" class="inp" size=20 id="p_barcode" autocomplete="off" ><input type="button" value="Add" class="add_b_product"></div>
+<div class="fixed_bottom" style="left:935px;">Barcode : <input type="text" class="inp" size=20 id="p_barcode" autocomplete="off" ><input type="button" value="Add" class="add_b_product"></div>
 
 <div style="padding:5px;">
 
@@ -1122,7 +1122,7 @@ $(function(){
 			var menu_qty=qty[i];
 			if(menu_qty>1 && mid!=0 && menu_id  == 112)
 			{
-				alert("More than 1 qty of Electronic Items for 1 member can't be processed");
+				alert("More than 1 qty of Electronics Item for 1 member can't be processed");
 				return false;
 			}
 
@@ -1223,9 +1223,12 @@ $(function(){
 			jHR.abort();
 		window.clearTimeout(search_timer);
 		search_timer=window.setTimeout(function(){
+			$('.loading_srch').remove();
+			$('#srch_results').html('<div class="loading_srch" style="display:block;text-align:center;background:#FFF"><img src="'+base_url+'/images/jx_loading.gif'+'"></div>');
 		jHR=$.post('<?=site_url("admin/pnh_jx_searchdeals")?>',{fid:$("#i_fid").val(),q:q},function(data){
 			$("#srch_results").html(data).show();
 			//$("#srch_results").css("margin-top","-"+($("#srch_results").height()+30)+"px");
+			$('.loading_srch').remove();
 		});},200);
 	});
 
@@ -1248,6 +1251,7 @@ $(function(){
 	
 	
 	$(".add_product").click(function(){
+		
 		pid=$("#p_pid").val();
 		if($.inArray(pid,pids)!=-1)
 		{
@@ -1256,10 +1260,14 @@ $(function(){
 		if(pid.length==0)
 		{alert("Enter product id");return;}
 		$("#p_pid").attr("disabled",true);
+		
+		$(this).val('Loading...');
+		
 		$.post("<?=site_url("admin/pnh_jx_loadpnhprod")?>",{pid:pid,fid:$("#i_fid").val()},function(data){
 			i=pids.length;
 			obj=p=$.parseJSON(data);
 			$("#p_pid").attr("disabled",false);
+			$(".add_product").val('Add');
 			if(obj.length==0)
 			{	alert("The product is DISABLED \nor\nNo product available for given id");return;}
 			

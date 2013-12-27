@@ -50,11 +50,33 @@ if($this->uri->segment(3)=="1")
 </style>
 <div class="container">
 <div>
-
-<div class="dash_bar">
-<a href="<?=site_url("admin/orders/1")?>"></a>
-<span><?php $pending=$this->db->query("select count(distinct(a.id)) as l from king_orders a join king_transactions b on a.transid = b.transid where a.status=0")->row()->l;?><?=$pending?></span>
-Pending Orders
+<div style="float: right">
+	
+	<?php if(!$partial_list){?>
+		
+		<div class="dash_bar" style="cursor: pointer;width: 323px;text-align: left;">
+			<h4 style="margin:4px;">Print Stock Unavailabilty Report</h4>
+			<div style="text-align: left">
+			<a style="float: none" target="_blank" href="<?=site_url("admin/stock_unavail_report/".($this->uri->segment(2)=="partial_shipment"?"1":"0")."/".($this->uri->segment(4)?$this->uri->segment(4):0)."/".($this->uri->segment(5)?$this->uri->segment(5):0)."/1")?>">PNH Orders</a>
+			<a style="float: none" target="_blank" href="<?=site_url("admin/stock_unavail_report/".($this->uri->segment(2)=="partial_shipment"?"1":"0")."/".($this->uri->segment(4)?$this->uri->segment(4):0)."/".($this->uri->segment(5)?$this->uri->segment(5):0)."/2")?>">Snapittoday Orders</a>
+			<a style="float: none" target="_blank" href="<?=site_url("admin/stock_unavail_report/".($this->uri->segment(2)=="partial_shipment"?"1":"0")."/".($this->uri->segment(4)?$this->uri->segment(4):0)."/".($this->uri->segment(5)?$this->uri->segment(5):0)."/0")?>">All Orders</a>
+			</div>
+		</div>
+		<br>
+	<?php }?>
+	<?php if(!$partial_list){?>
+	<div class="dash_bar" style="padding:7px;">
+	Date range: <input type="text" size="8" class="inp" id="ds_range" value="<?=$this->uri->segment(4)?>"> to <input size="8" type="text" class="inp"id="de_range" value="<?=$this->uri->segment(5)?>"> <input type="button" value="Show" onclick='showrange()'>
+	</div>
+	<?php }else
+	{
+	?>
+	<div class="dash_bar" style="padding:7px;">
+		Date range: <input type="text" size="8" class="inp" id="ds_range" value="<?=$this->uri->segment(3)?>"> to <input size="8" type="text" class="inp"id="de_range" value="<?=$this->uri->segment(4)?>"> <input type="button" value="Show" onclick='showpartialrange()'>
+	</div>	
+	<?php 	
+	}?>
+	
 </div>
 
 <?php /*?>
@@ -80,33 +102,36 @@ Orders this month
 Orders prev month
 </div>
 
-<div class="dash_bar">
-<span>Rs <?=number_format($this->db->query("select sum(i_price*quantity) as l from king_orders where time>?",mktime(0,0,0,date("n"),1))->row()->l)?></span>
-Value this month
+<div class="dash_bar qtipblk" qtip-txt="Sales Value : Rs <?=format_price($this->db->query("select sum(i_orgprice-(i_discount+i_coup_discount)*quantity) as l from king_orders a join king_transactions b on a.transid = b.transid where date(from_unixtime(b.init)) >= ? ",date('Y-m-01'))->row()->l,0)?>" > 
+<span>Rs <?=format_price($this->db->query("select sum(i_orgprice*quantity) as l from king_orders where time>?",mktime(0,0,0,date("n"),1))->row()->l,0)?></span>
+ this month
 </div>
 
-<div class="dash_bar">
-<span>Rs <?=number_format($this->db->query("select sum(i_price*quantity) as l from king_orders where time between ? and ?",array(mktime(0,0,0,date("n")-1,1),mktime(0,0,0,date("n"),1)))->row()->l)?></span>
-Value prev month
+<div class="dash_bar qtipblk" qtip-txt="Sales Value : Rs <?=format_price($this->db->query("select sum(i_orgprice-(i_discount+i_coup_discount)*quantity) as l from king_orders a join king_transactions b on a.transid = b.transid where b.init between ? and ?",array(mktime(0,0,0,date("n")-1,1),mktime(0,0,0,date("n"),1)))->row()->l,0)?>" >
+<span>Rs <?=format_price($this->db->query("select sum(i_orgprice*quantity) as l from king_orders where time between ? and ?",array(mktime(0,0,0,date("n")-1,1),mktime(0,0,0,date("n"),1)))->row()->l,0)?></span>
+ prev month
 </div>
+
 <?php } ?>
-<div class="clear"></div>
 
-<div class="dash_bar">
-showing <b><?=count($orders)?></b> orders
+
+<script>
+	$('.qtipblk').each(function(){
+		var ele = $(this)
+		$(this).qtip({
+		   content: ele.attr('qtip-txt'),
+		   show: 'mouseover',
+		   hide: 'mouseout'
+		});
+	});
+</script>
+
+<div class="dash_bar_red" >
+<a href="<?=site_url("admin/orders/1")?>"></a>
+<span style="font-size: 138%"><?php $pending=$this->db->query("select count(distinct(a.id)) as l from king_orders a join king_transactions b on a.transid = b.transid where a.status=0")->row()->l;?><?=$pending?></span>
+Pending Orders
 </div>
-<?php if(!$partial_list){?>
-<div class="dash_bar" style="padding:7px;">
-Date range: <input type="text" size="8" class="inp" id="ds_range" value="<?=$this->uri->segment(4)?>"> to <input size="8" type="text" class="inp"id="de_range" value="<?=$this->uri->segment(5)?>"> <input type="button" value="Show" onclick='showrange()'>
-</div>
-<?php }else
-{
-?>
-<div class="dash_bar" style="padding:7px;">
-	Date range: <input type="text" size="8" class="inp" id="ds_range" value="<?=$this->uri->segment(3)?>"> to <input size="8" type="text" class="inp"id="de_range" value="<?=$this->uri->segment(4)?>"> <input type="button" value="Show" onclick='showpartialrange()'>
-</div>	
-<?php 	
-}?>
+
 <div class="dash_bar_red">
 <a href="<?=site_url("admin/partial_shipment")?>"></a>
 Partial Shipment Orders 
@@ -119,15 +144,11 @@ Disabled but possible
 </div>
 
 <div class="clear"></div>
+ 
 
 </div>
 
-<?php if(!$partial_list){?>
-	Stock Unavailability Report for : 
-	<a target="_blank" href="<?=site_url("admin/stock_unavail_report/".($this->uri->segment(2)=="partial_shipment"?"1":"0")."/".($this->uri->segment(4)?$this->uri->segment(4):0)."/".($this->uri->segment(5)?$this->uri->segment(5):0)."/0")?>">All Orders</a> / 
-	<a target="_blank" href="<?=site_url("admin/stock_unavail_report/".($this->uri->segment(2)=="partial_shipment"?"1":"0")."/".($this->uri->segment(4)?$this->uri->segment(4):0)."/".($this->uri->segment(5)?$this->uri->segment(5):0)."/2")?>">Snapittoday Orders</a> / 
-	<a target="_blank" href="<?=site_url("admin/stock_unavail_report/".($this->uri->segment(2)=="partial_shipment"?"1":"0")."/".($this->uri->segment(4)?$this->uri->segment(4):0)."/".($this->uri->segment(5)?$this->uri->segment(5):0)."/1")?>">PNH Orders</a>
-<?php }?>
+
 
 
 

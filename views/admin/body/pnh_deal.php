@@ -206,6 +206,7 @@ ul.tabs li.active
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/jquery.jqplot.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.highlighter.min.js"></script>
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.pointLabels.min.js"></script>
+<script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
 
 
 <script class="include" type="text/javascript" src="<?php echo base_url();?>/js/jq_plot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
@@ -275,6 +276,7 @@ ul.tabs li.active
 									<tr><td>Offer price/Dealer Price :</td><td>Rs <?=$deal['price']?></td></tr>
 									<tr><td>Store price :</td><td>Rs <?=$deal['store_price']?></td></tr>
 									<tr><td>NYP price :</td><td>Rs <?=$deal['nyp_price']?></td></tr>
+									<tr><td>Bill on Orderprice :</td><td><?=$deal['billon_orderprice']?'Yes':'No'?></td></tr>
 									<tr><Td>Gender Attribute :</Td><td><?=$deal['gender_attr']?></td></tr>
 									<tr><Td>Max Allowed Qty <br>(for franchise per day):</Td><td><?=$deal['max_allowed_qty']?></td></tr>
 									<tr><td>Brand :</td><Td style="font-weight:bold;"><?=$deal['brand']?></Td></tr>
@@ -545,12 +547,14 @@ ul.tabs li.active
 									<h4>Linked Products</h4>
 									<table class="datagrid smallheader noprint"  width="88%">
 										<thead>
-											<tr><th>Sno</th><th>ID</th><th>Product Name</th><th>Qty</th></tr>
+											<tr><th>Sno</th><th>ID</th><th>Product Name</th><th>Qty</th><th>Sourceable</th></tr>
 										</thead>
 										
 										<tbody>
-											<?php foreach($prods as $i=>$p){?>
-											<tr><td><?=++$i?></td><td><?=$p['product_id']?></td><td><a href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_name']?></a></td><td><?=$p['qty']?></td></tr>
+											<?php foreach($prods as $i=>$p){
+												$p['is_sourceable'] = $this->db->query("select is_sourceable from m_product_info where product_id = ? ",$p['product_id'])->row()->is_sourceable;
+											?>
+											<tr><td><?=++$i?></td><td><?=$p['product_id']?></td><td><a href="<?=site_url("admin/product/{$p['product_id']}")?>"><?=$p['product_name']?></a></td><td><?=$p['qty']?></td><td><?=($p['is_sourceable']?'Yes':'No')?></td></tr>
 											<?php }?>
 										</tbody>
 									</table>
@@ -849,7 +853,6 @@ function deal_sale_stat()
 	var start_date = $('#date_from').val();
 	var end_date = $('#date_to').val();
 	$.getJSON(site_url+'/admin/jx_deal_getsales/'+start_date+'/'+end_date+'/'+itemid,'',function(resp){
-		
 		if(resp.summary == 0)
 		{
 			$('#deal_stat .deal_grph_view').html("<div class='alert_wrap' style='padding:113px 0px'>No Sales statisticks found between "+start_date+" and "+end_date+"</div>" );	
@@ -859,11 +862,11 @@ function deal_sale_stat()
 			// reformat data ;
 			if(resp.date_diff <= 31)
 		  	{
-		  		var interval = 2;
+		  		var interval = 5;
 		    }
 			else
 			{
-				var interval = 2;
+				var interval = 10;
 			}
 			$('#deal_stat .deal_grph_view').empty();
 			plot2 = $.jqplot('deal_stat .deal_grph_view', [resp.summary], {
@@ -871,7 +874,14 @@ function deal_sale_stat()
 			        showMarker:false,
 			        pointLabels: { show:true }
 			      },
-			      
+			      axesDefaults: {
+			        tickRenderer: $.jqplot.CanvasAxisTickRenderer ,
+			        tickOptions: {
+			          fontFamily: 'tahoma',
+			          fontSize: '11px',
+			          angle: -30
+			        }
+			    },
 			        axes:{
 			        xaxis:{
 			          renderer: $.jqplot.CategoryAxisRenderer,
@@ -884,7 +894,7 @@ function deal_sale_stat()
 			        },
 			        yaxis:{
 				          min : 0,
-						tickInterval : interval,
+						  tickInterval : interval,
 						  label:'Quantity',
 				          labelOptions:{
 				            fontFamily:'Arial',

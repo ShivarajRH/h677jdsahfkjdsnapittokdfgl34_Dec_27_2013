@@ -196,6 +196,7 @@
 										{
 											echo '<div><a href="javascript:void(0)" onclick="print_del_label('.$sent_det['id'].')" >Print Delivery Label : </a></div>';	
 										}
+										echo '<div><a href="javascript:void(0)" onclick="print_franchise_label('.$sent_det['id'].')" >Print Franchise Labels : </a></div>';
 										
 									?>	
 								</td>
@@ -1439,6 +1440,12 @@ function print_del_label(man_id)
 {
 	$('#print_del_label_frm').html('<iframe src="'+site_url+'/admin/print_deliverylabel/'+man_id+'"></iframe>');	
 }
+
+function print_franchise_label(man_id)
+{
+	$('#print_del_label_frm').html('<iframe src="'+site_url+'/admin/print_deliverylabel/'+man_id+'"></iframe>');	
+}
+
 
 $("#cancel_manifesto").click(function(e){
 	e.preventDefault();

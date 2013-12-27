@@ -918,3 +918,17 @@ select weekday(@dd),date_add(@dd,interval weekday(@dd) day );
 
 4,3 
 3-4 -1day 
+
+# =========================================================================================================
+
+select * from (
+	select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status 
+		from king_orders a 
+		join king_transactions tr on tr.transid = a.transid and tr.is_pnh=1 
+		where a.status in (0,1) and tr.batch_enabled=1 
+		and a.transid in ("'PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485','PNHZSN85485'"
+	) 
+group by a.transid) as ddd 
+where ddd.orders_status=0
+
+select * from (select a.transid,count(a.id) as num_order_ids,sum(a.status) as orders_status from king_orders a join king_transactions tr on tr.transid = a.transid and tr.is_pnh=1 where a.status in (0,1) and tr.batch_enabled=1 and a.transid in ('PNHFFB52222','PNHTCI15423') group by a.transid) as ddd where ddd.orders_status=0

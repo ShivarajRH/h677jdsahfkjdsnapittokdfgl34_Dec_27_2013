@@ -1044,3 +1044,7 @@ CREATE TABLE `t_imei_update_log` (
                      `logged_by` int(11) DEFAULT '0',                        
                      PRIMARY KEY (`id`)                                      
                    );
+
+ALTER TABLE `snapitto_dbexisting`.`m_vendor_brand_link` ADD COLUMN `cat_id` bigint(11) DEFAULT 0 NULL AFTER `brand_id`;
+
+ALTER TABLE `snapitto_dbexisting`.`t_po_info` ADD COLUMN `status_remarks` Varchar(2555) NULL AFTER `modified_on`; 

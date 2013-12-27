@@ -1,86 +1,5 @@
 
-<style type="text/css">
-
-.leftcont {        display: none;    }
-select {    margin: 10px 0 15px 5px; float: left; }
-.loading {
-    text-align: center;
-    margin: 5% 0 0 40%;
-    visibility: visible; font-size: 16px; 
-}
-.dash_bar_right {
-    background-color: #F1F0FF;
-    color: #443266;
-    font-size: 11px;
-    min-width: 100px !important;
-    text-align: center;
-    padding: 3px 6px;
-    margin:0px 5px 5px 5px; 
-}
-.dash_bar_right span {
-    display: block;
-    font-size: 16px;
-}
-.dash_bar {
-    background-color: #F1F0FF;
-    color: #443266; font-size: 18px;float: right;
-}
-        #franchise_order_list_wrapper .tab_list{
-                clear:both;
-                display: block;
-
-        }
-        #franchise_order_list_wrapper .tab_list ol{
-                padding-left:0px;
-        }
-        #franchise_order_list_wrapper .tab_list li{
-                display: inline-block;
-        }
-        #franchise_order_list_wrapper .tab_list li a{
-                display: block;
-                background: #F1F0FF;
-                padding:5px 20px;
-                font-size: 13px;
-                color: #454545;
-                cursor:pointer;
-                font-weight: bold;
-                text-decoration: none;
-        }
-        #franchise_order_list_wrapper .tab_list li a.selected{
-                background: #443266;
-                color: #C3C3E5;
-        }
-.transit_link{
-	border-radius:5px;
-	background:#96C5E0;
-	display:inline-block;
-	padding:3px 7px;
-	color:#fff;
-}
-.transit_link:hover{
-	border-radius:0px;
-	background:#3084C1;
-	text-decoration:none;
-}
-
-.grid_bg { background:#F1F0FF; }
-table.datagridsort tbody td { padding: 7px; }
-.datagrid td { padding: 7px; }
-.datagrid th { background: #443266;color: #C3C3E5; }
-.subdatagrid {
-    width: 100%;
-}
-.subdatagrid td {
-    padding: 3px;
-    font-size: 12px;
-}
-.subdatagrid td a {
-color: #121213;
-}
-</style>	
-
 <div class="container">
-    <!--<h2>Orders Status Summary</h2>-->
     <div class="">
         <form>
             <table width="100%">
@@ -115,8 +34,8 @@ color: #121213;
         <div id="franchise_ord_list" style="clear: both;overflow: hidden">
                 <table width="100%" >
                         <tr>
-                                <td width="60%">
-                                        <div class="tab_list" style="clear: both;">
+                                <td width="45%">
+                                        <div class="tab_list" style="clear: both;overflow: hidden">
                                                     <ol>
                                                             <li><a class="load_type selected" id="all" href="javascript:void(0)">All</a><div class="all_pop"></div></li>
                                                             <li><a class="load_type" id="shipped" href="javascript:void(0)">Shipped</a><div class="shipped_pop"></div></li>
@@ -149,7 +68,7 @@ color: #121213;
                         <td><select id="sel_menu" name="sel_menu" colspan="2">
                                 <option value="00">Select Menu</option>
                                  <?php foreach($pnh_menu as $menu): ?>
-                                        <option value="<?php echo $menu['id'];?>"><?php echo $menu['name'];?></option>
+                                        <option value="<?php echo $town['id'];?>"><?php echo $menu['name'];?></option>
                                 <?php endforeach; ?>
                             </select> &nbsp;
                             <select id="sel_brands" name="sel_brands">
@@ -164,6 +83,9 @@ color: #121213;
                         </td>
                         <td align="right" valign="middle">
                                 
+                            
+<!--                            <div class="top_orders_status_pagination"></div>-->
+                            
                         </td>
                     </tr>
 
@@ -217,10 +139,8 @@ function date_range()
     });
     $("#sel_franchise").live("change",function() {
         var franchiseid=($("#sel_franchise").val()=='00')? 00 :$("#sel_franchise").val();
-        if(franchiseid==00) {
-            $(".sel_status").html("");
-        }
-        var url="<?php echo site_url("admin/jx_franchise_creditnote"); ?>"+"/"+franchiseid;
+        if(franchiseid!=00) {
+            var url="<?php echo site_url("admin/jx_franchise_creditnote"); ?>"+"/"+franchiseid;
             $.post(url,function(resp) {
                     if(resp.status=='success') {
                          $(".sel_status").html(resp);
@@ -229,7 +149,10 @@ function date_range()
                         $(".sel_status").html(resp);
                     }
                 }).done(done).fail(fail);
-                
+        }
+        else {
+            $(".sel_status").html(" ");
+        }
         loadTableData(0);
         return false;
     });
@@ -260,7 +183,6 @@ function date_range()
         var terrid=$(this).find(":selected").val();//text();
 //        if(terrid=='00') {          $(".sel_status").html("Please select territory."); return false;        }
         
-       // $("table").data("sdata", {terrid:terrid});
         var url="<?php echo site_url("admin/jx_suggest_townbyterrid"); ?>/"+terrid;//  alert(url);
         $.post(url,function(resp) {
             if(resp.status=='success') {
@@ -292,16 +214,9 @@ function date_range()
     });
     
     function loadTableData(pg) {
-        
-            $(".ttl_orders_status_listed").html("");
-            $(".c2").html("");
-            $(".all_pop").html("");
-            $(".shipped_pop").html("");
-            $(".unshipped_pop").html("");
-            $(".cancelled_pop").html("");
-            $(".removed_pop").html("");
-            $(".show_totalamount").html("");
-        
+            
+        $(".ttl_orders_status_listed,.c2,.all_pop, .shipped_pop, .unshipped_pop, .cancelled_pop, .removed_pop, .show_totalamount").html("").css({"display":"none"});
+            
          var type = $('.tab_list .selected').attr('id');
          var date_from=$( "#date_from").val();
          var date_to=$( "#date_to").val();
@@ -396,6 +311,85 @@ function date_range()
     
   
 </script>
+<style type="text/css">
+
+.leftcont {        display: none;    }
+select {    margin: 10px 0 15px 5px; float: left; }
+.loading {
+    text-align: center;
+    margin: 5% 0 0 40%;
+    visibility: visible; font-size: 16px; 
+}
+.dash_bar_right {
+    background-color: #F1F0FF;
+    color: #443266;
+    font-size: 11px;
+    min-width: 100px !important;
+    text-align: center;
+    padding: 3px 6px;
+    margin:0px 5px 5px 5px; 
+}
+.dash_bar_right span {
+    display: block;
+    font-size: 16px;
+}
+.dash_bar {
+    background-color: #F1F0FF;
+    color: #443266; font-size: 18px;float: right;
+}
+        #franchise_order_list_wrapper .tab_list{
+                clear:both;
+                display: block;
+
+        }
+        #franchise_order_list_wrapper .tab_list ol{
+                padding-left:0px;
+        }
+        #franchise_order_list_wrapper .tab_list li{
+                display: inline-block;
+        }
+        #franchise_order_list_wrapper .tab_list li a{
+                display: block;
+                background: #F1F0FF;
+                padding:5px 20px;
+                font-size: 13px;
+                color: #454545;
+                cursor:pointer;
+                font-weight: bold;
+                text-decoration: none;
+        }
+        #franchise_order_list_wrapper .tab_list li a.selected{
+                background: #443266;
+                color: #C3C3E5;
+        }
+.transit_link{
+	border-radius:5px;
+	background:#96C5E0;
+	display:inline-block;
+	padding:3px 7px;
+	color:#fff;
+}
+.transit_link:hover{
+	border-radius:0px;
+	background:#3084C1;
+	text-decoration:none;
+}
+
+.grid_bg { background:#F1F0FF; }
+/*.datagrid td { background: #F1F0FF; }*/
+.datagrid th { background: #443266;color: #C3C3E5; }
+
+/*.datagrid th{padding:8px 7px;}*/
+/*.datagrid tr { background: #F1F0FF;color: #443266; }
+.datagrid1 { border-collapse: collapse;border:none !important;}
+.datagrid1 th{padding:8px 7px; border:none !important;font-size: 13px;background: #C3C3E5;color: #443266;}
+.datagrid1 td{ border-right:none;border-left:none;border-bottom:none;font-size: 12px;padding:2px;color: #444;background-color:#F1F0FF; text-transform: capitalize;}
+.datagrid1 td:hover {background-color:transparent; }
+.datagrid1 td a{text-transform: capitalize;}
+.datagrid1 td b{font-weight: bold;font-size: 11px;}*/
+
+</style>	
+
 <script type="text/javascript">
 
 

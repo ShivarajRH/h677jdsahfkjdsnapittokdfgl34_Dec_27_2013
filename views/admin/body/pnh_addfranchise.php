@@ -1,5 +1,4 @@
-
-<?php 
+<?php
 	$v=false;
 	if(isset($fran))
 		$v=$fran;
@@ -131,25 +130,20 @@ function init_frmap() {
 <tr><td>Working Time : </td><td>
 <select name="shop_from">
 <?php for($i=1;$i<=24;$i++){?>
-<?php /* <option value="<?=$i?>" <?=(($v&&date("h",$v['store_open_time'])==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option> */ ?>
-<option value="<?=$i?>" <?=(($v&&$v['store_open_time']==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option> 
+<option value="<?=date("H:i:s",mktime($i,0,0))?>" <?=(($v&&date("H",strtotime($v['store_open_time']))==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>
 <?php }?>
 </select>
 to 
 <select name="shop_to">
 <?php for($i=1;$i<=24;$i++){?>
-<?php /*<option value="<?=$i?>" <?=(($v&&date("h",$v['store_close_time'])==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>*/?>
-<option value="<?=$i?>" <?=(($v&&$v['store_close_time']==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>
+	<option value="<?=date("H:i:s",mktime($i,0,0))?>" <?=(($v&&date("H",strtotime($v['store_close_time']))==$i)?'selected':"")?>><?=date("g:ia",mktime($i,0))?></option>
 <?php }?>
 </select>
 </td></tr>
-<tr>
-	<td>Own Property? :</td>
-	<td>
-		<?php /*<input type="checkbox" name="own" value="<?=$v&&$v['own_rented']==1?"1":"0"?>">**/?>
-		<input type="checkbox" name="own" value="1" <? echo $v&&$v['own_rented']==1?"checked":''?>>
-	</td>
-</tr>
+
+
+<tr><td>Own Property? :</td><td><input type="checkbox" name="own" value="1" <?=((($v&&$v['own_rented'])==1)?"checked":"")?> ></td></tr>
+
 <tr><td>Website :</td><td><input type="text" name="website" size=50 value="<?=$v?$v['website_name']:""?>"></td></tr>
 <tr><td>If Internet Available,mention ISP :</td><td><input type="text" name="internet" size=50 value="<?=$v?$v['internet_available']:""?>"></td></tr>
 <tr><td>TIN No :</td><td><input type="text" name="shop_tin" class="inp" value="<?=$v?$v['store_tin_no']:""?>" size=30  maxlength="40"></td></tr> 
@@ -182,6 +176,7 @@ to
 <td><div id="pnh_towns">
 <?php if($v){
 		echo "<select name='town'>";
+		echo '<option value="">Choose</option>';
 		foreach($this->db->query("select id,town_name from pnh_towns where territory_id=?",$v['territory_id'])->result_array() as $t)
 			echo '<option value="'.$t['id'].'">'.$t['town_name'].'</option>';
 		echo "</select>";
@@ -392,8 +387,6 @@ $(function(){
 			error=1;
 			validation_report.push('Check login mobile numbers');
 		}
-
-
 		$("input.mand",$(this)).each(function(){
 			if($(this).val().length==0)
 			{
@@ -409,10 +402,17 @@ $(function(){
 			f=false;
 		}
 		
-		if(f && !is_valid_email($(".login_email",$(this)).val()))
+		if(f && !is_email($(".login_email",$(this)).val()))
 		{
 			error=1;
 			validation_report.push("Please enter valid login email");
+			f=false;
+		}
+		
+		if($('#pnh_towns select').val() == '')
+		{
+			error=1;
+			validation_report.push("Please choose franchise town.");
 			f=false;
 		}
 
@@ -424,6 +424,8 @@ $(function(){
 			alert(html_cnt);
 			return false;
 		}
+		
+		
 
 		//if("input [type="checkbox" name="fran_menu[]")
 		return f;
@@ -431,18 +433,26 @@ $(function(){
 
 		
 	$("#pnh_terry").change(function(){
+		$("#pnh_towns").html("<option value=''>Loading...</option>");
 		$.post("<?=site_url("admin/pnh_jx_loadtown")?>",{tid:$(this).val()},function(data){
-			$("#pnh_towns").html(data);
+			
+			$("#pnh_towns").append(data);
+			$("#pnh_towns select").prepend("<option value=''>Choose</option>");
+			
+			$("#pnh_towns select").val("<?=$v['town_id']?>");
 		});
 	})<?php if(!$v){?>.change()<?php }?>;
+	
 <?php if($v){?>
 	$("#pnh_towns select").val("<?=$v['town_id']?>");
 <?php }?>
 	
 	for(i=0;i<b_added.length;i++)
 		$(".lb_date"+i+", .lb_date"+i+"t").datepicker();
+		
 	if(b_added.length==0)
-	clone_vcnt();
+		clone_vcnt();
+	
 	$("#v_lpsearch").keyup(function(){
 		$.post("<?=site_url("admin/searchproducts")?>",{q:$(this).val()},function(data){
 			$("#v_searchres").html(data).show();

@@ -31,7 +31,7 @@
 <th>Product</th>
 <th></th>
 <th>Oldest Order Details</th>
-<th>Open PO Details</th>
+<th>Open PO Qty</th>
 <th></th>
 <th>Qty</th>
 <th>MRP</th>
@@ -131,26 +131,28 @@
 <td>Date:%last_orderdon% <br />Transid:<a target="_blank" href="<?php echo site_url('admin/trans/%transid%')?>">%transid%</a></p>
 </td>
 
-<td style="width:100px;cellspacing:2"; id="is_po_raised_%product_id%"></td>
+<td style="width:50px;text-align: center" id="is_po_raised_%product_id%"></td>
 
 <td></td>
 <td><input type="text" class="inp calc_pp qty" id="prod_qty_%product_id%"  size=2 name="qty[]" value="%require_qty%"></td>
 <td><input type="text" class="inp calc_pp mrp" size=4 name="mrp[]" value="%mrpvalue%"></td>
 <td><input type="text" title="Change/Update DP Price on change" class="inp calc_pp has_dp_price dp_price" size=4 name="dp_price[]" value="%dp_price%"></td>
-<td><input type="text" class="inp calc_pp margin" size=3 name="margin[]" style="border:2px solid #000" value="%margin%">&nbsp;<span class="marg_prc"><input type="text" size="3" name="marg_prc" class="marg_prc" val="">%</span></td>
+<td><input type="text" class="inp calc_pp margin" size=3 name="margin[]" style="border:2px solid #000" value="%margin%"></td>
 <td><input type="text" class="inp calc_pp discount" size=3 name="sch_discount[]" value="0"></td>
 <td><select class="calc_pp type" name="sch_type[]">
 <option value="1">percent</option>
 <option value="2">value</option>
 </select></td>
-<td><input type="text" class="inp pprice" readonly="readonly" size=6 name="price[]" value="%pprice%"></td>
+<td><input type="text" class="inp pprice" readonly="readonly" style="width:46px" name="price[]" value="%pprice%">
+		<span class="marg_prc_preview" style="margin-right:3px;width:40px;display: none"><input type="text" name="marg_prc" value="" style="width:27px;font-size:10px" readonly="" class="marg_prc">%</span>
+</td>
 <td><input type="checkbox" class="inp" name="%foc%" value="1"></td>
 <td><input type="checkbox" class="inp" name="%offer%" value="1"></td>
 <!--  <td><input type="text" class="inp" name="note[]" value=""></td>-->
 
-<td><select class="vendor" name="vendor[]" style="width: 200px;">%vendorlist%</select></td>
-<td><select class="partner" name="partner[]"  style="width: 150px;">%partnerlist%</select></td>
-<td><a href="javascript:void(0)" onclick='$(this).parent().parent().remove();'>remove</a></td>
+<td><select class="vendor" name="vendor[]" style="width: 150px;">%vendorlist%</select></td>
+<td><select class="partner" name="partner[]"  style="width: 100px;">%partnerlist%</select></td>
+<td><a href="javascript:void(0)" onclick='remove_prod_selection(this)'>remove</a></td>
 </tr>
 </table>
 </div>
@@ -213,11 +215,57 @@ Loading.Please wait...<br /><br />
 </form>
 </div>
 
+<div style="display:none">
+	<div id="dlg_openpolist" title="Open PO List"></div>
+</div>
+
 <script>
+
+function get_unixtimetodate(utime)
+{
+	var date = new Date(utime * 1000);
+	var y=date.getFullYear();
+    var m=date.getMonth()+1;
+    var d=date.getDate();
+    var h=(date.getHours() > 9)?date.getHours()-12:date.getHours();
+    var mi=date.getMinutes();
+    var s=date.getSeconds();
+    var datetime=d+'/'+m+'/'+y;
+    return datetime;
+}
+
+$('#dlg_openpolist').dialog({'width':500,autoOpen:false,'height':'auto',modal:true,open:function(){
+	var pid = $(this).data('pid');
+	$('#dlg_openpolist').html("<h3 align='center'>Loading...</h3>");
+	$.post(site_url+'/admin/jx_getopenpolistbypid/'+pid,{},function(resp){
+		var html = '<h3 class="pname">'+resp.product_name+'</h3>';
+			html += '	<div class="pttl">Total open qty : <b>'+resp.ttl_open_qty+'</b></div>';
+			html += '	<div id="openpolist_tbl">';
+			html += '	<table width="100%" class="datagrid" cellpadding="5" cellspacing="0">';
+			html += '		<thead>';
+			html += '			<th>Slno</th><th>Vendor</th><th>PO Date</th><th>POID</th><th>Total Qty</th><th>Action</th>';
+			html += '		</thead>';
+			html += '		<tbody>';
+			$.each(resp.vendor_po_list,function(a,b){
+				html += '		<tr><td>'+(a*1+1)+'</td><td><a target="_blank" href="'+site_url+'/admin/vendor/'+b.vendor_id+'">'+b.vendor_name+'</a></td><td>'+get_unixtimetodate(b.po_date)+'</td><td>'+b.po_id+'</td><td>'+b.qty+'</td><td><a class="inline_trig" style="color:blue;font-weight:bold" target="_blank" href="'+(site_url+'/admin/viewpo/'+b.po_id)+'" >View</a></td></tr>';	
+			});
+			html += '		</tbody>';
+			html += '	</table>';
+			html += '	</div>';
+			$('#dlg_openpolist').html(html);
+	},'json');
+}}).load(function() {
+                $(this).dialog("option", "position", ['center', 'center'] );
+            });
+	
+function load_openpolist(pid)
+{
+	$('#dlg_openpolist').data('pid',pid).dialog('open');
+}
 
 function show() {
     document.getElementById("modal").style.display="block";
-    setTimeout("hide()", 3000);  // 3 seconds
+    setTimeout("hide()", 10000);  // 3 seconds
 }
 
 function hide() {
@@ -276,7 +324,7 @@ function loadbrandproducts()
 {
 	$(".sl_sel_prod:checked").each(function(){
 	$r=$(this).parents("tr").get(0);
-	addproduct($(".pid",$r).val(),$(".name",$r).html(),$(".mrp",$r).html());
+	addproduct($(".pid",$r).val(),$(".name",$r).html(),$(".mrp",$r).html(),$(".i_po_qty",$r).val());
 	});
 	$("#sl_products .datagrid tbody").html("");
 	$("#sl_products").dialog('close');
@@ -284,6 +332,25 @@ function loadbrandproducts()
 
 var p_brand_list = [];
 var added_po=[];
+function remove_prod_selection(ele)
+{
+		var trEle = $(ele).parents('tr:first');
+		var rmv_prdid = $('input[name="product[]"]',trEle).val();
+			trEle.remove();
+			
+		var po_prod_sel = [];
+			for(var i in added_po)
+			{
+				if(rmv_prdid != added_po[i])
+					po_prod_sel.push(added_po[i]);
+			}
+			added_po = po_prod_sel;
+			
+			$('#pprods tbody tr').each(function(i,ele){
+				$('td:first',this).text(i*1+1);
+			});
+			
+}
 
 function addproduct(id,name,mrp,require)
 {
@@ -306,18 +373,19 @@ function addproduct(id,name,mrp,require)
 		
 	if(data.length && data!=undefined && o.product_id != undefined)
 	{
+
+		
+		
 		template=$("#p_clone_template tbody").html();
 		template=template.replace(/%sno%/g,i+1);
-		//template=template.replace(/%require_qty%/g,require);
-		if(o.require_qty <= 0)
-			o.require_qty =0;
-		template=template.replace(/%require_qty%/g,o.require_qty);
+		template=template.replace(/%require_qty%/g,require?require:o.require_qty);
 		template=template.replace(/%product_id%/g,o.product_id);
 		template=template.replace(/%brand_id%/g,o.brand_id);
 		template=template.replace(/%menuid%/g,o.menuid);
 		template=template.replace(/%brand_name%/g,o.brand_name);
 		template=template.replace(/%menu%/g,o.menu);
 		template=template.replace(/%vendor_id%/g,o.vendor_id);
+	
 		template=template.replace(/%product_name%/g,o.product_name);
 		template=template.replace(/%last_orderdon%/g,o.last_orderdon);
 		template=template.replace(/%transid%/g,o.transid);
@@ -325,17 +393,14 @@ function addproduct(id,name,mrp,require)
 		template=template.replace(/--barcode--/g,o.barcode);
 		template=template.replace(/%mrpvalue%/g,o.mrp);
 		template=template.replace(/%dp_price%/g,o.dp_price);
-
-		//template=template.replace(/%po_id%/g,o.po_id);
-		//template=template.replace(/%ord_poqty%/g,o.order_qty);
-
+		
 		o.margin = 0;
 		
 		template=template.replace(/%margin%/g,"");
 		template=template.replace(/%foc%/g,"foc"+i);
 		template=template.replace(/%offer%/g,"offer"+i);
 		
-		mrp=parseInt(o.mrp);
+		mrp=parseFloat(o.mrp);
 
 		
 		
@@ -353,12 +418,12 @@ function addproduct(id,name,mrp,require)
 			if(sch_type == 1)
 			{
 				
-				pprice=mrp-(mrp*parseInt(o.margin)/100);
+				pprice=mrp-(mrp*parseFloat(o.margin)/100);
 			}
 			else
 			{
 				
-				pprice=mrp-parseInt(o.margin);
+				pprice=mrp-parseFloat(o.margin);
 			}
 		}
 
@@ -366,9 +431,9 @@ function addproduct(id,name,mrp,require)
 		if(o.dp_price.length)
 		{
 			if(sch_type == 1)
-				pprice=o.dp_price-(o.dp_price*parseInt(o.margin)/100);
+				pprice=o.dp_price-(o.dp_price*parseFloat(o.margin)/100);
 			else
-				pprice=o.dp_price-parseInt(o.margin);
+				pprice=o.dp_price-parseFloat(o.margin);
 			
 		}
 
@@ -422,18 +487,19 @@ function addproduct(id,name,mrp,require)
 
 		template=template.replace(/%partnerlist%/g,partners);
 		$("#pprods tbody").append(template);
-
+		var ttl_openpo = 0;
 		if(o.is_po_raised != null)
 		{
 			is_po_raised_html = "";
 			$.each(o.is_po_raised,function(i,p){
 				if(p.po_order_qty<0)
 					p.po_order_qty=0;
-				is_po_raised_html+="<a href='"+site_url+'/admin/viewpo/'+p.po_id+"' target='_blank'>"+p.po_id+"</a>"+'-'+'<input type="text" readonly="readonly" style="background-color: #F1F1F1" size="2" value='+p.po_order_qty+' >';
-				
+					//is_po_raised_html+="<div><ul><a href='"+site_url+'/admin/viewpo/'+p.po_id+"' target='_blank'>"+p.po_id+"</a>"+'-'+'<input type="text" readonly="readonly" style="background-color: #F1F1F1" size="2" value='+p.po_order_qty+' ></ul></div>';
+					ttl_openpo += p.po_order_qty*1;
 				});
-			$("#is_po_raised_"+o.product_id).append(is_po_raised_html);
 		}
+		
+		$("#is_po_raised_"+o.product_id).html('<a href="javascript:void(0)" onclick="load_openpolist('+o.product_id+')" ><b>'+ttl_openpo+'</b></a>');
 		
 		if(!o.dp_price.length)
 		{
@@ -498,11 +564,10 @@ $(function(){
 			if(data.status=='error')
 			{
 				alert(data.msg);
-				//$('#show_submit').hide();
 			}
 			else
 			{
-			//$('#show_submit').show();
+			
 			$('#filter_prods').hide('');
 			$('select[name="fil_brand"]').html('<option value="">Choose</option>');
 			$('select[name="fil_menu"]').html('<option value="">Choose</option>');
@@ -510,7 +575,7 @@ $(function(){
 			$('select[name="fil_partner"]').html('<option value="">Choose</option>');
 
 				$.each(os,function(i,o){
-					addproduct(o.product_id, "", "",o.qty-o.available);
+					addproduct(o.product_id, "", "",0);
 				});
 								
 
@@ -664,9 +729,9 @@ $(function(){
 		if(!o.dp_price.length)
 		{
 			if(sch_type == 1)
-				pprice=mrp-(mrp*parseInt(o.margin)/100);
+				pprice=mrp-(mrp*parseFloat(o.margin)/100);
 			else
-				pprice=mrp-parseInt(o.margin);
+				pprice=mrp-parseFloat(o.margin);
 		}
 	
 	 });*/
@@ -690,8 +755,6 @@ $(function(){
 	});
 });
 
-	 
-
 	$('select[name="fil_partner"]').live("change",function(){
 		var partnerid=$(this).val();
 		
@@ -709,33 +772,32 @@ $(function(){
 	});
 	
 	$("#pprods .calc_pp").live("change",function(){
-		
 		$r=$(this).parents("tr").get(0);
 		
-		dp_price=parseInt($(".dp_price",$r).val());
+		dp_price=parseFloat($(".dp_price",$r).val());
 		
 		dp_price = isNaN(dp_price)?'-1':dp_price;
 
 		sch_type= $(".type",$r).val();
 
 		
-		mrp=parseInt($(".mrp",$r).val());
-		margin=parseInt($(".margin",$r).val());
-		discount=parseInt($(".discount",$r).val());
+		mrp=parseFloat($(".mrp",$r).val());
+		margin=parseFloat($(".margin",$r).val());
+		discount=parseFloat($(".discount",$r).val());
 		if(dp_price == -1)
 		{
 				if(sch_type == 1)
 				{
-					$('.marg_prc').hide();
-					mmrp=mrp-(mrp*parseInt(margin+discount)/100);
+					$('.marg_prc_preview',$r).hide();
+					mmrp=mrp-(mrp*parseFloat(margin+discount)/100);
 				}
 				else
 				{
 					
-					mmrp=mrp-parseInt(margin+discount);
+					mmrp=mrp-parseFloat(margin+discount);
 					margin_prc=(1-(mmrp/mrp))*100;
-					$('.marg_prc',$r).show();
-					$('.marg_prc').val(margin_prc);
+					$('.marg_prc_preview',$r).show();
+					$('.marg_prc',$r).val(margin_prc);
 				}
 		}
 		else
@@ -743,14 +805,14 @@ $(function(){
 			
 				if(sch_type == 1)
 				{
-					$('.marg_prc').hide();
-					mmrp=dp_price-(dp_price*parseInt(margin+discount)/100);
+					$('.marg_prc_preview',$r).hide();
+					mmrp=dp_price-(dp_price*parseFloat(margin+discount)/100);
 				}
 				else
 				{
-					mmrp=dp_price-parseInt(margin+discount);
+					mmrp=dp_price-parseFloat(margin+discount);
 					margin_prc=(1-(mmrp/dp_price))*100;
-					$('.marg_prc',$r).show();
+					$('.marg_prc_preview',$r).show();
 					$('.marg_prc').val(margin_prc);
 				}
 			
@@ -776,7 +838,7 @@ $(function(){
 	$("#pprods .partner").live("change",function(){
 		$r=$(this).parents("tr").get(0);
 		$.post("<?=site_url("admin/jx_getqtybypartnerorder")?>",{partnerid:$(this).val(),prodid:$(".product",$r).val()},function(data){
-			$("#prod_qty_"+data.prod_id).val(data.qty).change();
+				$("#prod_qty_"+data.prod_id).val(data.qty).change();
 		},'json');
 	
 });
@@ -785,7 +847,6 @@ $(function(){
 function view_orderdet(pid)
 {
 	$("#orderd_productdet").data('product_id',pid).dialog('open');
-	
 }
 
 $('#orderd_productdet').dialog({
@@ -1125,7 +1186,7 @@ $("#sl_products").dialog({
 
 //$("#sl_products .datagrid").tablesorter({sortList: [[1,0]]});
 
-
+	
 
 
 
@@ -1252,7 +1313,6 @@ background:#ff9900;
 	background:#faa;
 }
 #sl_products td {text-align: center;}
-.marg_prc{display:none;}
 .psrcstat a{font-size: 10px;color: blue;}
 #purchase_productdet_frm tfoot{display:none !important}
 </style>

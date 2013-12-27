@@ -15,14 +15,18 @@ h2 {    width: 60%;    float: left; }
 .delivery_type span{ font-size: 11px;}
 .delivery_type input[type="radio"] { width: 11px;padding-top: 10px;margin: 2px 3px 0 2px;}
 .clear { clear: both; }
+.dlg_fr_list{margin:10px;}
+.dlg_fr_list ol {margin:3px;padding:0px 10px;}
+.dlg_fr_list ol li{margin:5px;border-bottom:1px dotted #ccc;padding:3px;}
+.dlg_fr_list ol li a{display: block}
 </style>
 <div class="container">
     <h2>Manage Towns Courier Priority</h2>
     <div class="filter_territory">
         <select id="sel_territory" name="sel_territory" >
-            <option value="00">Choose Territory</option>
+            <option value="0" <?php echo (($sel_terr_id==='0')?'selected':'')?> >Choose Territory</option>
             <?php  foreach($pnh_terr as $terr): 
-                if(isset($terr_selected['territory_id']) and $terr_selected['territory_id'] == $terr['id']) {?>
+                if(isset($terr_selected['territory_id']) and $terr_selected['territory_id'] === $terr['id']) {?>
                     <option value="<?php echo $terr['id'];?>" selected><?php echo $terr['territory_name'];?></option>
                 <?php
                 }
@@ -34,16 +38,16 @@ h2 {    width: 60%;    float: left; }
         </select>
         Status:
         <select id="sel_assign_status" name="sel_assign_status" >
-            <option value="00">All</option>
-            <option value="y" <?=($sel_assign_status == 'y')?"selected":"";?> >Assigned</option>
-            <option value="n" <?=($sel_assign_status == 'n')?"selected":"";?> >Unassigned</option>
+            <option value="" <?=($assign_status === '')?"selected":"";?>>All</option>
+            <option value="1" <?=($assign_status == "1")?"selected":"";?>>Assigned</option>
+            <option value="0" <?=($assign_status == "0")?"selected":"";?>>Unassigned</option>
         </select>
     </div>
     <div class="clear"></div>
     <div class="towns_courier_priority_list">
         <?php
         if(count($towns_courier_priority) == 0 ) {
-            echo '<h3 class="nodata">No match found for search criteria.</h3>'; 
+            echo '<h3 class="nodata">No towns available</h3>'; 
         }
         else 
             {
@@ -79,7 +83,7 @@ h2 {    width: 60%;    float: left; }
                             <?=++$i?>
                             <form name="form_<?=$town['id'];?>" method="post" onsubmit="return save_courier_priority(<?=$townid?>);">
                         </td>
-                        <td><input type="hidden" value="<?=$townid?>" /><a href="javascript:void(0);" onclick="return disp_franchise(<?=$townid?>);"><?php echo $town['town_name'];?></a> <span title="No of franchises in this town">(<?=$town["fran_count"];?>)</span></td>
+                        <td><a href="javascript:void(0);" onclick="return disp_franchise(<?=$townid?>);" id="town_link_<?php echo $townid;?>"><?php echo $town['town_name'];?></a> <span title="No of franchises in this town">(<?=$town["fran_count"];?>)</span></td>
                         <td>
                             <select id="courier_priority_1_<?=$townid?>" name="courier_priority_1_<?=$townid?>" class="courier_priority_1">
                                 <option value="00">Select courier</option>
@@ -256,23 +260,25 @@ h2 {    width: 60%;    float: left; }
         autoOpen: false,
         height: 300,
         width: 350,
-        modal: true
-    });
+        modal: true,
+        autoResize: true
+    }); 
                     
     function disp_franchise(townid) {
         
+        
         $.post(site_url+"admin/get_franchisebytwn_id",{townid:townid},function(rdata){
            if(rdata.status == 'success') {
-               var franchiselist_html='';
-               $.each(rdata.franchise_list,function(i,itm) {
-                   franchiselist_html+='<div class="dia_fran_list">'
-                        +'<input type="hidden" name="fids[]" value="'+itm.franchise_id+'"/>'
-                        +(++i)+". <a href='"+site_url+"admin/pnh_franchise/"+itm.franchise_id+"' target='_blank'>"+itm.franchise_name+"</a>"
-                        +'</div>';
-               });
-                  //output = ""+franchiselist_html;
-                  $("#show_fran_info_block").attr('title',"Franchise list for "+townid);
-                  $("#show_fran_info_block").html(franchiselist_html).dialog("open");
+               var  franchiselist_html='<div class="dlg_fr_list" style="padding:10px;background:#f5f5f5">';
+               		franchiselist_html += '<ol>';
+	                $.each(rdata.franchise_list,function(i,itm) {
+	                   franchiselist_html += '<li><a href="'+site_url+'/admin/pnh_franchise/'+itm.franchise_id+'" target="_blank">' + itm.franchise_name +'</a></li>';
+	                });
+	                franchiselist_html += '</ol>';
+               
+               $("#show_fran_info_block").dialog({'height':'auto'});
+               $("#show_fran_info_block").dialog('option', 'title', "Franchise list for "+$('#town_link_'+townid).text());
+               $("#show_fran_info_block").html(franchiselist_html).dialog("open");
            }
            else {
                alert("Error: "+rdata.message);
@@ -282,27 +288,18 @@ h2 {    width: 60%;    float: left; }
 //ONCHANGE Territory
 $("#sel_territory").live("change",function() {
     var terrid=$(this).find(":selected").val();//text(); 
-    var assigns_status=$("#sel_assign_status").find(":selected").val();//text(); 
-    
-    if(terrid=='00') terrid='0';
-    if(assigns_status=='00') assigns_status='0';
-    
-    reload_page(terrid,assigns_status);
-    
+    var assigns_tatus=$("#sel_assign_status").find(":selected").val();//text(); 
+    reload_page(terrid,assigns_tatus);
 });
 
 $("#sel_assign_status").live("change",function() {
-    var assigns_status=$(this).find(":selected").val();//text(); 
+    var assigns_tatus=$(this).find(":selected").val();//text(); 
     var terrid=$("#sel_territory").find(":selected").val();//text(); 
-    
-    if(terrid=='00') terrid='0';
-    if(assigns_status=='00') assigns_status='0';
-    
-    reload_page(terrid,assigns_status);
+    reload_page(terrid,assigns_tatus);
         //var pathname = window.location.pathname; alert(pathname);return false;document.URL    window.status = "message";
 });
-function reload_page(terrid,assigns_status) {
-    window.location=site_url+"admin/towns_courier_priority/"+terrid+"/"+assigns_status;
+function reload_page(terrid,assigns_tatus) {
+    window.location=site_url+"/admin/towns_courier_priority/"+terrid+"/"+assigns_tatus;
 }
 function done(data) { }
 function fail(xhr,status) { print("Error: "+xhr.responseText+" "+xhr+" | "+status);}

@@ -42,10 +42,10 @@ Partial Shipment Orders
 				<h4>Orders by :</h4>
 			 	
 				<div style="clear: both;">
-					
-<!--					<div style="padding:4px;margin:2px;background: #e6e6e6;">
+						<?php /*
+					<div style="padding:4px;margin:2px;background: #e6e6e6;">
 						<input type="radio" checked="checked" name="snp_pnh" value="pnh">Paynearhome
-					</div>-->
+					</div>*/ ?>
 					<div style="background: #e6e6e6;padding:4px;margin:2px;">
 						<input type="radio" name="snp_pnh" value="others" checked>Others
 							

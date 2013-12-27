@@ -64,7 +64,7 @@ Prepaid Voucher used : <?=$c?>
 	<input type="submit" class="button button-tiny button-flat-caution button-rounded " value="<?=$tran['batch_enabled']?"Dis":"En"?>able for Batch">
 </form>
 </div>
-<?php if($tran['batch_enabled'] && 0){ ?>
+<?php if($tran['batch_enabled'] && ($tran['is_pnh'] == 0)?1:0){ ?>
 <div style="float:right;padding-right:20px;" id="process_fulltrans">
 <form method="post" onsubmit='return confirm("Are you sure want to process this transaction for batch?")' action="<?=site_url("admin/add_batch_process")?>">
 <input type="hidden" name="num_orders" value="1">
@@ -106,6 +106,8 @@ if(count($allotted_memids) <= 1)
 {
 	echo implode(', ',$allotted_memids);
 }
+
+$is_pnh = $tran['is_pnh'];
 ?>
 
 <?php if($tran['is_pnh']){?>
@@ -248,7 +250,7 @@ PROCESSED IN <span style="color:red"><?=(count($pbatch)==0?count($batch):count($
 <div >
 <h4 style="margin-bottom:0px;">Invoices Summary</h4>
 <table class="datagrid smallheader noprint" style="width: 100%">
-<thead><tr><th>Proforma ID</th><th>Invoice</th><th>Batch</th><th colspan="2">Status</th><th>Date</th></thead>
+<thead><tr><th>Proforma ID</th><th>Invoice</th><th>Batch</th><th>Status</th><th>Date</th></thead>
 <tbody>
 <?php foreach($batch as $b){?>
 <tr>
@@ -262,14 +264,22 @@ PROCESSED IN <span style="color:red"><?=(count($pbatch)==0?count($batch):count($
 	</td>
 <td><a href="<?=site_url("admin/invoice/{$b['invoice_no']}")?>" <?=$b['invoice_status']==0?'style="text-decoration:line-through;"':""?>><?=$b['invoice_no']?></a></td>
 <td><a href="<?=site_url("admin/batch/{$b['batch_id']}")?>">B<?=$b['batch_id']?></a></td>
-<?php if($b['invoice_status']==1){?>
 <td>
-<?=$b['packed']&&$b['shipped']?"SHIPPED":($b['packed']?"PACKED":"Invoiced")?>
+	<?php 
+	if($b['invoice_status']==1){
+		echo $b['packed']&&$b['shipped']?"SHIPPED":($b['packed']?"PACKED":"Invoiced");
+		
+		if($b['shipped'] == 0 || $is_pnh==0)
+		{
+	?>
+			<a href="<?=site_url("admin/cancel_invoice/{$b['invoice_no']}")?>" class="danger_link">cancel</a>		
+	<?php
+		}
+	}else 
+		echo "CANCELLED";
+	?>
 </td>
-<?php }else echo "<td colspan='2'>CANCELLED</td>";?>
-<?php if($b['invoice_status']==1){?>
-<td><a href="<?=site_url("admin/cancel_invoice/{$b['invoice_no']}")?>" class="danger_link">cancel</a></td>
-<?php }?>
+
 <td><?=date("d/m/y",$b['createdon'])?>
 </tr>
 <?php } if(empty($batch)){?>

@@ -1475,7 +1475,7 @@ table{
 					<tbody>
 						<tr>
 							<td><p>For membership registration for this month </p></td>
-                                                        <td align="right"><b><?php echo formatInIndianStyle($invoice_credit_note_det['amount']);?></b></td>
+                            <td align="right"><b><?php echo formatInIndianStyle($invoice_credit_note_det['amount']);?></b></td>
 						</tr>
 					</tbody>
 				</table>

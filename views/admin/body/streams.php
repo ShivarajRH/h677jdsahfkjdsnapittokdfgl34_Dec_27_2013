@@ -292,6 +292,8 @@ function subreply_block(e,post_id,replied_by,stream_id) {
                $( "#date_from_"+stream_id).datepicker( "option", "maxDate", selectedDate );
              }
         });
+
+        prepare_daterange('date_from','date_to');
     }
     $(".stream_link").first().trigger("click");
 </script>

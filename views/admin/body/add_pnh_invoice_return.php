@@ -136,7 +136,7 @@ var return_prod_imei_list = new Array();
 											{
 												if(i==0)
 												{
-													rowHtml += '	<td rowspan="'+rspan+'">'+item.invoice_no+' <br > '+order_from_det+' </td>';
+													rowHtml += '	<td rowspan="'+rspan+'"><a href="'+(site_url+'/admin/invoice/'+item.invoice_no)+'" target="_blank">'+item.invoice_no+'</a> <br ><a href="'+(site_url+'/admin/trans/'+item.transid)+'" target="_blank">'+item.transid+'</a> <br > <span style="font-size:11px;"><a href="'+site_url+'/admin/pnh_franchise/'+resp.franchise_id+'">'+resp.franchise_name+'</a></span> </td>';
 												}
 												cspan = 1;
 												rspan = 0;
@@ -226,14 +226,13 @@ var return_prod_imei_list = new Array();
 						
 						rowHtml += '					<tr '+style_code+' ><td  >Barcode </td><td><input type="text" class="barcode '+(itm_has_bc?'chk_barcode':'')+' " pid="'+itm_prod_id+'" style="width:200px;font-size:11px;" name="prod_rcvd_pid_bc['+itm_inv_no+']['+itm_ord_id+']['+itm_prod_id+'][]" value="" ><span class="chk_barcode_stat"></span></td></tr>';
 					if(itm_has_serial)
-					{console.log(itm_ord_id +' '+itm_prod_id );
+					{
 						//rowHtml += '	<tr><td>IMEI NO </td><td><input type="text" style="width:200px;font-size:11px;" name="prod_rcvd_pid_imei['+itm_inv_no+']['+itm_ord_id+']['+itm_prod_id+'][]" value="" ></td></tr>';
 						var product_imei_list = '';
 							$.each(return_prod_imei_list[itm_ord_id][itm_prod_id],function(a,imei_no){
-								alert(a);
 								product_imei_list += '<option value="'+imei_no+'">'+imei_no+'</option>';
 							});
-										 
+							 
 						rowHtml += '	<tr><td>IMEI NO </td><td><select style="width:200px;font-size:11px;" name="prod_rcvd_pid_imei['+itm_inv_no+']['+itm_ord_id+']['+itm_prod_id+'][]" >'+product_imei_list+'</select></td></tr>';
 						
 					}

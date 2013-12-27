@@ -1,6 +1,3 @@
-<style type="text/css">
-    .leftcont { display: none; }
-</style>
 <?php
 $this->load->plugin('barcode');
 
@@ -22,7 +19,7 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 	<div style="margin:10px;" class="hideinprint">
 	<table width="100%">
 		<tr>
-			<td align="left" width="53%">
+			<td align="left" width="33%">
 				<input type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> invoice" onclick='printinv(this)'>
 				<?php
 					$dispatch_id = @$this->db->query("
@@ -45,18 +42,21 @@ $invoice_credit_note_res = $this->db->query("select group_concat(id) as id,sum(a
 						<input type="button" value="Print Credit Note" onclick='printcreditnote(this)'> 
 				<?php 			
 						}
-					}
+					} 
 				?>
-                                <input type="button" value="Print Invoice Acknowledment Copy" onclick="print_taxinv_acknowledgement(this)" >
-                        </td>
+				
+				<?php if($is_pnh){ ?>
+					<input type="button" value="Print Acknowledgement" onclick="print_tax_acknowledgement()" >
+				<?php } ?>
+				
+			</td>
 			<td align="center" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Partner Order Form" onclick='printpartorderform(this)'></td>
 			<td align="right" width="33%"><input class="print_partner_orderfrm_btn" style="display: none;" type="button" value="<?php echo $inv_total_prints?'RePrint':'Print' ?> Invoice and Partner Order Form" onclick='printinvpartorderform(this)'></td>
 		</tr>
 	</table>
 	</div>
-	<?php } ?>
-</div>
-    
+	<?php }?>
+
 <div id="invoice">
 <style>
 table{
@@ -627,15 +627,15 @@ table{
 					</div>
 				</td>
 				<td width="50%">
-                                <?php 
-                                        $offer_det_res = $this->db->query("select b.invoice_no,has_offer,offer_refid,b.invoice_no,c.offer_text,c.immediate_payment 
-                                                                            from king_orders a
-                                                                            join king_invoice b on a.id = b.order_id
-                                                                            join pnh_m_offers c on c.id = a.offer_refid and is_active = 1 
-                                                                            where b.invoice_no != 0 and b.invoice_no = ? and has_offer = 1  ",$invoice_no);
+					<?php 
+						$offer_det_res = $this->db->query("select b.invoice_no,has_offer,offer_refid,b.invoice_no,c.offer_text,c.immediate_payment 
+	from king_orders a
+	join king_invoice b on a.id = b.order_id
+	join pnh_m_offers c on c.id = a.offer_refid and is_active = 1 
+	where b.invoice_no != 0 and b.invoice_no = ? and has_offer = 1  ",$invoice_no);
 					if($offer_det_res->num_rows()){
 						$offer_det  = $offer_det_res->row_array();
-                                ?>
+					?>
 						<div style="margin-left:10px;border: 2px solid rgb(0, 0, 0);font-size: 110%;margin-bottom: 10px;padding: 5px;margin-top:-40px">
 							<b><?php echo $offer_det['offer_text'] ;?>
 							<?php echo $offer_det['immediate_payment']?'<br />Require Immediate Payment':'';?>
@@ -801,7 +801,7 @@ table{
 <?php 
 
 	$ttl_inv_amt += $cod_ship_charges+$total_item_amount;
-	array_push($ttl_inv_list,$invoice_no);
+	array_push($ttl_inv_list,$invoice_no); 
 }
 ?>
 
@@ -826,8 +826,8 @@ table{
 		display:none;
 	}
 	.showinprint{
-                display:block;
-        }
+					display:block;
+				}
 }
 </style>
 
@@ -917,7 +917,7 @@ table{
 		</tr>
 		<?php 
 			$k1=0;
-			foreach($orderslist_byproduct as $itmid=>$itm_ord) {
+			foreach($orderslist_byproduct as $itmid=>$itm_ord){ 
 			?>
 		<tr>
 			<td><?php echo ++$k1; ?></td>
@@ -972,7 +972,7 @@ table{
 	<br><br>
 	Gate Pass  
 	</div>
-          <table width="100%" style="margin-top:10px">
+	<table width="100%" style="margin-top:10px">
 				<tr>
 					<td valign="top">
 					<?php 
@@ -1261,7 +1261,7 @@ table{
 									{
 										$p_order_no_bc = generate_barcode($p_order_no,500,70,2);
 								?>
-										<b>Homeshop18</b>
+										<b><?php echo $this->db->query("select * from partner_info where id = ? ",$part_order_det['partner_id'])->row()->name; ?></b>
 										<div><img src="data:image/png;base64,<?=base64_encode($p_order_no_bc);?>" /></div>
 										<b><?php echo $part_order_det['order_no'] ?></b>
 								<?php 		
@@ -1475,7 +1475,7 @@ table{
 					<tbody>
 						<tr>
 							<td><p>For membership registration for this month </p></td>
-                            <td align="right"><b><?php echo formatInIndianStyle($invoice_credit_note_det['amount']);?></b></td>
+							<td align="right"><b><?php echo $invoice_credit_note_det['amount'];?></b></td>
 						</tr>
 					</tbody>
 				</table>
@@ -1545,14 +1545,11 @@ table{
 
 <script type="text/javascript">
 var inv_no = '<?php echo $invoice_no;?>';
-/**
- * Function to print invoice
- */
 function printinv(ele){
-    ele.value="RePrint Invoice";
-    log_printcount(); 
-    myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-    <?php if($is_pnh) { ?>
+ele.value="RePrint Invoice";
+log_printcount(); 
+myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+<?php if($is_pnh) { ?>
 		
 		$('.top_tax_inv_bar').hide();
 		
@@ -1569,19 +1566,21 @@ function printinv(ele){
 		$('.eoe_txt').hide();
 		
 		
-		// Acknowledgement Copy
-		/*$('#tax_inv_ack_copy').show();
-		inv_html += '<div style="margin-top:0px;">';
-		inv_html += $('#tax_inv_ack_copy').html();
+		//inv_html += '<div style="margin-top:30px;">'+$("#invoice").html()+'</div>';
+		$('#tax_inv_ack_copy').hide();
+		//inv_html += '<div style="margin-top:0px;">';
+		//inv_html += $('#tax_inv_ack_copy').html();
+		//inv_html += '</div>';
+		
+		
+		
+		
+		$('.customer_ship_details').hide();
+		//inv_html += '<div style="margin-top:0px;">';
+		//inv_html += $('#customer_acknowlegment').html();
+		//inv_html += '</div>';
 		inv_html += '</div>';
-				
-		$('.customer_ship_details').show();
-		inv_html += '<div style="margin-top:0px;">';
-		inv_html += $('#customer_acknowlegment').html();
-		inv_html += '</div>';
-		inv_html += '</div>';
-		*/
-               
+		
 		if($('#gate_pass_copy').length)
 		{
 			inv_html += '<div style="page-break-before:always">';
@@ -1604,12 +1603,27 @@ function printinv(ele){
 		$('#gate_pass_copy').hide();
 		
 <?php }else { ?>
-    myWindow.document.write($("#invoice").html());
+myWindow.document.write($("#invoice").html());
 <?php } ?>
-    myWindow.focus();
-    myWindow.print();
+myWindow.focus();
+myWindow.print();
 }
 
+
+
+
+function print_tax_acknowledgement(ele)
+{
+	myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+	var inv_html = $('#tax_inv_ack_copy').html();
+		inv_html += '<div style="margin-top:0px;">';
+		inv_html += $('#customer_acknowlegment').html();
+		inv_html += '</div>';
+	
+	myWindow.document.write(inv_html);
+	myWindow.focus();
+	myWindow.print();
+}
 
 function printdispatchdoc(ele)
 {
@@ -1633,31 +1647,22 @@ function printcreditnote(ele)
 	myWindow.print();
 }
 
-function printpartorderform(ele){
-        ele.value="RePrint Partner Order Form";
-        log_printcount();
-        myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#partner_order_form").html());
-        myWindow.focus();
-        myWindow.print();
+function printpartorderform(ele){ 
+ele.value="RePrint Partner Order Form";
+log_printcount();
+myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+myWindow.document.write($("#partner_order_form").html());
+myWindow.focus();
+myWindow.print();
 }
 
 function printinvpartorderform(ele){ 
-        ele.value="RePrint Invoice and Partner Order Form";
-        log_printcount();
-        myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#invoice").html()+'<div style="page-break-before:always"></div>'+$("#partner_order_form").html());
-        myWindow.focus();
-        myWindow.print();
-}
-
-function print_taxinv_acknowledgement(ele){ 
-        ele.value="RePrint Invoice Acknowledgement Copy";
-        log_printcount();
-        myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
-        myWindow.document.write($("#tax_inv_ack_copy").html()+''+$("#customer_acknowlegment").html());
-        myWindow.focus();
-        myWindow.print();
+ele.value="RePrint Invoice and Partner Order Form";
+log_printcount();
+myWindow=window.open('','','width=950,height=600,scrollbars=yes,resizable=yes');
+myWindow.document.write($("#invoice").html()+'<div style="page-break-before:always"></div>'+$("#partner_order_form").html());
+myWindow.focus();
+myWindow.print();
 }
 
 function log_printcount()
@@ -1670,7 +1675,7 @@ function log_printcount()
 
 
 <STYLE TYPE="text/css">
-     h2.page_break{ page-break-before: always }
+     H2.page_break{page-break-before: always}
      .note{margin-bottom:5px;border-bottom:1px solid #e3e3e3;}
 </STYLE> 
 <h2>&nbsp;</h2>

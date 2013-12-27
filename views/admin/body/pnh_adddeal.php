@@ -16,6 +16,7 @@ $d=$deal;
 <tr><td>Offer Price : </td><td>Rs <input type="text" name="offer_price" class="inp chk_price" size="5" value="<?=$d?$d['price']:""?>"></td></tr>
 <tr><td>Store Offer Price : </td><td>Rs <input type="text" name="store_offer_price" class="inp chk_price" size="5" value="<?=$d?$d['store_price']:""?>"></td></tr>
 <tr><td>NYP Offer Price : </td><td>Rs <input type="text" name="nyp_offer_price" class="inp chk_price" size="5" value="<?=$d?$d['nyp_price']:""?>"></td></tr>
+<tr><td>Bill on order price : </td><td><input type="checkbox" name="billon_orderprice" class="inp" value="1" <?=$d?($d['billon_orderprice']?"checked":""):""?> ></td></tr>
 <tr><td>Gender Attribute : </td><td><input type="text" name="gender_attr" class="inp" size=15 value="<?=$d?$d['gender_attr']:""?>"></td></tr>
 <tr><td>Tax : </td><td><input type="text" class="inp" name="tax" size=2 value="<?=$d?($d['tax']/100):""?>"> %</td></tr>
 <tr><td>Is Combo : </td><td><input type="checkbox" name="is_combo" value="1" <?=$d&&$d['is_combo']?"checked":""?>></td></tr>

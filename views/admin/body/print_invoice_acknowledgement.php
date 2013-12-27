@@ -36,8 +36,7 @@ $list_invs_group_arr=array();
                     $invs = $dispatch_det['invs'];
                     $invoice_list = explode(',',$invs);
                     
-//                    echo count($invoice_list); 
-//                    die();
+//                    echo count($invoice_list); die();
                     $orderslist_byproduct = $this->db->query("select terr.territory_name,a.transid,a.createdon as invoiced_on,b.bill_person,b.bill_address,b.bill_landmark,b.bill_city,b.bill_state,b.bill_pincode,bill_phone,d.init,b.itemid,c.name,if(c.print_name,c.print_name,c.name) as print_name,c.pnh_id,group_concat(distinct a.invoice_no) as invs,
                                                                     ((a.mrp-(a.discount))) as amt,
                                                                     sum(a.invoice_qty) as qty 
@@ -157,7 +156,6 @@ $list_invs_group_arr=array();
        
        //$list_invs_arr = explode(",",$list_invs_group_str);
        //echo ''.count($list_invs_arr);
-       
 ?>
         <input type="hidden" name="all_inv_list" id="all_inv_list" value="<?=$list_invs_group_str; ?>"
         </div>
